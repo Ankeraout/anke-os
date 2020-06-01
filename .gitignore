@@ -1,0 +1,6 @@
+*.bxrc
+*.img
+*.o
+*.bin
+.vscode
+*.sh
