@@ -1,5 +1,6 @@
 bits 16
 
+section .text
 ; Input:
 ;  - AL: character to print
 ;  - BL: color

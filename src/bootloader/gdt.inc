@@ -1,3 +1,4 @@
+section .rodata
 gdt_gdt:
 .null:
     db 0, 0, 0, 0, 0, 0, 0, 0

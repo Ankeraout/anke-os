@@ -1,5 +1,7 @@
 bits 16
 
+section .text
+
 ; Description:
 ; Checks if the A20 gate is enabled, and enables it if it is not enabled.
 a20_enable:
@@ -56,6 +58,7 @@ a20_enable:
     pop ax
     ret
 
+section .rodata
 .str_checking: db "a20: Checking A20 gate... ", 0
 .str_disabled: db "Disabled.", 13, 10, "a20: Enabling A20 gate... ", 0
 .str_enabled: db "Enabled.", 13, 10, 0

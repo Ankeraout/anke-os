@@ -1,5 +1,7 @@
 bits 16
 
+section .text
+
 ; Description:
 ; Reads the memory map and puts it at 0x00020000 in memory.
 ;
@@ -76,6 +78,7 @@ e820_readMemoryMap:
     call text16_puts
     jmp halt16
     
+section .rodata
 .str_ok: db "OK", 13, 10, 0
 .str_readingMemoryMap: db "e820: Reading memory map... ", 0
 .str_error1: db "BIOS call failed.", 13, 10, 0
