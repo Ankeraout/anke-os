@@ -66,17 +66,11 @@ _start:
     mov cr0, eax
 
 .jumpToHigherHalf:
-    lea ecx, [.unmapLowerMemory]
+    lea ecx, [.higherHalfStart]
     jmp ecx
 
 section .text
-.unmapLowerMemory:
-    mov dword [kernel_pageDirectory], 0
-
-.reloadPageDirectory:
-    mov eax, cr3
-    mov cr3, eax
-
+.higherHalfStart:
 .setupStack:
     mov esp, kernel_stack_top
 

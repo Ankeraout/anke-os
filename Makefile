@@ -6,12 +6,14 @@ BINDIR=bin
 KERNEL_CC=i686-elf-gcc -c
 KERNEL_LD=i686-elf-ld
 KERNEL_LDFLAGS=
-KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding
+KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
 
 KERNEL_SOURCES_ASM=$(SRCDIR)/kernel/arch/i686/multiboot.asm
-KERNEL_SOURCES_C=$(SRCDIR)/kernel/main.c
+KERNEL_SOURCES_C=	$(SRCDIR)/kernel/main.c \
+				 	$(SRCDIR)/kernel/tty/tty.c \
+					$(SRCDIR)/kernel/libk/libk.c
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
