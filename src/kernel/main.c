@@ -1,6 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "arch/i686/multiboot.h"
+#include "libk/libk.h"
 #include "tty/tty.h"
 
 tty_t kernel_tty = {
@@ -12,7 +14,9 @@ tty_t kernel_tty = {
     .attr = 0x07
 };
 
-int kernel_main(void) {
+void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_info) {
+    UNUSED_PARAMETER(multiboot_info);
+
     tty_cls(&kernel_tty);
     kernel_tty.attr = 0x0a;
     
@@ -27,6 +31,12 @@ int kernel_main(void) {
     tty_putc(&kernel_tty, '\n');
     kernel_tty.attr = 0x07;
     tty_puts(&kernel_tty, "Welcome to AnkeOS!\n");
+
+    if(multiboot_magic == 0x2badb002) {
+        tty_puts(&kernel_tty, "Good multiboot signature.\n");
+    } else {
+        tty_puts(&kernel_tty, "Wrong multiboot signature.\n");
+    }
 
     while(true) {
         asm("cli\n \

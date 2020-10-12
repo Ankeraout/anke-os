@@ -65,6 +65,10 @@ _start:
     or eax, 0x80000000
     mov cr0, eax
 
+.loadSavedRegisters:
+    mov ebx, [saved_ebx]
+    mov edx, [saved_eax] ;We load it in EDX for now because EAX is used later.
+
 .jumpToHigherHalf:
     lea ecx, [.higherHalfStart]
     jmp ecx
@@ -84,9 +88,14 @@ section .text
     mov gs, ax
     mov ss, ax
 
-    jmp dword 0x08:.callKernel
+    jmp dword 0x08:.restoreRegisters
+
+.restoreRegisters:
+    mov eax, edx
 
 .callKernel:
+    push ebx
+    push eax
     call kernel_main
 
 .halt:
