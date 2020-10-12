@@ -80,6 +80,18 @@ section .text
 .setupStack:
     mov esp, kernel_stack_top
 
+.reloadGDT:
+    lgdt [kernel_gdtr]
+
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+    jmp dword 0x08:.callKernel
+
 .callKernel:
     call kernel_main
 
@@ -101,3 +113,20 @@ kernel_pageDirectory:
 
 kernel_bootstrapPageTable:
     resb 4096
+
+section .rodata
+kernel_gdt:
+.nullEntry:
+    times 8 db 0
+.codeSegment:
+    db 0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xcf, 0x00
+.dataSegment:
+    db 0xff, 0xff, 0x00, 0x00, 0x00, 0x92, 0xcf, 0x00
+.end:
+
+section .data
+kernel_gdtr:
+.limit:
+    dw (kernel_gdt.end - kernel_gdt) - 1
+.base:
+    dd kernel_gdt
