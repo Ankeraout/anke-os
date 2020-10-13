@@ -2,11 +2,7 @@
 #include "tty/tty.h"
 
 void tty_cls(tty_t *tty) {
-    for(int y = 0; y < tty->h; y++) {
-        for(int x = 0; x < tty->w; x++) {
-            ((uint16_t *)tty->buf)[y * tty->w + x] = 0;
-        }
-    }
+    memset(tty->buf, 0, tty->w * tty->h * 2);
 
     tty->x = 0;
     tty->y = 0;
