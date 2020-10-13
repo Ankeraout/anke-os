@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -50,4 +51,60 @@ void *memcpy(void *dest, const void *src, size_t n) {
     }
 
     return dest;
+}
+
+size_t strlen(const char *str) {
+    size_t stringLength = 0;
+
+    while(str[stringLength]) {
+        stringLength++;
+    }
+    
+    return stringLength;
+}
+
+char *strrev(char *str) {
+    size_t i = 0;
+    size_t j = strlen(str) - 1;
+
+    while(j > i) {
+        char tmp = str[i];
+        str[i] = str[j];
+        str[j] = tmp;
+
+        i++;
+        j--;
+    }
+
+    return str;
+}
+
+char *itoa(int value, char *str, int base) {
+    const char *basebuf = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+    bool minusSign = false;
+
+    if((base < 2) || (base > 36)) {
+        return str;
+    }
+
+    size_t index = 0;
+
+    if((base == 10) && (value < 0)) {
+        minusSign = true;
+        value = -value;
+    }
+
+    while(value) {
+        str[index++] = basebuf[value % base];
+        value /= base;
+    }
+
+    if(minusSign) {
+        str[index++] = '-';
+    }
+
+    str[index] = '\0';
+
+    return strrev(str);
 }
