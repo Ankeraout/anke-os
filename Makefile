@@ -19,7 +19,7 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
 QEMU=qemu-system-x86_64
-QEMUFLAGS=-m 64 -serial stdio -d cpu_reset
+QEMUFLAGS=-m 2 -serial stdio -d cpu_reset
 ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)

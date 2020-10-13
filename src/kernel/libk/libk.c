@@ -14,6 +14,18 @@
         ((type *)dest)[i] = ((type *)src)[i]; \
     }
 
+#define DEF_HEX(n) \
+    char *hex##n(uint##n##_t value, char *str) { \
+        for(int i = 0; i < (n >> 2); i++) { \
+            str[i] = "0123456789abcdef"[value & 0x0f]; \
+            value >>= 4; \
+        } \
+        \
+        str[n >> 2] = '\0'; \
+        \
+        return strrev(str); \
+    }
+
 void *memset(void *str, int c, size_t n) {
     size_t address = (size_t)str;
 
@@ -83,6 +95,7 @@ char *itoa(int value, char *str, int base) {
     const char *basebuf = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     bool minusSign = false;
+    size_t uvalue = value;
 
     if((base < 2) || (base > 36)) {
         return str;
@@ -92,13 +105,13 @@ char *itoa(int value, char *str, int base) {
 
     if((base == 10) && (value < 0)) {
         minusSign = true;
-        value = -value;
+        uvalue = -value;
     }
 
-    while(value) {
-        str[index++] = basebuf[value % base];
-        value /= base;
-    }
+    do {
+        str[index++] = basebuf[uvalue % base];
+        uvalue /= base;
+    } while(uvalue);
 
     if(minusSign) {
         str[index++] = '-';
@@ -108,3 +121,8 @@ char *itoa(int value, char *str, int base) {
 
     return strrev(str);
 }
+
+DEF_HEX(8);
+DEF_HEX(16);
+DEF_HEX(32);
+DEF_HEX(64);
