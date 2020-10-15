@@ -4,6 +4,9 @@
 #include "arch/i686/multiboot.h"
 #include "libk/libk.h"
 #include "tty/tty.h"
+#include "arch/i686/idt.h"
+#include "arch/i686/pic.h"
+#include "arch/i686/io.h"
 
 tty_t kernel_tty = {
     .x = 0,
@@ -69,7 +72,7 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
     multiboot_info_mmap_entry_t *memoryMapEntry = (multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr;
     size_t size = multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t);
     size_t free = 0;
-    char buffer[33];
+    char buffer[17];
 
     for(size_t i = 0; i < size; i++) {
         tty_puts(&kernel_tty, "addr=0x");
@@ -88,6 +91,20 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
     tty_puts(&kernel_tty, "\nTotal usable memory: ");
     tty_puts(&kernel_tty, itoa(free >> 10, buffer, 10));
     tty_puts(&kernel_tty, " KiB\n");
+    
+    tty_puts(&kernel_tty, "Initializing IDT... ");
+    idt_init();
+    tty_puts(&kernel_tty, "Done.\n");
 
-    halt();
+    tty_puts(&kernel_tty, "Initializing PIC... ");
+    pic_init();
+    tty_puts(&kernel_tty, "Done.\n");
+
+    tty_puts(&kernel_tty, "Enabling interrupts... ");
+    sti();
+    tty_puts(&kernel_tty, "Done.\n");
+
+    while(true) {
+        hlt();
+    }
 }

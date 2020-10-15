@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#define cli() asm volatile("cli" ::)
+#define sti() asm volatile("sti" ::)
+#define hlt() asm volatile("hlt" ::)
+
 static inline void outb(uint16_t port, uint8_t value) {
     asm volatile("outb %0, %1" : : "a"(value), "Nd"(port));
 }
@@ -47,13 +51,13 @@ static inline void cpuid(int code, uint32_t* a, uint32_t* d) {
 static inline uint64_t rdmsr(uint32_t msr_id) {
     uint64_t msr_value;
 
-    asm volatile("rdmsr" : "=A" (msr_value) : "c" (msr_id));
+    asm volatile("rdmsr" : "=A"(msr_value) : "c"(msr_id));
 
     return msr_value;
 }
 
 static inline void wrmsr(uint32_t msr_id, uint64_t msr_value) {
-    asm volatile("wrmsr" : : "c" (msr_id), "A" (msr_value));
+    asm volatile("wrmsr" : : "c"(msr_id), "A"(msr_value));
 }
 
 #endif

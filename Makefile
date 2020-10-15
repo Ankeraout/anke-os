@@ -10,16 +10,20 @@ KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreest
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
 
-KERNEL_SOURCES_ASM=$(SRCDIR)/kernel/arch/i686/multiboot.asm
+KERNEL_SOURCES_ASM=	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
+					$(SRCDIR)/kernel/arch/i686/isr.asm
 KERNEL_SOURCES_C=	$(SRCDIR)/kernel/main.c \
 				 	$(SRCDIR)/kernel/tty/tty.c \
-					$(SRCDIR)/kernel/libk/libk.c
+					$(SRCDIR)/kernel/libk/libk.c \
+					$(SRCDIR)/kernel/arch/i686/pic.c \
+					$(SRCDIR)/kernel/arch/i686/idt.c \
+					$(SRCDIR)/kernel/panic.c
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
 QEMU=qemu-system-x86_64
-QEMUFLAGS=-m 2 -serial stdio -d cpu_reset
+QEMUFLAGS=-m 2 -serial stdio -d cpu_reset --enable-kvm
 ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)
