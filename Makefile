@@ -17,7 +17,9 @@ KERNEL_SOURCES_C=	$(SRCDIR)/kernel/main.c \
 					$(SRCDIR)/kernel/libk/libk.c \
 					$(SRCDIR)/kernel/arch/i686/pic.c \
 					$(SRCDIR)/kernel/arch/i686/idt.c \
-					$(SRCDIR)/kernel/panic.c
+					$(SRCDIR)/kernel/panic.c \
+					$(SRCDIR)/kernel/mm/pmm.c \
+					$(SRCDIR)/kernel/debug.c
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf

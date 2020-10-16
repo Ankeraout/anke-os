@@ -7,6 +7,7 @@
 #include "arch/i686/idt.h"
 #include "arch/i686/pic.h"
 #include "arch/i686/io.h"
+#include "mm/pmm.h"
 
 tty_t kernel_tty = {
     .x = 0,
@@ -102,6 +103,10 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
 
     tty_puts(&kernel_tty, "Enabling interrupts... ");
     sti();
+    tty_puts(&kernel_tty, "Done.\n");
+
+    tty_puts(&kernel_tty, "Initializing PMM... ");
+    pmm_init((multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr, multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t));
     tty_puts(&kernel_tty, "Done.\n");
 
     while(true) {

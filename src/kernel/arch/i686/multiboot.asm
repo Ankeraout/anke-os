@@ -38,7 +38,7 @@ _start:
 .fillPageDirectory:
     mov ebx, VIRTUAL_TO_PHYSICAL_ADDR(kernel_pageDirectory)
     mov eax, VIRTUAL_TO_PHYSICAL_ADDR(kernel_bootstrapPageTable)
-    or eax, 0x0000008b
+    or eax, 0x0000000b
     mov [ebx], eax
     mov [ebx + 4 * 768], eax
 
@@ -111,6 +111,7 @@ kernel_stack_top:
 kernel_stack_bottom:
 
 align 4096
+global kernel_pageDirectory
 kernel_pageDirectory:
     resb 4096
 

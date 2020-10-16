@@ -1,6 +1,8 @@
 #ifndef __MULTIBOOT_H__
 #define __MULTIBOOT_H__
 
+#include <stdint.h>
+
 typedef struct {
     uint32_t flags;
     uint32_t mem_lower;
