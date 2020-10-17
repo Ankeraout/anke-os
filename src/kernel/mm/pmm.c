@@ -2,11 +2,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "panic.h"
 #include "arch/i686/io.h"
 #include "arch/i686/multiboot.h"
-#include "mm/pmm.h"
-#include "panic.h"
 #include "libk/libk.h"
+#include "mm/mm.h"
+#include "mm/pmm.h"
+#include "mm/vmm.h"
 
 #define VIRTUAL_TO_PHYSICAL_ADDR(address) ((address) - 0xc0000000)
 
@@ -22,25 +24,21 @@ extern whatever_t __kernel_start;
 // Kernel end symbol
 extern whatever_t __kernel_end;
 
-// Page table reserved for pmm use
-uint32_t pmm_pageTable[1024] __attribute__((aligned(0x1000)));
-
-// Page table index in the page directory
-int pmm_pageTableIndex = 0;
-
 // First free page number or -1 if none is available
 int pmm_freePageNumber = -1;
 
 void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength) {
+    // TODO: unmap the page table from page directory at the end
+
     bool freeSpaceFound = false;
 
     // Look for a free space in the page directory
-    for(int i = 0; i < 1024; i++) {
+    for(int i = 0xfff; i > 0xc00; i--) {
         if(!(kernel_pageDirectory[i] & 0x00000001)) {
             // Register page table
             // Write-through, Read/Write, Present
-            kernel_pageDirectory[i] = VIRTUAL_TO_PHYSICAL_ADDR((uint32_t)pmm_pageTable) | 0x0000000b;
-            pmm_pageTableIndex = i;
+            kernel_pageDirectory[i] = VIRTUAL_TO_PHYSICAL_ADDR((uint32_t)mm_pageTable) | 0x0000000b;
+            mm_pageTableIndex = i;
             freeSpaceFound = true;
             break;
         }
@@ -100,13 +98,15 @@ void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength)
 }
 
 void *pmm_alloc() {
+    // TODO: don't use mm_pageTable. Use a page table allocated by vmm instead
+
     if(pmm_freePageNumber == -1) {
         // No pages to allocate
         return NULL;
     }
 
     // Compute the address of the first page of the page table
-    uint32_t address = pmm_pageTableIndex << 22;
+    uint32_t address = mm_pageTableIndex << 22;
 
     // Save the allocated page number
     int allocatedPageNumber = pmm_freePageNumber;
@@ -115,7 +115,7 @@ void *pmm_alloc() {
     uint32_t allocatedPageAddress = allocatedPageNumber << 12;
 
     // Map the page
-    pmm_pageTable[0] = allocatedPageAddress | 0x0000000b;
+    mm_pageTable[0] = allocatedPageAddress | 0x0000000b;
 
     // Invalidate the corresponding page
     invlpg((void *)address);
@@ -124,7 +124,7 @@ void *pmm_alloc() {
     pmm_freePageNumber = *((int *)address);
 
     // Unmap the page
-    pmm_pageTable[0] = 0;
+    mm_pageTable[0] = 0;
 
     // Invalidate the corresponding page
     invlpg((void *)address);
@@ -134,14 +134,18 @@ void *pmm_alloc() {
 }
 
 void pmm_free(const void *addr) {
+    // TODO: don't use mm_pageTable. Use a page table allocated by vmm instead
+    // Note that this function is used by pmm_init(), and in this case it needs
+    // mm_pageTable.
+
     // Compute the page number of the page to free
     int pageNumber = ((uint32_t)addr) >> 12;
 
     // Compute the address of the first page of the page table
-    uint32_t address = pmm_pageTableIndex << 22;
+    uint32_t address = mm_pageTableIndex << 22;
 
     // Map the page
-    pmm_pageTable[0] = (pageNumber << 12) | 0x0000000b;
+    mm_pageTable[0] = (pageNumber << 12) | 0x0000000b;
     
     // Invalidate the corresponding page
     invlpg((void *)address);
@@ -150,7 +154,7 @@ void pmm_free(const void *addr) {
     *((int *)address) = pmm_freePageNumber;
 
     // Unmap the page
-    pmm_pageTable[0] = 0;
+    mm_pageTable[0] = 0;
 
     // Invalidate the page
     invlpg((void *)address);
