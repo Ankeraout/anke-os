@@ -33,7 +33,7 @@ void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength)
     bool freeSpaceFound = false;
 
     // Look for a free space in the page directory
-    for(int i = 0xfff; i > 0xc00; i--) {
+    for(int i = 0x3ff; i >= 0x300; i--) {
         if(!(kernel_pageDirectory[i] & 0x00000001)) {
             // Register page table
             // Write-through, Read/Write, Present

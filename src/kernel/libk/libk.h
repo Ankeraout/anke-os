@@ -14,6 +14,8 @@ void *memcpy(void *dest, const void* src, size_t n);
 size_t strlen(const char *str);
 char *strrev(char *str);
 char *itoa(int value, char *str, int base);
+void *malloc(size_t size);
+void free(const void *addr);
 
 DECL_HEX(8);
 DECL_HEX(16);

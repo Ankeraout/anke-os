@@ -4,8 +4,8 @@ SRCDIR=src
 BINDIR=bin
 
 KERNEL_CC=i686-elf-gcc -c
-KERNEL_LD=i686-elf-ld
-KERNEL_LDFLAGS=
+KERNEL_LD=i686-elf-gcc
+KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc
 KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
@@ -21,7 +21,9 @@ KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/arch/i686/pic.c \
 	$(SRCDIR)/kernel/arch/i686/idt.c \
 	$(SRCDIR)/kernel/libk/libk.c \
+	$(SRCDIR)/kernel/mm/mm.c \
 	$(SRCDIR)/kernel/mm/pmm.c \
+	$(SRCDIR)/kernel/mm/vmm.c \
 	$(SRCDIR)/kernel/tty/tty.c \
 
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
@@ -35,7 +37,7 @@ ISO=anke-os.iso
 all: $(KERNEL_EXEC)
 
 $(KERNEL_EXEC): $(BINDIR)/kernel $(KERNEL_OBJECTS)
-	$(KERNEL_LD) $(KERNEL_LDFLAGS) $(KERNEL_OBJECTS) -o $(KERNEL_EXEC) -T $(SRCDIR)/kernel/arch/i686/linker.ld
+	$(KERNEL_LD) -T $(SRCDIR)/kernel/arch/i686/linker.ld $(KERNEL_OBJECTS) $(KERNEL_LDFLAGS) -o $(KERNEL_EXEC)
 
 $(BINDIR)/kernel: $(BINDIR)
 	mkdir $(BINDIR)/kernel

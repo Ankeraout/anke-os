@@ -8,6 +8,7 @@
 #include "arch/i686/pic.h"
 #include "arch/i686/io.h"
 #include "mm/pmm.h"
+#include "mm/vmm.h"
 
 tty_t kernel_tty = {
     .x = 0,
@@ -17,6 +18,8 @@ tty_t kernel_tty = {
     .buf = (void *)0xc00b8000,
     .attr = 0x07
 };
+
+extern uint32_t kernel_pageDirectory[1024];
 
 void halt() {
     while(true) {
@@ -67,31 +70,6 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
         tty_puts(&kernel_tty, "The bootloader did not provide a memory map. System halted.\n");
         halt();
     }
-
-    tty_puts(&kernel_tty, "\nMemory map:\n");
-
-    multiboot_info_mmap_entry_t *memoryMapEntry = (multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr;
-    size_t size = multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t);
-    size_t free = 0;
-    char buffer[17];
-
-    for(size_t i = 0; i < size; i++) {
-        tty_puts(&kernel_tty, "addr=0x");
-        tty_puts(&kernel_tty, hex64(memoryMapEntry[i].base_addr, buffer));
-        tty_puts(&kernel_tty, " len=0x");
-        tty_puts(&kernel_tty, hex64(memoryMapEntry[i].length, buffer));
-        tty_puts(&kernel_tty, " type=");
-        tty_puts(&kernel_tty, itoa(memoryMapEntry[i].type, buffer, 10));
-        tty_putc(&kernel_tty, '\n');
-
-        if(memoryMapEntry[i].type == 1) {
-            free += memoryMapEntry[i].length;
-        }
-    }
-
-    tty_puts(&kernel_tty, "\nTotal usable memory: ");
-    tty_puts(&kernel_tty, itoa(free >> 10, buffer, 10));
-    tty_puts(&kernel_tty, " KiB\n");
     
     tty_puts(&kernel_tty, "Initializing IDT... ");
     idt_init();
@@ -108,6 +86,21 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
     tty_puts(&kernel_tty, "Initializing PMM... ");
     pmm_init((multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr, multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t));
     tty_puts(&kernel_tty, "Done.\n");
+
+    char buffer[100];
+    void *block = malloc(0x1000);
+    tty_puts(&kernel_tty, "malloc() call result: ");
+    tty_puts(&kernel_tty, hex32((uint32_t)block, buffer));
+    tty_puts(&kernel_tty, "\n");
+
+    *((uint32_t *)block) = 0x1BADB002;
+
+    tty_puts(&kernel_tty, "Write in malloc()ed block success.\n");
+    tty_puts(&kernel_tty, "Freeing block...\n");
+    free(block);
+    tty_puts(&kernel_tty, "Trying to write in block again (should raise an exception)... ");
+
+    *((uint32_t *)block) = 0x1BADB002;
 
     while(true) {
         hlt();

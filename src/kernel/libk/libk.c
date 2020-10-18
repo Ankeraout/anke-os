@@ -2,7 +2,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "panic.h"
+#include "arch/i686/io.h"
 #include "libk/libk.h"
+#include "mm/pmm.h"
+#include "mm/vmm.h"
 
 #define DEF_MEMSET(type) \
     for(size_t i = 0; i < n / sizeof(type); i++) { \
@@ -120,6 +124,41 @@ char *itoa(int value, char *str, int base) {
     str[index] = '\0';
 
     return strrev(str);
+}
+
+void *malloc(size_t size) {
+    // TODO: take size into consideration
+    UNUSED_PARAMETER(size);
+
+    void *paddr = pmm_alloc();
+
+    if(paddr == NULL) {
+        return NULL;
+    }
+
+    void *vaddr;
+    bool mapped = false;
+
+    while(!mapped) {
+        uint64_t timerValue = rdtsc();
+
+        uint32_t currentMallocAddress = (0xc0004000 + (timerValue % 0x3fc00000)) & 0xfffff000;
+
+        vaddr = (void *)currentMallocAddress;
+        currentMallocAddress += 0x00001000;
+        mapped = vmm_map(paddr, vaddr) == 0;
+
+        if(!mapped) {
+            char buffer[9];
+            kernel_panic(hex32((uint32_t)vaddr, buffer));
+        }
+    }
+
+    return vaddr;
+}
+
+void free(const void *addr) {
+    vmm_unmap(addr);
 }
 
 DEF_HEX(8);

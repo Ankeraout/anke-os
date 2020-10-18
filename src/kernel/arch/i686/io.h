@@ -40,7 +40,7 @@ static inline uint64_t rdtsc() {
     return returnValue;
 }
 
-static inline void invlpg(void* ptr) {
+static inline void invlpg(const void* ptr) {
     asm volatile("invlpg (%0)" : : "b"(ptr) : "memory");
 }
 
