@@ -21,6 +21,7 @@ KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/debug.c \
 	$(SRCDIR)/kernel/main.c \
 	$(SRCDIR)/kernel/panic.c \
+	$(SRCDIR)/kernel/acpi/rsdp.c \
 	$(SRCDIR)/kernel/arch/i686/idt.c \
 	$(SRCDIR)/kernel/arch/i686/pic.c \
 	$(SRCDIR)/kernel/libk/libk.c \
