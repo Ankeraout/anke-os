@@ -161,6 +161,21 @@ void free(const void *addr) {
     vmm_unmap(addr);
 }
 
+int memcmp(const void *str1, const void *str2, size_t n) {
+    for(size_t i = 0; i < n; i++) {
+        uint8_t x = ((uint8_t *)str1)[i];
+        uint8_t y = ((uint8_t *)str2)[i];
+
+        if(x < y) {
+            return -1;
+        } else if(x > y) {
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+
 DEF_HEX(8);
 DEF_HEX(16);
 DEF_HEX(32);

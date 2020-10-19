@@ -9,13 +9,14 @@
 #define DECL_HEX(n) \
     char *hex##n(uint##n##_t value, char *str)
 
-void *memset(void *str, int c, size_t n);
-void *memcpy(void *dest, const void* src, size_t n);
-size_t strlen(const char *str);
-char *strrev(char *str);
+void free(const void *addr);
 char *itoa(int value, char *str, int base);
 void *malloc(size_t size);
-void free(const void *addr);
+int memcmp(const void *str1, const void *str2, size_t n);
+void *memcpy(void *dest, const void* src, size_t n);
+void *memset(void *str, int c, size_t n);
+size_t strlen(const char *str);
+char *strrev(char *str);
 
 DECL_HEX(8);
 DECL_HEX(16);
