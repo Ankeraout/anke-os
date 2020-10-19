@@ -7,24 +7,28 @@ KERNEL_CC=i686-elf-gcc -c
 KERNEL_LD=i686-elf-gcc
 KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc
 KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
+KERNEL_INTHLDR_CFLAGS=-mgeneral-regs-only
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
 
 KERNEL_SOURCES_ASM=	\
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
-	$(SRCDIR)/kernel/arch/i686/isr.asm \
+
+KERNEL_SOURCES_C_INTHDLR=	\
+	$(SRCDIR)/kernel/arch/i686/isr.c
 
 KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/debug.c \
 	$(SRCDIR)/kernel/main.c \
 	$(SRCDIR)/kernel/panic.c \
-	$(SRCDIR)/kernel/arch/i686/pic.c \
 	$(SRCDIR)/kernel/arch/i686/idt.c \
+	$(SRCDIR)/kernel/arch/i686/pic.c \
 	$(SRCDIR)/kernel/libk/libk.c \
 	$(SRCDIR)/kernel/mm/mm.c \
 	$(SRCDIR)/kernel/mm/pmm.c \
 	$(SRCDIR)/kernel/mm/vmm.c \
 	$(SRCDIR)/kernel/tty/tty.c \
+	$(KERNEL_SOURCES_C_INTHDLR)
 
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
 
@@ -47,7 +51,12 @@ $(BINDIR):
 
 # Generic rule for compiling C code
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.c
-	$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@
+	if [ "$(KERNEL_SOURCES_C_INTHDLR)" == *"$<"* ]; then \
+		$(KERNEL_CC) $(KERNEL_CFLAGS) $(KERNEL_INTHLDR_CFLAGS) $< -o $@; \
+		echo "Compiled with interrupt handler flags"; \
+	else \
+		$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@; \
+	fi
 
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.asm
 	$(KERNEL_AS) $(KERNEL_ASFLAGS) $< -o $@

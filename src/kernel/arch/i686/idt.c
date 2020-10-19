@@ -26,8 +26,8 @@ typedef struct {
 // IDT itself
 idt_entry_t idt[256];
 
-extern void isr_handler0_7();
-extern void isr_handler8_15();
+extern void isr_handler0_7(void *arg);
+extern void isr_handler8_15(void *arg);
 
 void idt_initEntry(idt_entry_t *entry, void *interruptHandler, bool present, int dpl, bool storageSegment, int gateType, uint16_t codeSegmentSelector) {
     uint32_t offset = (uint32_t)interruptHandler;
@@ -68,6 +68,9 @@ void idt_init() {
     for(int i = 48; i < 256; i++) {
         idt_initEntry(&idt[i], NULL, false, 0, 0, 0, 0);
     }
+
+    // Kernel service ISR (todo: enable and set function)
+    idt_initEntry(&idt[0x80], NULL, false, 0, false, GATE_INT32, 0x08);
 
     // Load IDT
     lidt(idt, sizeof(idt) - 1);
