@@ -83,10 +83,13 @@ void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength)
                     kernelEndPageNumber--;
                 }
 
-                // Don't mark kernel pages as free
+                // Don't mark kernel pages or pages < 1MB as free
                 if(
-                    (pageNumber >= kernelStartPageNumber)
-                    && (pageNumber <= kernelEndPageNumber)
+                    (
+                        (pageNumber >= kernelStartPageNumber)
+                        && (pageNumber <= kernelEndPageNumber)
+                    )
+                    || pageNumber < 0x100
                 ) {
                     continue;
                 }
