@@ -5,6 +5,7 @@
 #include "panic.h"
 #include "arch/i686/io.h"
 #include "libk/libk.h"
+#include "mm/mm.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
 
@@ -174,6 +175,22 @@ int memcmp(const void *str1, const void *str2, size_t n) {
     }
     
     return 0;
+}
+
+char *strncpy(char *dst, const char *src, size_t num) {
+    size_t i = 0;
+
+    for(i = 0; i < num; i++) {
+        if(src[i]) {
+            dst[i] = src[i];
+        } else {
+            break;
+        }
+    }
+
+    dst[i] = '\0';
+
+    return dst;
 }
 
 DEF_HEX(8);
