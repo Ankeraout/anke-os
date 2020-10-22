@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "debug.h"
 #include "panic.h"
 #include "arch/i686/io.h"
 #include "arch/i686/multiboot.h"
@@ -49,8 +50,21 @@ void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength)
         kernel_panic("pmm_init(): Could not register page table.");
     }
 
+    kernel_debug("\n\nSystem memory map:\n");
+    kernel_debug("Base             | End              | Type\n");
+    kernel_debug("-----------------+------------------+-----\n");
+
     // Free all usable
     for(int i = 0; i < memoryMapLength; i++) {
+        char buffer[100];
+
+        kernel_debug(hex64(memoryMap[i].base_addr, buffer));
+        kernel_debug(" | ");
+        kernel_debug(hex64(memoryMap[i].base_addr + memoryMap[i].length - 1, buffer));
+        kernel_debug(" | ");
+        kernel_debug(itoa(memoryMap[i].type, buffer, 10));
+        kernel_debug("\n");
+
         // Useless to try to map reserved or >4GiB RAM
         if(
             (memoryMap[i].type == 1)
@@ -98,6 +112,8 @@ void pmm_init(const multiboot_info_mmap_entry_t *memoryMap, int memoryMapLength)
             }
         }
     }
+
+    kernel_debug("\n");
 }
 
 void *pmm_alloc() {
