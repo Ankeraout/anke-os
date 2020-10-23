@@ -47,7 +47,7 @@ void *vmm_map(const void *paddr, size_t n) {
         return NULL;
     }
 
-    if(vmm_map2(paddr, vaddr, n)) {
+    if(!vmm_map2(paddr, vaddr, n)) {
         vmm_free(vaddr);
         return NULL;
     } else {
