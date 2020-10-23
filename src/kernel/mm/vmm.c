@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -8,6 +9,13 @@
 #include "mm/pmm.h"
 #include "mm/vmm.h"
 
+#define PAGETABLE_FLAG_PRESENT 0x00000001
+#define PAGETABLE_FLAG_MAPPED PAGETABLE_FLAG_PRESENT
+#define PAGEDIRECTORY_FLAG_PRESENT PAGETABLE_FLAG_PRESENT
+#define PAGETABLE_FLAG_LASTMAP 0x00000200
+#define PAGETABLE_FLAG_ALLOCATED 0x00000400
+#define PAGETABLE_FLAG_LASTALLOC 0x00000800
+
 #define VIRTUAL_TO_PHYSICAL_ADDR(address) ((address) - 0xc0000000)
 
 // When we don't care about the type
@@ -16,164 +24,352 @@ typedef int whatever_t;
 // Declaration of the kernel page directory
 extern uint32_t kernel_pageDirectory[1024];
 
-/**
- *  Summary:
- *      Returns the page table entry for the given virtual memory address. If
- *      there is no page table mapped for this address in the page directory,
- *      then this function will return 0.
- * 
- *  Args:
- *      - addr: The virtual address for which to get the page table entry.
- * 
- *  Returns:
- *      The page table entry for the given virtual address.
- */
-uint32_t vmm_getPageTableEntry(const void *addr) {
-    uint32_t address32 = (uint32_t)addr;
-    uint32_t pageDirectoryIndex = address32 >> 22;
-    uint32_t pageTableIndex = (address32 >> 12) & 0x000003ff;
-    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | 0x00001000);
+static inline void invalidTemporary() {
+    invlpg((void *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12)));
+}
 
-    // Present flag set in page directory entry
-    if(kernel_pageDirectory[pageDirectoryIndex] & 0x00000001) {
-        // Map the page table to the temporary area
-        mm_pageTable[1] = (kernel_pageDirectory[pageDirectoryIndex] & 0xfffff000) | 0x0000000b;
+static inline void vmm_mapTemporary(void *paddr) {
+    mm_pageTable[MM_PAGETABLEINDEX_VMM] = ((uint32_t)paddr & 0xfffff000) | 0x0000000b;
+    invalidTemporary();
+}
 
-        // Invalidate the TLB cache
-        invlpg(pageTable);
+static inline void vmm_unmapTemporary() {
+    mm_pageTable[MM_PAGETABLEINDEX_VMM] = 0;
+    invalidTemporary();
+}
 
-        // Read the value
-        uint32_t pageTableEntryValue = pageTable[pageTableIndex];
+void *vmm_map(const void *paddr, size_t n) {
+    void *vaddr = vmm_alloc(n);
 
-        // Unmap the page table from the temporary area
-        mm_pageTable[1] = 0;
+    if(!vaddr) {
+        return NULL;
+    }
 
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-
-        // Return the value
-        return pageTableEntryValue;
+    if(vmm_map2(paddr, vaddr, n)) {
+        vmm_free(vaddr);
+        return NULL;
     } else {
-        return 0;
+        return vaddr;
     }
 }
 
-int vmm_map(const void *paddr, const void *vaddr) {
-    uint32_t address32 = (uint32_t)vaddr;
-    uint32_t pageDirectoryIndex = address32 >> 22;
-    uint32_t pageTableIndex = (address32 >> 12) & 0x000003ff;
-    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | 0x00001000);
+static inline int vmm_map2_checkPageDirectoryEntryExists(size_t pageDirectoryIndex) {
+    if(!(kernel_pageDirectory[pageDirectoryIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
+        void *newPageTable = pmm_alloc();
 
-    // Check if there is a page directory entry for this address. If none,
-    // create a new page table and map it.
-    if(!(kernel_pageDirectory[pageDirectoryIndex] & 0x00000001)) {
-        // Allocate a new page for the new page table
-        void *newPageTable_p = pmm_alloc();
-
-        if(!newPageTable_p) {
-            // Page allocation failed
+        if(!newPageTable) {
             return 1;
+        } else {
+            vmm_mapTemporary(newPageTable);
+
+            kernel_pageDirectory[pageDirectoryIndex] = ((uint32_t)newPageTable) | 0x0000000b;
         }
-
-        // Map the page table to the temporary area
-        mm_pageTable[1] = (((uint32_t)newPageTable_p) & 0xfffff000) | 0x0000000b;
-
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-
-        // Clear the page table
-        memset(pageTable, 0, 0x1000);
-
-        // Map the page in the page table
-        pageTable[pageTableIndex] = (((uint32_t)paddr) & 0xfffff000) | 0x0000000b;
-
-        // Unmap the page table from the temporary area
-        mm_pageTable[1] = 0;
-
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-
-        // Map the page table in the page directory
-        kernel_pageDirectory[pageDirectoryIndex] = ((uint32_t)newPageTable_p) | 0x0000000b;
-    } else {
-        // Map the page table to the temporary area
-        mm_pageTable[1] = (kernel_pageDirectory[pageDirectoryIndex] & 0xfffff000) | 0x0000000b;
-
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-
-        // Check the present flag in the page table entry
-        if(pageTable[pageTableIndex] & 0x00000001) {
-            // Unmap the page table from the temporary area
-            mm_pageTable[1] = 0;
-
-            // Invalidate the TLB cache
-            invlpg(pageTable);
-            
-            // A page was already mapped here
-            return 1;
-        }
-
-        // Map the page in the page table
-        pageTable[pageTableIndex] = (((uint32_t)paddr) & 0xfffff000) | 0x0000000b;
-
-        // Unmap the page table from the temporary area
-        mm_pageTable[1] = 0;
-
-        // Invalidate the TLB cache
-        invlpg(pageTable);
     }
 
-    // Invalidate the TLB cache
-    invlpg(vaddr);
+    return 0;
+}
 
-    // No errors occurred.
+void *vmm_map2(const void *paddr, void *vaddr, size_t n) {
+    size_t pageDirectoryIndex = ((size_t)vaddr) >> 22;
+    size_t pageTableIndex = (((size_t)vaddr) >> 12) & 0x3ff;
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+
+    if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+        return NULL;
+    }
+
+    for(size_t i = 0; i < n; i++) {
+        pageTable[pageTableIndex] = (((uint32_t)paddr + i * MM_PAGE_SIZE) & 0xfffff000) | 0x0000000b;
+
+        if(i == n - 1) {
+            pageTable[pageTableIndex] |= PAGETABLE_FLAG_LASTMAP;
+        }
+
+        invlpg((const void *)((uint32_t)vaddr + i * MM_PAGE_SIZE));
+
+        pageTableIndex++;
+
+        if(pageTableIndex == 1024) {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+            
+            if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                vmm_unmap2(vaddr, i + 1);
+                return NULL;
+            }
+        }
+
+        if(pageDirectoryIndex == 1024) {
+            pageDirectoryIndex = 0;
+            
+            if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                vmm_unmap2(vaddr, i + 1);
+                return NULL;
+            }
+        }
+    }
+
+    return vaddr;
+}
+
+static inline int vmm_unmap_checkPageDirectoryEntryExists(size_t pageDirectoryIndex) {
+    if(!(kernel_pageDirectory[pageDirectoryIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
+        return 1;
+    }
+
+    vmm_mapTemporary((void *)kernel_pageDirectory[pageDirectoryIndex]);
+
     return 0;
 }
 
 int vmm_unmap(const void *vaddr) {
-    uint32_t address32 = (uint32_t)vaddr;
-    uint32_t pageDirectoryIndex = address32 >> 22;
-    uint32_t pageTableIndex = (address32 >> 12) & 0x000003ff;
-    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | 0x00001000);
+    size_t pageDirectoryIndex = ((size_t)vaddr) >> 22;
+    size_t pageTableIndex = (((size_t)vaddr) >> 12) & 0x3ff;
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+    bool lastUnmapped = false;
 
-    // Present flag set in page directory entry
-    if(kernel_pageDirectory[pageDirectoryIndex] & 0x00000001) {
-        // Map the page table to the temporary area
-        mm_pageTable[1] = (kernel_pageDirectory[pageDirectoryIndex] & 0xfffff000) | 0x0000000b;
+    if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+        // Error: we didn't find "last map" flag
+        return 1;
+    }
 
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-
-        int returnValue = 0;
-
-        if(pageTable[pageTableIndex] & 0x00000001) {
-            pageTable[pageTableIndex] = 0;
-        } else {
-            returnValue = 1;
+    while(!lastUnmapped) {
+        if(pageTable[pageTableIndex] & PAGETABLE_FLAG_LASTMAP) {
+            lastUnmapped = true;
         }
 
-        // Unmap the page table from the temporary area
-        mm_pageTable[1] = 0;
+        pageTable[pageTableIndex] = 0;
 
-        // Invalidate the TLB cache
-        invlpg(pageTable);
-        invlpg(vaddr);
+        invlpg((const void *)vaddr);
 
-        // Return the value
-        return returnValue;
-    } else {
+        if(!lastUnmapped) {
+            vaddr += MM_PAGE_SIZE;
+
+            pageTableIndex++;
+
+            if(pageTableIndex == 1024) {
+                pageTableIndex = 0;
+                pageDirectoryIndex++;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last map" flag
+                    return 1;
+                }
+            }
+
+            if(pageDirectoryIndex == 1024) {
+                pageDirectoryIndex = 0;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last map" flag
+                    return 1;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+int vmm_unmap2(const void *vaddr, size_t n) {
+    size_t pageDirectoryIndex = ((size_t)vaddr) >> 22;
+    size_t pageTableIndex = (((size_t)vaddr) >> 12) & 0x3ff;
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+    bool lastUnmapped = false;
+    size_t unmappedPageCount = 0;
+
+    if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+        // Error: we didn't find "last map" flag
         return 1;
+    }
+
+    while(unmappedPageCount < n) {
+        if(pageTable[pageTableIndex] & PAGETABLE_FLAG_LASTMAP) {
+            lastUnmapped = true;
+        }
+
+        unmappedPageCount++;
+
+        pageTable[pageTableIndex] = 0;
+
+        invlpg((const void *)vaddr);
+
+        if((!lastUnmapped) && (unmappedPageCount < n)) {
+            vaddr += MM_PAGE_SIZE;
+
+            pageTableIndex++;
+
+            if(pageTableIndex == 1024) {
+                pageTableIndex = 0;
+                pageDirectoryIndex++;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last map" flag
+                    return 1;
+                }
+            }
+
+            if(pageDirectoryIndex == 1024) {
+                pageDirectoryIndex = 0;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last map" flag
+                    return 1;
+                }
+            }
+        }
+
+        if(lastUnmapped && (unmappedPageCount < n)) {
+            // Error: we unmapped less than asked
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static inline void *vmm_alloc_findFreeBlock(size_t n) {
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+    size_t address = 0xc0000000;
+    size_t pageDirectoryIndex = address >> 22;
+    size_t pageTableIndex = (address >> 12) & 0x3ff;
+    size_t freePages = 0;
+
+    bool found = false;
+
+    while((!found) && (pageDirectoryIndex < 0x00000400)) {
+        if(!(kernel_pageDirectory[pageDirectoryIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
+            freePages += 1024;
+        } else {
+            vmm_mapTemporary((void *)kernel_pageDirectory[pageDirectoryIndex]);
+
+            while((pageTableIndex < 1024) && (freePages < n)) {
+                if(!(pageTable[pageTableIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
+                    freePages++;
+                } else {
+                    freePages = 0;
+                    address = ((pageDirectoryIndex << 22) | (pageTableIndex << 12)) + MM_PAGE_SIZE;
+                }
+
+                pageTableIndex++;
+            }
+        }
+
+        if(freePages >= n) {
+            found = true;
+        } else {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+        }
+    }
+
+    if(found) {
+        return (void *)address;
+    } else {
+        return NULL;
     }
 }
 
-void *vmm_alloc(int pageCount) {
-    // TODO
-    UNUSED_PARAMETER(pageCount);
-    return NULL;
+void *vmm_alloc(size_t n) {
+    // Look for a free block at least n pages wide
+    void *vaddr = vmm_alloc_findFreeBlock(n);
+
+    if(!vaddr) {
+        return NULL;
+    }
+
+    // Mark all pages as allocated
+    size_t pageDirectoryIndex = ((size_t)vaddr) >> 22;
+    size_t pageTableIndex = (((size_t)vaddr) >> 12) & 0x3ff;
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+
+    if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+        return NULL;
+    }
+
+    for(size_t i = 0; i < n; i++) {
+        pageTable[pageTableIndex] |= PAGETABLE_FLAG_ALLOCATED;
+
+        if(i == n - 1) {
+            pageTable[pageTableIndex] |= PAGETABLE_FLAG_LASTALLOC;
+        }
+
+        pageTableIndex++;
+
+        if(pageTableIndex == 1024) {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+            
+            if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                vmm_free(vaddr);
+                return NULL;
+            }
+        }
+
+        if(pageDirectoryIndex == 1024) {
+            pageDirectoryIndex = 0;
+            
+            if(vmm_map2_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                vmm_free(vaddr);
+                return NULL;
+            }
+        }
+    }
+
+    return vaddr;
 }
 
-void vmm_free(const void *addr) {
-    // TODO
-    UNUSED_PARAMETER(addr);
+int vmm_free(const void *vaddr) {
+    size_t pageDirectoryIndex = ((size_t)vaddr) >> 22;
+    size_t pageTableIndex = (((size_t)vaddr) >> 12) & 0x3ff;
+    uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
+    bool lastFreed = false;
+
+    if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+        // Error: we didn't find "last map" flag
+        return 1;
+    }
+
+    while(!lastFreed) {
+        // Make sure the entry is allocated
+        if(!(pageTable[pageTableIndex] & PAGETABLE_FLAG_ALLOCATED)) {
+            // Error: tried to free an unallocated space
+            return 1;
+        }
+
+        if(pageTable[pageTableIndex] & PAGETABLE_FLAG_LASTALLOC) {
+            lastFreed = true;
+        }
+
+        pageTable[pageTableIndex] &= ~(PAGETABLE_FLAG_LASTALLOC | PAGETABLE_FLAG_ALLOCATED | PAGETABLE_FLAG_LASTMAP | PAGETABLE_FLAG_MAPPED);
+
+        invlpg((const void *)vaddr);
+
+        if(!lastFreed) {
+            vaddr += MM_PAGE_SIZE;
+
+            pageTableIndex++;
+
+            if(pageTableIndex == 1024) {
+                pageTableIndex = 0;
+                pageDirectoryIndex++;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last alloc" flag
+                    return 1;
+                }
+            }
+
+            if(pageDirectoryIndex == 1024) {
+                pageDirectoryIndex = 0;
+                
+                if(vmm_unmap_checkPageDirectoryEntryExists(pageDirectoryIndex)) {
+                    // Error: we didn't find "last alloc" flag
+                    return 1;
+                }
+            }
+        }
+    }
+
+    return 0;
 }

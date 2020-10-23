@@ -128,38 +128,32 @@ char *itoa(int value, char *str, int base) {
 }
 
 void *malloc(size_t size) {
-    // TODO: take size into consideration
-    UNUSED_PARAMETER(size);
+    size_t nbPages = (size + MM_PAGE_SIZE - 1) / MM_PAGE_SIZE;
 
-    void *paddr = pmm_alloc();
+    void *vaddr = vmm_alloc(nbPages);
 
-    if(paddr == NULL) {
+    kernel_debug("vmm_alloc() returned\n");
+
+    if(vaddr == NULL) {
         return NULL;
     }
 
-    void *vaddr;
-    bool mapped = false;
+    for(size_t i = 0; i < nbPages; i++) {
+        void *paddr = pmm_alloc();
 
-    while(!mapped) {
-        uint64_t timerValue = rdtsc();
-
-        uint32_t currentMallocAddress = (0xc0004000 + (timerValue % 0x3fc00000)) & 0xfffff000;
-
-        vaddr = (void *)currentMallocAddress;
-        currentMallocAddress += 0x00001000;
-        mapped = vmm_map(paddr, vaddr) == 0;
-
-        if(!mapped) {
-            char buffer[9];
-            kernel_panic(hex32((uint32_t)vaddr, buffer));
+        if(!paddr) {
+            vmm_free(vaddr);
         }
+
+        vmm_map2(paddr, vaddr + i * MM_PAGE_SIZE, 1);
     }
 
     return vaddr;
 }
 
 void free(const void *addr) {
-    vmm_unmap(addr);
+    // TODO: free physical pages
+    vmm_free(addr);
 }
 
 int memcmp(const void *str1, const void *str2, size_t n) {
