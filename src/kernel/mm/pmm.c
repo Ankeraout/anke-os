@@ -142,6 +142,9 @@ void *pmm_alloc() {
     // Extract the next page number from it
     pmm_freePageNumber = *((int *)address);
 
+    // Clean the page
+    memset((void *)address, 0, MM_PAGE_SIZE);
+
     // Unmap the page
     mm_pageTable[0] = 0;
 

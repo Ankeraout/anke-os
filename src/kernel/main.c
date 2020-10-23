@@ -1,14 +1,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "arch/i686/multiboot.h"
-#include "libk/libk.h"
-#include "tty/tty.h"
 #include "arch/i686/idt.h"
-#include "arch/i686/pic.h"
 #include "arch/i686/io.h"
+#include "arch/i686/multiboot.h"
+#include "arch/i686/pic.h"
+#include "libk/libk.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
+#include "tty/tty.h"
 
 tty_t kernel_tty = {
     .x = 0,
@@ -87,6 +87,8 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
     pmm_init((multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr, multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t));
     tty_puts(&kernel_tty, "Done.\n");
 
+    tty_puts(&kernel_tty, "Testing VMM... ");
+
     char buffer[100];
     void *block = malloc(0x1000);
     tty_puts(&kernel_tty, "malloc() call result: ");
@@ -95,12 +97,14 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
 
     *((uint32_t *)block) = 0x1BADB002;
 
-    tty_puts(&kernel_tty, "Write in malloc()ed block success.\n");
+    tty_puts(&kernel_tty, "Write in allocated block success.\n");
     tty_puts(&kernel_tty, "Freeing block...\n");
     free(block);
     tty_puts(&kernel_tty, "Trying to write in block again (should raise an exception)... ");
 
     *((uint32_t *)block) = 0x1BADB002;
+
+    tty_puts(&kernel_tty, "No exception.\n");
 
     while(true) {
         hlt();

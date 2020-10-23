@@ -132,8 +132,6 @@ void *malloc(size_t size) {
 
     void *vaddr = vmm_alloc(nbPages);
 
-    kernel_debug("vmm_alloc() returned\n");
-
     if(vaddr == NULL) {
         return NULL;
     }
