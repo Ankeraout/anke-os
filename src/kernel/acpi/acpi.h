@@ -1,6 +1,7 @@
 #ifndef __ACPI_H__
 #define __ACPI_H__
 
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -22,7 +23,7 @@ typedef struct {
  *  Returns:
  *      0 if the checksum is correct, any other value otherwise.
  */
-int acpi_sdt_checkChecksum(const acpi_sdt_header_t *acpi_sdt_header);
+bool acpi_sdt_checkChecksum(const acpi_sdt_header_t *acpi_sdt_header);
 
 /**
  *  Summary:

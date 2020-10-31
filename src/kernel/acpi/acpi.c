@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -17,7 +18,7 @@ const rsdt_t *rsdt = NULL;
 size_t fadt_physicalAddress = 0;
 const fadt_t *fadt = NULL;
 
-int acpi_sdt_checkChecksum(const acpi_sdt_header_t *acpi_sdt_header) {
+bool acpi_sdt_checkChecksum(const acpi_sdt_header_t *acpi_sdt_header) {
     uint8_t checksum = 0;
 
     for(size_t i = 0; i < acpi_sdt_header->length; i++) {
@@ -72,14 +73,11 @@ int acpi_init() {
         const acpi_sdt_header_t *sdt = (const acpi_sdt_header_t *)acpi_mapSDT((const acpi_sdt_header_t *)rsdt->sdt_ptr[i]);
 
         kernel_debug("  - ");
-        strncpy(buffer, (const char *)sdt->signature, 4);
-        kernel_debug(buffer);
-
-        kernel_debug(" [0x");
-        kernel_debug(hex32((uint32_t)sdt, buffer));
-        kernel_debug("]");
+        kernel_debug(strncpy(buffer, (const char *)sdt->signature, 4));
 
         if(acpi_sdt_checkChecksum(sdt)) {
+            
+        } else {
             kernel_debug(" (invalid checksum)");
         }
 
