@@ -3,17 +3,19 @@
 
 #include <stdint.h>
 
-/**
- * ACPI 2.0 RSDP
- */
 typedef struct {
     uint8_t signature[8]; // "RSD PTR "
     uint8_t checksum;
     uint8_t oem_id[6];
     uint8_t revision;
     uint32_t rsdt_addr;
+} __attribute__((packed)) rsdp1_t;
 
-    // The next fields are only valid if revision == 2
+/**
+ * ACPI 2.0 RSDP
+ */
+typedef struct {
+    rsdp1_t rsdp1;
     uint32_t length;
     uint64_t xsdt_addr;
     uint8_t extendedChecksum;
