@@ -97,6 +97,9 @@ _start:
 
 section .text
 .higherHalfStart:
+.unmapLowerMemory:
+    mov dword [kernel_pageDirectory], 0
+
 .setupStack:
     mov esp, kernel_stack_top
 
