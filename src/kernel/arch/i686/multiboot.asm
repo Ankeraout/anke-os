@@ -14,7 +14,6 @@
 section .multiboot.data
 align 4
 saved_eax: dd 0
-saved_ebx: dd 0
 
 section .multiboot.text
 
@@ -30,11 +29,35 @@ _start:
 .saveRegisters:
     ; Save EAX and EBX for later
     mov [saved_eax], eax
-    mov [saved_ebx], ebx
+
+.copyMultibootInfo:
+    mov edi, VIRTUAL_TO_PHYSICAL_ADDR(kernel_multibootInfo)
+    mov esi, ebx
+    mov ecx, 116 << 2
+    repz movsd
+
+.copyMemoryMap:
+    ; Determine memory map length
+    lea ebp, [ebx + 44]
+    mov ecx, [ebp]
+    cmp ecx, 4096
+    ja .copyMemoryMap_shrink
+
+.copyMemoryMap_definiteSize:
+    mov [VIRTUAL_TO_PHYSICAL_ADDR(kernel_memoryMapLength)], ecx
+    mov esi, [ebp + 4]
+    mov edi, VIRTUAL_TO_PHYSICAL_ADDR(kernel_memoryMap)
+    shr ecx, 2
+    repz movsd
+    jmp .fillPageDirectory
+
+.copyMemoryMap_shrink:
+    mov ecx, 4080
+    jmp .copyMemoryMap_definiteSize
 
     ; Map the page table at index 0 and 768 of the page directory.
     ; Index 0 will map 0x00000000-0x003fffff and index 768 will map 0xc0000000-
-    ; 0xc03fffff.
+    ; 0xc03fffff. 
 .fillPageDirectory:
     mov ebx, VIRTUAL_TO_PHYSICAL_ADDR(kernel_pageDirectory)
     mov eax, VIRTUAL_TO_PHYSICAL_ADDR(kernel_bootstrapPageTable)
@@ -66,7 +89,6 @@ _start:
     mov cr0, eax
 
 .loadSavedRegisters:
-    mov ebx, [saved_ebx]
     mov edx, [saved_eax] ;We load it in EDX for now because EAX is used later.
 
 .jumpToHigherHalf:
@@ -94,7 +116,6 @@ section .text
     mov eax, edx
 
 .callKernel:
-    push ebx
     push eax
     call kernel_main
 
@@ -117,6 +138,21 @@ kernel_pageDirectory:
 
 kernel_bootstrapPageTable:
     resb 4096
+
+align 4
+global kernel_memoryMap
+kernel_memoryMap:
+    resb 4096
+
+align 4
+global kernel_memoryMapLength
+kernel_memoryMapLength:
+    resd 1
+
+align 4
+global kernel_multibootInfo
+kernel_multibootInfo:
+    resb 116
 
 section .rodata
 kernel_gdt:

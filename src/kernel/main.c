@@ -10,6 +10,11 @@
 #include "mm/vmm.h"
 #include "tty/tty.h"
 
+extern uint32_t kernel_pageDirectory[1024];
+extern multiboot_info_t kernel_multibootInfo;
+extern multiboot_info_mmap_entry_t kernel_memoryMap[];
+extern uint32_t kernel_memoryMapLength;
+
 tty_t kernel_tty = {
     .x = 0,
     .y = 0,
@@ -19,8 +24,6 @@ tty_t kernel_tty = {
     .attr = 0x07
 };
 
-extern uint32_t kernel_pageDirectory[1024];
-
 void halt() {
     while(true) {
         asm("cli\n \
@@ -28,9 +31,7 @@ void halt() {
     }
 }
 
-void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_info) {
-    UNUSED_PARAMETER(multiboot_info);
-
+void kernel_main(uint32_t multiboot_magic) {
     tty_cls(&kernel_tty);
     kernel_tty.attr = 0x0f;
     
@@ -57,15 +58,15 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
 
     tty_puts(&kernel_tty, "Welcome to AnkeOS!");
 
-    if(multiboot_info->flags & (1 << 9)) {
+    if(kernel_multibootInfo.flags & (1 << 9)) {
         tty_puts(&kernel_tty, " (booted using ");
-        tty_puts(&kernel_tty, (char *)multiboot_info->boot_loader_name);
+        tty_puts(&kernel_tty, (char *)kernel_multibootInfo.boot_loader_name);
         tty_puts(&kernel_tty, ")");
     }
 
     tty_putc(&kernel_tty, '\n');
 
-    if(!(multiboot_info->flags & (1 << 6))) {
+    if(!(kernel_multibootInfo.flags & (1 << 6))) {
         kernel_tty.attr = 0x0c;
         tty_puts(&kernel_tty, "The bootloader did not provide a memory map. System halted.\n");
         halt();
@@ -84,27 +85,12 @@ void kernel_main(uint32_t multiboot_magic, const multiboot_info_t *multiboot_inf
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Initializing PMM... ");
-    pmm_init((multiboot_info_mmap_entry_t *)multiboot_info->mmap_addr, multiboot_info->mmap_length / sizeof(multiboot_info_mmap_entry_t));
+    pmm_init(kernel_memoryMap, kernel_memoryMapLength / sizeof(multiboot_info_mmap_entry_t));
     tty_puts(&kernel_tty, "Done.\n");
 
-    tty_puts(&kernel_tty, "Testing VMM... ");
-
-    char buffer[100];
-    void *block = malloc(0x1000);
-    tty_puts(&kernel_tty, "malloc() call result: ");
-    tty_puts(&kernel_tty, hex32((uint32_t)block, buffer));
-    tty_puts(&kernel_tty, "\n");
-
-    *((uint32_t *)block) = 0x1BADB002;
-
-    tty_puts(&kernel_tty, "Write in allocated block success.\n");
-    tty_puts(&kernel_tty, "Freeing block...\n");
-    free(block);
-    tty_puts(&kernel_tty, "Trying to write in block again (should raise an exception)... ");
-
-    *((uint32_t *)block) = 0x1BADB002;
-
-    tty_puts(&kernel_tty, "No exception.\n");
+    tty_puts(&kernel_tty, "Unmapping lower half kernel... ");
+    kernel_pageDirectory[0] = 0;
+    tty_puts(&kernel_tty, "Done.\n");
 
     while(true) {
         hlt();

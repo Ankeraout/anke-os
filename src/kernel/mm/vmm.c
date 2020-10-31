@@ -240,14 +240,14 @@ static inline void *vmm_alloc_findFreeBlock(size_t n) {
 
     bool found = false;
 
-    while((!found) && (pageDirectoryIndex < 0x00000400)) {
+    while((!found) && (pageDirectoryIndex < 1024)) {
         if(!(kernel_pageDirectory[pageDirectoryIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
             freePages += 1024;
         } else {
             vmm_mapTemporary((void *)kernel_pageDirectory[pageDirectoryIndex]);
 
             while((pageTableIndex < 1024) && (freePages < n)) {
-                if(!(pageTable[pageTableIndex] & PAGEDIRECTORY_FLAG_PRESENT)) {
+                if(!(pageTable[pageTableIndex] & PAGETABLE_FLAG_PRESENT)) {
                     freePages++;
                 } else {
                     freePages = 0;
