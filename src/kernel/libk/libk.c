@@ -185,6 +185,18 @@ char *strncpy(char *dst, const char *src, size_t num) {
     return dst;
 }
 
+int strncmp(const char *str1, const char *str2, size_t num) {
+    for(size_t i = 0; i < num; i++) {
+        if(*str1 < *str2) {
+            return -1;
+        } else if(*str1 > *str2) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 DEF_HEX(8);
 DEF_HEX(16);
 DEF_HEX(32);

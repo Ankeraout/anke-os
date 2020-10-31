@@ -18,6 +18,7 @@ void *memset(void *str, int c, size_t n);
 size_t strlen(const char *str);
 char *strncpy(char *dst, const char *src, size_t num);
 char *strrev(char *str);
+int strncmp(const char *str1, const char *str2, size_t num);
 
 DECL_HEX(8);
 DECL_HEX(16);
