@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "acpi/acpi.h"
 #include "arch/i686/idt.h"
 #include "arch/i686/io.h"
 #include "arch/i686/multiboot.h"
@@ -58,12 +59,6 @@ void kernel_main(uint32_t multiboot_magic) {
 
     tty_puts(&kernel_tty, "Welcome to AnkeOS!");
 
-    if(kernel_multibootInfo.flags & (1 << 9)) {
-        tty_puts(&kernel_tty, " (booted using ");
-        tty_puts(&kernel_tty, (char *)kernel_multibootInfo.boot_loader_name);
-        tty_puts(&kernel_tty, ")");
-    }
-
     tty_putc(&kernel_tty, '\n');
 
     if(!(kernel_multibootInfo.flags & (1 << 6))) {
@@ -88,8 +83,8 @@ void kernel_main(uint32_t multiboot_magic) {
     pmm_init(kernel_memoryMap, kernel_memoryMapLength / sizeof(multiboot_info_mmap_entry_t));
     tty_puts(&kernel_tty, "Done.\n");
 
-    tty_puts(&kernel_tty, "Unmapping lower half kernel... ");
-    kernel_pageDirectory[0] = 0;
+    tty_puts(&kernel_tty, "Initializing ACPI...\n");
+    acpi_init();
     tty_puts(&kernel_tty, "Done.\n");
 
     while(true) {
