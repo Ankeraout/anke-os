@@ -4,7 +4,9 @@
 
 #include "debug.h"
 #include "acpi/acpi.h"
+#include "acpi/dsdt.h"
 #include "acpi/fadt.h"
+#include "acpi/madt.h"
 #include "acpi/rsdp.h"
 #include "acpi/rsdt.h"
 #include "libk/libk.h"
@@ -17,6 +19,12 @@ size_t rsdt_physicalAddress = 0;
 const rsdt_t *rsdt = NULL;
 size_t fadt_physicalAddress = 0;
 const fadt_t *fadt = NULL;
+size_t madt_physicalAddress = 0;
+const madt_t *madt = NULL;
+size_t dsdt_physicalAddress = 0;
+const dsdt_t *dsdt = NULL;
+size_t ssdt_physicalAddress = 0;
+const dsdt_t *ssdt = NULL;
 
 bool acpi_sdt_checkChecksum(const acpi_sdt_header_t *acpi_sdt_header) {
     uint8_t checksum = 0;
@@ -76,12 +84,36 @@ int acpi_init() {
         kernel_debug(strncpy(buffer, (const char *)sdt->signature, 4));
 
         if(acpi_sdt_checkChecksum(sdt)) {
-            
+            if(strncmp("FACP", (const char *)sdt->signature, 4) == 0) {
+                fadt = (const fadt_t *)sdt;
+                fadt_physicalAddress = rsdt->sdt_ptr[i];
+                dsdt_physicalAddress = fadt->dsdtPtr;
+                dsdt = (const dsdt_t *)acpi_mapSDT((const acpi_sdt_header_t *)dsdt_physicalAddress);
+
+                if(dsdt && !acpi_sdt_checkChecksum((const acpi_sdt_header_t *)dsdt)) {
+                    vmm_unmap(dsdt);
+                }
+            } else if(strncmp("APIC", (const char *)sdt->signature, 4) == 0) {
+                madt = (const madt_t *)sdt;
+                madt_physicalAddress = rsdt->sdt_ptr[i];
+            }
         } else {
             kernel_debug(" (invalid checksum)");
         }
 
         kernel_debug("\n");
+    }
+
+    if(fadt) {
+        kernel_debug("FADT was found\n");
+    }
+
+    if(madt) {
+        kernel_debug("MADT was found\n");
+    }
+
+    if(dsdt) {
+        kernel_debug("DSDT was found\n");
     }
 
     return 0;
@@ -100,10 +132,12 @@ const acpi_sdt_header_t *acpi_mapSDT(const acpi_sdt_header_t *paddr) {
     }
 
     // Map the header
-    acpi_sdt_header_t *header = (acpi_sdt_header_t *)(vmm_map((void *)paddr, pagesToMap) + offset);
+    acpi_sdt_header_t *header = (acpi_sdt_header_t *)vmm_map((void *)paddr, pagesToMap);
 
     if(!header) {
         return NULL;
+    } else {
+        header = (acpi_sdt_header_t *)(((size_t)header) + offset);
     }
 
     if(header->length < mappedSize) {
@@ -122,7 +156,7 @@ const acpi_sdt_header_t *acpi_mapSDT(const acpi_sdt_header_t *paddr) {
         if(!header) {
             return NULL;
         } else {
-            return header + offset;
+            return (acpi_sdt_header_t *)(((size_t)header) + offset);
         }
     }
 }

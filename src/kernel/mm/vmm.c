@@ -26,18 +26,18 @@ typedef int whatever_t;
 // Declaration of the kernel page directory
 extern uint32_t kernel_pageDirectory[1024];
 
-static inline void invalidTemporary() {
+static inline void invalidateTemporary() {
     invlpg((void *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12)));
 }
 
 static inline void vmm_mapTemporary(void *paddr) {
     mm_pageTable[MM_PAGETABLEINDEX_VMM] = ((uint32_t)paddr & 0xfffff000) | 0x0000000b;
-    invalidTemporary();
+    invalidateTemporary();
 }
 
 static inline void vmm_unmapTemporary() {
     mm_pageTable[MM_PAGETABLEINDEX_VMM] = 0;
-    invalidTemporary();
+    invalidateTemporary();
 }
 
 void *vmm_map(const void *paddr, size_t n) {
