@@ -6,6 +6,8 @@
 #include "arch/i686/io.h"
 #include "arch/i686/multiboot.h"
 #include "arch/i686/pic.h"
+#include "arch/i686/ring3.h"
+#include "arch/i686/tss.h"
 #include "libk/libk.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
@@ -30,6 +32,12 @@ void halt() {
         asm("cli\n \
             hlt");
     }
+}
+
+void usermodeFunc() {
+    tty_puts(&kernel_tty, "This was printed from ring 3.\n");
+
+    while(true);
 }
 
 void kernel_main(uint32_t multiboot_magic) {
@@ -76,7 +84,7 @@ void kernel_main(uint32_t multiboot_magic) {
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Enabling interrupts... ");
-    sti();
+    //sti();
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Initializing PMM... ");
@@ -86,6 +94,13 @@ void kernel_main(uint32_t multiboot_magic) {
     tty_puts(&kernel_tty, "Initializing ACPI...\n");
     acpi_init();
     tty_puts(&kernel_tty, "Done.\n");
+
+    tty_puts(&kernel_tty, "Initializing TSS... ");
+    tss_init();
+    tss_flush();
+    tty_puts(&kernel_tty, "Done.\n");
+
+    callUsermode(usermodeFunc);
 
     while(true) {
         hlt();

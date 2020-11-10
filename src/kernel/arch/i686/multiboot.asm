@@ -61,14 +61,14 @@ _start:
 .fillPageDirectory:
     mov ebx, VIRTUAL_TO_PHYSICAL_ADDR(kernel_pageDirectory)
     mov eax, VIRTUAL_TO_PHYSICAL_ADDR(kernel_bootstrapPageTable)
-    or eax, 0x0000000b
+    or eax, 0x0000000f
     mov [ebx], eax
     mov [ebx + 4 * 768], eax
 
     ; Fill the page table
 .fillPageTable:
     mov ebx, VIRTUAL_TO_PHYSICAL_ADDR(kernel_bootstrapPageTable)
-    mov eax, 0x0000000b
+    mov eax, 0x0000000f
     xor ecx, ecx
 
 .fillPageTable_loop:
@@ -157,17 +157,27 @@ global kernel_multibootInfo
 kernel_multibootInfo:
     resb 116
 
-section .rodata
+section .data
+global kernel_gdt
 kernel_gdt:
 .nullEntry:
     times 8 db 0
-.codeSegment:
+.codeSegment32_r0:
     db 0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xcf, 0x00
-.dataSegment:
+.dataSegment32_r0:
     db 0xff, 0xff, 0x00, 0x00, 0x00, 0x92, 0xcf, 0x00
+.codeSegment32_r3:
+    db 0xff, 0xff, 0x00, 0x00, 0x00, 0xfa, 0xcf, 0x00
+.dataSegment32_r3:
+    db 0xff, 0xff, 0x00, 0x00, 0x00, 0xf2, 0xcf, 0x00
+.tss:
+    times 8 db 0
+.codeSegment16:
+    times 8 db 0
+.dataSegment16:
+    times 8 db 0
 .end:
 
-section .data
 kernel_gdtr:
 .limit:
     dw (kernel_gdt.end - kernel_gdt) - 1

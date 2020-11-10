@@ -3,3 +3,4 @@ bin
 *.o
 *.img
 *.iso
+*.bxrc

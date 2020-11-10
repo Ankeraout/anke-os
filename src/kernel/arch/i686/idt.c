@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "arch/i686/io.h"
-#include "panic.h"
+#include "arch/i686/isr.h"
 
 // Gate types
 enum {
@@ -26,9 +26,6 @@ typedef struct {
 // IDT itself
 idt_entry_t idt[256];
 
-extern void isr_handler0_7(void *arg);
-extern void isr_handler8_15(void *arg);
-
 void idt_initEntry(idt_entry_t *entry, void *interruptHandler, bool present, int dpl, bool storageSegment, int gateType, uint16_t codeSegmentSelector) {
     uint32_t offset = (uint32_t)interruptHandler;
 
@@ -44,14 +41,10 @@ void idt_initEntry(idt_entry_t *entry, void *interruptHandler, bool present, int
         ;
 }
 
-void idt_handler_exception() {
-    kernel_panic("Unimplemented CPU exception handler");
-}
-
 void idt_init() {
     // CPU exceptions
     for(int i = 0; i < 32; i++) {
-        idt_initEntry(&idt[i], idt_handler_exception, true, 0, false, GATE_INT32, 0x08);
+        idt_initEntry(&idt[i], isr_handler_exception, true, 3, false, GATE_TRP32, 0x08);
     }
 
     // IRQs 0-7

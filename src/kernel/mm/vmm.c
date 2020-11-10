@@ -12,6 +12,7 @@
 #define PAGETABLE_FLAG_PRESENT 0x00000001
 #define PAGETABLE_FLAG_MAPPED PAGETABLE_FLAG_PRESENT
 #define PAGETABLE_FLAG_READWRITE 0x00000002
+#define PAGETABLE_FLAG_USER 0x00000004
 #define PAGETABLE_FLAG_WRITETHROUGH 0x00000008
 #define PAGETABLE_FLAG_LASTMAP 0x00000200
 #define PAGETABLE_FLAG_ALLOCATED 0x00000400
@@ -64,7 +65,7 @@ static inline int vmm_map2_checkPageDirectoryEntryExists(size_t pageDirectoryInd
         } else {
             vmm_mapTemporary(newPageTable);
 
-            kernel_pageDirectory[pageDirectoryIndex] = ((uint32_t)newPageTable) | 0x0000000b;
+            kernel_pageDirectory[pageDirectoryIndex] = ((uint32_t)newPageTable) | 0x0000000f;
         }
     }
 
@@ -82,7 +83,7 @@ void *vmm_map2(const void *paddr, void *vaddr, size_t n) {
 
     for(size_t i = 0; i < n; i++) {
         pageTable[pageTableIndex] &= 0x00000fff;
-        pageTable[pageTableIndex] |= (((uint32_t)paddr + i * MM_PAGE_SIZE) & 0xfffff000) | PAGETABLE_FLAG_MAPPED | PAGETABLE_FLAG_READWRITE | PAGETABLE_FLAG_WRITETHROUGH;
+        pageTable[pageTableIndex] |= (((uint32_t)paddr + i * MM_PAGE_SIZE) & 0xfffff000) | PAGETABLE_FLAG_MAPPED | PAGETABLE_FLAG_READWRITE | PAGETABLE_FLAG_USER | PAGETABLE_FLAG_WRITETHROUGH;
 
         if(i == n - 1) {
             pageTable[pageTableIndex] |= PAGETABLE_FLAG_LASTMAP;

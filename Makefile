@@ -13,9 +13,10 @@ KERNEL_ASFLAGS=-f elf
 
 KERNEL_SOURCES_ASM=	\
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
+	$(SRCDIR)/kernel/arch/i686/ring3.asm \
+	$(SRCDIR)/kernel/arch/i686/isr.asm
 
-KERNEL_SOURCES_C_INTHDLR=	\
-	$(SRCDIR)/kernel/arch/i686/isr.c
+KERNEL_SOURCES_C_INTHDLR=
 
 KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/debug.c \
@@ -25,6 +26,7 @@ KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/acpi/rsdp.c \
 	$(SRCDIR)/kernel/arch/i686/idt.c \
 	$(SRCDIR)/kernel/arch/i686/pic.c \
+	$(SRCDIR)/kernel/arch/i686/tss.c \
 	$(SRCDIR)/kernel/libk/libk.c \
 	$(SRCDIR)/kernel/mm/mm.c \
 	$(SRCDIR)/kernel/mm/pmm.c \
@@ -81,6 +83,9 @@ clean:
 
 qemu_kernel: $(KERNEL_EXEC)
 	$(QEMU) $(QEMUFLAGS) -kernel $(KERNEL_EXEC)
+
+qemu_kernel_debug: $(KERNEL_EXEC)
+	$(QEMU) $(QEMUFLAGS) -kernel $(KERNEL_EXEC) -S -s
 
 qemu_iso: $(BINDIR)/$(ISO)
 	$(QEMU) $(QEMUFLAGS) -cdrom $(BINDIR)/$(ISO)
