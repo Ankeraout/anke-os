@@ -29,6 +29,7 @@ KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/arch/i686/idt.c \
 	$(SRCDIR)/kernel/arch/i686/pic.c \
 	$(SRCDIR)/kernel/arch/i686/tss.c \
+	$(SRCDIR)/kernel/libc/stdlib.c \
 	$(SRCDIR)/kernel/libk/libk.c \
 	$(SRCDIR)/kernel/mm/mm.c \
 	$(SRCDIR)/kernel/mm/pmm.c \

@@ -132,7 +132,7 @@ const acpi_sdt_header_t *acpi_mapSDT(const acpi_sdt_header_t *paddr) {
     }
 
     // Map the header
-    acpi_sdt_header_t *header = (acpi_sdt_header_t *)vmm_map((void *)paddr, pagesToMap);
+    acpi_sdt_header_t *header = (acpi_sdt_header_t *)vmm_map((void *)paddr, pagesToMap, true);
 
     if(!header) {
         return NULL;
@@ -151,7 +151,7 @@ const acpi_sdt_header_t *acpi_mapSDT(const acpi_sdt_header_t *paddr) {
         vmm_free(header);
 
         // Allocate bigger space now that we know the size of the SDT
-        header = vmm_map(paddr, (size + offset + MM_PAGE_SIZE - 1) / MM_PAGE_SIZE);
+        header = vmm_map(paddr, (size + offset + MM_PAGE_SIZE - 1) / MM_PAGE_SIZE, true);
 
         if(!header) {
             return NULL;

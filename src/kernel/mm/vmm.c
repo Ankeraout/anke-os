@@ -41,8 +41,8 @@ static inline void vmm_unmapTemporary() {
     invalidateTemporary();
 }
 
-void *vmm_map(const void *paddr, size_t n) {
-    void *vaddr = vmm_alloc(n);
+void *vmm_map(const void *paddr, size_t n, bool kernel) {
+    void *vaddr = vmm_alloc(n, kernel);
 
     if(!vaddr) {
         return NULL;
@@ -232,9 +232,9 @@ int vmm_unmap2(const void *vaddr, size_t n) {
     return 0;
 }
 
-static inline void *vmm_alloc_findFreeBlock(size_t n) {
+static inline void *vmm_alloc_findFreeBlock(size_t n, bool kernel) {
     uint32_t *pageTable = (uint32_t *)((mm_pageTableIndex << 22) | (MM_PAGETABLEINDEX_VMM << 12));
-    size_t address = 0xc0000000;
+    size_t address = kernel ? 0xc0100000 : 0x00100000;
     size_t pageDirectoryIndex = address >> 22;
     size_t pageTableIndex = (address >> 12) & 0x3ff;
     size_t freePages = 0;
@@ -274,9 +274,9 @@ static inline void *vmm_alloc_findFreeBlock(size_t n) {
     }
 }
 
-void *vmm_alloc(size_t n) {
+void *vmm_alloc(size_t n, bool kernel) {
     // Look for a free block at least n pages wide
-    void *vaddr = vmm_alloc_findFreeBlock(n);
+    void *vaddr = vmm_alloc_findFreeBlock(n, kernel);
 
     if(!vaddr) {
         return NULL;

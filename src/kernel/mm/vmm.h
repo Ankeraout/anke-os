@@ -10,6 +10,8 @@
  *  Args:
  *      - paddr: The physical address of the page to map
  *      - n: Number of pages to map
+ *      - kernel: true to map memory in the kernel space, false to map memory
+ *          in the user space.
  * 
  *  Returns:
  *      A pointer to the mapped area or NULL if an error occurred.
@@ -18,7 +20,7 @@
  *      - There is not enough contiguous space in the virtual memory address
  *          space.
  */
-void *vmm_map(const void *paddr, size_t n);
+void *vmm_map(const void *paddr, size_t n, bool kernel);
 
 /**
  *  Summary:
@@ -74,13 +76,15 @@ int vmm_unmap2(const void *vaddr, size_t n);
  * 
  *  Args:
  *      - n: The number of contiguous pages to allocate.
+ *      - kernel: true to allocate memory in the kernel space, false to
+ *          allocate memory in the user space.
  * 
  *  Returns:
  *      The address in the virtual address space of the allocated pages, or
  *      NULL if an error occurred. An error can occur in these situations:
  *          - There is not enough contiguous space in the virtual address space
  */ 
-void *vmm_alloc(size_t n);
+void *vmm_alloc(size_t n, bool kernel);
 
 /**
  *  Summary:

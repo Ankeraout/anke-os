@@ -29,7 +29,7 @@ void tss_init() {
     memset(&tss, 0, sizeof(tss_t));
 
     tss.ss0 = 0x10;
-    asm("movl %%esp, %0;" : "=r"(tss.esp0));
+    tss.esp0 = 0xc0200000;
 }
 
 void tss_flush() {

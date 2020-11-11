@@ -56,7 +56,7 @@ bool rsdp_validate(const rsdp_t *rsdp) {
  */
 const rsdp_t *rsdp_find_ebda() {
     // Map first 4KiB of RAM
-    void *ram = vmm_map((void *)0x00000000, 1);
+    void *ram = vmm_map((void *)0x00000000, 1, true);
 
     if(!ram) {
         return NULL;
@@ -68,7 +68,7 @@ const rsdp_t *rsdp_find_ebda() {
     vmm_free(ram);
     
     // Map first 4 KiB of EBDA
-    const uint8_t *ebda = vmm_map((void *)ebdaAddress, 1);
+    const uint8_t *ebda = vmm_map((void *)ebdaAddress, 1, true);
 
     if(!ebda) {
         return NULL;
@@ -93,7 +93,7 @@ const rsdp_t *rsdp_find_ebda() {
  *      found.
  */
 const rsdp_t *rsdp_find_e0000() {
-    void *ram = vmm_map((void *)0xe0000, 0x20);
+    void *ram = vmm_map((void *)0xe0000, 0x20, true);
 
     if(!ram) {
         return NULL;
@@ -112,7 +112,7 @@ const rsdp_t *rsdp_find_e0000() {
             }
 
             vmm_free(ram);
-            ram = vmm_map((void *)rsdpAddress, pagesToMap);
+            ram = vmm_map((void *)rsdpAddress, pagesToMap, true);
 
             if(!ram) {
                 return NULL;

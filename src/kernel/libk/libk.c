@@ -127,10 +127,10 @@ char *itoa(int value, char *str, int base) {
     return strrev(str);
 }
 
-void *malloc(size_t size) {
+void *kmalloc(size_t size, bool kernel) {
     size_t nbPages = (size + MM_PAGE_SIZE - 1) / MM_PAGE_SIZE;
 
-    void *vaddr = vmm_alloc(nbPages);
+    void *vaddr = vmm_alloc(nbPages, kernel);
 
     if(vaddr == NULL) {
         return NULL;
@@ -149,7 +149,7 @@ void *malloc(size_t size) {
     return vaddr;
 }
 
-void free(const void *addr) {
+void kfree(const void *addr) {
     // TODO: free physical pages
     vmm_free(addr);
 }

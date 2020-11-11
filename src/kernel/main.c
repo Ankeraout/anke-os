@@ -8,6 +8,7 @@
 #include "arch/i686/pic.h"
 #include "arch/i686/ring3.h"
 #include "arch/i686/tss.h"
+#include "libc/stdlib.h"
 #include "libk/libk.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
@@ -37,9 +38,12 @@ void halt() {
 void usermodeFunc() {
     tty_puts(&kernel_tty, "This was printed from ring 3.\n");
 
-    asm("int $0x80");
+    void *memzone = malloc(1024);
+    char buffer[9];
 
-    tty_puts(&kernel_tty, "This was also printed from ring 3.\n");
+    tty_puts(&kernel_tty, "malloc() result=0x");
+    tty_puts(&kernel_tty, hex32((uint32_t)memzone, buffer));
+    tty_puts(&kernel_tty, "\n");
 
     while(true);
 }

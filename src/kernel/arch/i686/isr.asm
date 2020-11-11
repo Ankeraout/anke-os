@@ -24,9 +24,21 @@ isr_handler8_15:
 global isr_handler_exception
 isr_handler_exception:
     pushad
+    mov ax, ds
+    push eax
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
     push dword msg_kernelPanic
     call kernel_panic
     add esp, 4
+    pop eax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
     popad
     iret
 
