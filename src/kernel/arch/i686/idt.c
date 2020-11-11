@@ -50,12 +50,12 @@ void idt_init() {
 
     // IRQs 0-7
     for(int i = 32; i < 40; i++) {
-        idt_initEntry(&idt[i], isr_handler0_7, true, 0, false, GATE_INT32, 0x08);
+        idt_initEntry(&idt[i], isr_handler0_7, true, 3, false, GATE_INT32, 0x08);
     }
 
     // IRQs 8-15
     for(int i = 40; i < 48; i++) {
-        idt_initEntry(&idt[i], isr_handler8_15, true, 0, false, GATE_INT32, 0x08);
+        idt_initEntry(&idt[i], isr_handler8_15, true, 3, false, GATE_INT32, 0x08);
     }
     
     // Empty entries

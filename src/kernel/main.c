@@ -88,7 +88,7 @@ void kernel_main(uint32_t multiboot_magic) {
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Enabling interrupts... ");
-    //sti();
+    sti();
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Initializing PMM... ");
