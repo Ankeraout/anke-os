@@ -4,6 +4,7 @@
 
 #include "arch/i686/io.h"
 #include "arch/i686/isr.h"
+#include "syscall.h"
 
 // Gate types
 enum {
@@ -63,7 +64,7 @@ void idt_init() {
     }
 
     // Kernel service ISR (todo: enable and set function)
-    idt_initEntry(&idt[0x80], NULL, false, 0, false, GATE_INT32, 0x08);
+    idt_initEntry(&idt[0x80], syscall_wrapper, true, 3, false, GATE_TRP32, 0x08);
 
     // Load IDT
     lidt(idt, sizeof(idt) - 1);

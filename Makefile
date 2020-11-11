@@ -12,9 +12,10 @@ KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
 
 KERNEL_SOURCES_ASM=	\
+	$(SRCDIR)/kernel/arch/i686/isr.asm \
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
 	$(SRCDIR)/kernel/arch/i686/ring3.asm \
-	$(SRCDIR)/kernel/arch/i686/isr.asm
+	$(SRCDIR)/kernel/arch/i686/syscall.asm \
 
 KERNEL_SOURCES_C_INTHDLR=
 
@@ -22,6 +23,7 @@ KERNEL_SOURCES_C=	\
 	$(SRCDIR)/kernel/debug.c \
 	$(SRCDIR)/kernel/main.c \
 	$(SRCDIR)/kernel/panic.c \
+	$(SRCDIR)/kernel/syscall.c \
 	$(SRCDIR)/kernel/acpi/acpi.c \
 	$(SRCDIR)/kernel/acpi/rsdp.c \
 	$(SRCDIR)/kernel/arch/i686/idt.c \

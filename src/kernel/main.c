@@ -37,6 +37,10 @@ void halt() {
 void usermodeFunc() {
     tty_puts(&kernel_tty, "This was printed from ring 3.\n");
 
+    asm("int $0x80");
+
+    tty_puts(&kernel_tty, "This was also printed from ring 3.\n");
+
     while(true);
 }
 
