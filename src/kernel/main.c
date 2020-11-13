@@ -8,6 +8,7 @@
 #include "arch/i686/pic.h"
 #include "arch/i686/ring3.h"
 #include "arch/i686/tss.h"
+#include "driver/pci.h"
 #include "libc/stdlib.h"
 #include "libk/libk.h"
 #include "mm/pmm.h"
@@ -101,6 +102,10 @@ void kernel_main(uint32_t multiboot_magic) {
 
     tty_puts(&kernel_tty, "Initializing ACPI...\n");
     acpi_init();
+    tty_puts(&kernel_tty, "Done.\n");
+
+    tty_puts(&kernel_tty, "Initializing PCI... ");
+    pci_init(PCI_CSAM_2);
     tty_puts(&kernel_tty, "Done.\n");
 
     tty_puts(&kernel_tty, "Initializing TSS... ");

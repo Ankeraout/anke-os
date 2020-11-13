@@ -6,5 +6,5 @@
 #include "syscall.h"
 
 void *malloc(size_t size) {
-    void *ret = (void *)syscall_call(SYSCALL_MALLOC, size);
+    return (void *)syscall_call(SYSCALL_MALLOC, size);
 }
