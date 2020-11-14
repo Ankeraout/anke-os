@@ -4,9 +4,11 @@ SRCDIR=src
 BINDIR=bin
 
 KERNEL_CC=i686-elf-gcc -c
+KERNEL_CPP=i686-elf-g++ -c
 KERNEL_LD=i686-elf-gcc
 KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc
 KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
+KERNEL_CPPFLAGS=-W -Wall -Wextra -std=gnu++17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
 KERNEL_INTHLDR_CFLAGS=-mgeneral-regs-only
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
@@ -19,26 +21,27 @@ KERNEL_SOURCES_ASM=	\
 
 KERNEL_SOURCES_C_INTHDLR=
 
+KERNEL_SOURCES_CPP= \
+	$(SRCDIR)/kernel/debug.cpp \
+	$(SRCDIR)/kernel/main.cpp \
+	$(SRCDIR)/kernel/panic.cpp \
+	$(SRCDIR)/kernel/syscall.cpp \
+	$(SRCDIR)/kernel/acpi/acpi.cpp \
+	$(SRCDIR)/kernel/acpi/rsdp.cpp \
+	$(SRCDIR)/kernel/arch/i686/idt.cpp \
+	$(SRCDIR)/kernel/arch/i686/pic.cpp \
+	$(SRCDIR)/kernel/arch/i686/tss.cpp \
+	$(SRCDIR)/kernel/driver/pci.cpp \
+	$(SRCDIR)/kernel/libk/libk.cpp \
+	$(SRCDIR)/kernel/mm/mm.cpp \
+	$(SRCDIR)/kernel/mm/pmm.cpp \
+	$(SRCDIR)/kernel/mm/vmm.cpp \
+	$(SRCDIR)/kernel/tty/tty.cpp
+
 KERNEL_SOURCES_C=	\
-	$(SRCDIR)/kernel/debug.c \
-	$(SRCDIR)/kernel/main.c \
-	$(SRCDIR)/kernel/panic.c \
-	$(SRCDIR)/kernel/syscall.c \
-	$(SRCDIR)/kernel/acpi/acpi.c \
-	$(SRCDIR)/kernel/acpi/rsdp.c \
-	$(SRCDIR)/kernel/arch/i686/idt.c \
-	$(SRCDIR)/kernel/arch/i686/pic.c \
-	$(SRCDIR)/kernel/arch/i686/tss.c \
-	$(SRCDIR)/kernel/driver/pci.c \
-	$(SRCDIR)/kernel/libc/stdlib.c \
-	$(SRCDIR)/kernel/libk/libk.c \
-	$(SRCDIR)/kernel/mm/mm.c \
-	$(SRCDIR)/kernel/mm/pmm.c \
-	$(SRCDIR)/kernel/mm/vmm.c \
-	$(SRCDIR)/kernel/tty/tty.c \
 	$(KERNEL_SOURCES_C_INTHDLR)
 
-KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
+KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o) $(KERNEL_SOURCES_CPP:%.cpp=%.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
@@ -61,9 +64,15 @@ $(BINDIR):
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.c
 	if [ "$(KERNEL_SOURCES_C_INTHDLR)" == *"$<"* ]; then \
 		$(KERNEL_CC) $(KERNEL_CFLAGS) $(KERNEL_INTHLDR_CFLAGS) $< -o $@; \
-		echo "Compiled with interrupt handler flags"; \
 	else \
 		$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@; \
+	fi
+
+$(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.cpp
+	if [ "$(KERNEL_SOURCES_CPP_INTHDLR)" == *"$<"* ]; then \
+		$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $(KERNEL_INTHLDR_CPPFLAGS) $< -o $@; \
+	else \
+		$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $< -o $@; \
 	fi
 
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.asm
