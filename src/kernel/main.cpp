@@ -34,7 +34,6 @@ namespace kernel {
     void kmain(uint32_t multiboot_magic) {
         kernel_tty.cls();
         kernel_tty.setAttr(0x0f);
-        
         kernel_tty.puts("       db                      88                      ,ad8888ba,     ad88888ba ");
         kernel_tty.puts("      d88b                     88                     d8\"'    `\"8b   d8\"     \"8b");
         kernel_tty.puts("     d8'`8b                    88                    d8'        `8b  Y8,        ");

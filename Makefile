@@ -3,25 +3,26 @@ MAKEFLAGS+=--no-builtin-rules
 SRCDIR=src
 BINDIR=bin
 
-KERNEL_CC=i686-elf-gcc -c
 KERNEL_CPP=i686-elf-g++ -c
-KERNEL_LD=i686-elf-gcc
+KERNEL_LD=i686-elf-g++
 KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc
-KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu11 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
-KERNEL_CPPFLAGS=-W -Wall -Wextra -std=gnu++17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel
-KERNEL_INTHLDR_CFLAGS=-mgeneral-regs-only
+KERNEL_CPPFLAGS=-W -Wall -Wextra -std=gnu++17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel -fno-exceptions -fno-rtti
+KERNEL_INTHLDR_CPPFLAGS=-mgeneral-regs-only
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
+KERNEL_CRTBEGIN=$(shell $(KERNEL_CPP) $(KERNEL_CPPFLAGS) -print-file-name=crtbegin.o)
+KERNEL_CRTEND=$(shell $(KERNEL_CPP) $(KERNEL_CPPFLAGS) -print-file-name=crtend.o)
+KERNEL_CRTI=$(SRCDIR)/kernel/crti.o
+KERNEL_CRTN=$(SRCDIR)/kernel/crtn.o
 
 KERNEL_SOURCES_ASM=	\
 	$(SRCDIR)/kernel/arch/i686/isr.asm \
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
 	$(SRCDIR)/kernel/arch/i686/ring3.asm \
-	$(SRCDIR)/kernel/arch/i686/syscall.asm \
-
-KERNEL_SOURCES_C_INTHDLR=
+	$(SRCDIR)/kernel/arch/i686/syscall.asm
 
 KERNEL_SOURCES_CPP= \
+	$(SRCDIR)/kernel/cpp.cpp \
 	$(SRCDIR)/kernel/debug.cpp \
 	$(SRCDIR)/kernel/main.cpp \
 	$(SRCDIR)/kernel/panic.cpp \
@@ -38,9 +39,6 @@ KERNEL_SOURCES_CPP= \
 	$(SRCDIR)/kernel/mm/vmm.cpp \
 	$(SRCDIR)/kernel/tty/tty.cpp
 
-KERNEL_SOURCES_C=	\
-	$(KERNEL_SOURCES_C_INTHDLR)
-
 KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o) $(KERNEL_SOURCES_CPP:%.cpp=%.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
@@ -51,22 +49,14 @@ ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)
 
-$(KERNEL_EXEC): $(BINDIR)/kernel $(KERNEL_OBJECTS)
-	$(KERNEL_LD) -T $(SRCDIR)/kernel/arch/i686/linker.ld $(KERNEL_OBJECTS) $(KERNEL_LDFLAGS) -o $(KERNEL_EXEC)
+$(KERNEL_EXEC): $(BINDIR)/kernel $(KERNEL_OBJECTS) $(KERNEL_CRTI) $(KERNEL_CRTN)
+	$(KERNEL_LD) -T $(SRCDIR)/kernel/arch/i686/linker.ld $(KERNEL_CRTI) $(KERNEL_CRTBEGIN) $(KERNEL_OBJECTS) $(KERNEL_CRTEND) $(KERNEL_CRTN) $(KERNEL_LDFLAGS) -o $(KERNEL_EXEC)
 
 $(BINDIR)/kernel: $(BINDIR)
 	mkdir $(BINDIR)/kernel
 
 $(BINDIR):
 	mkdir $(BINDIR)
-
-# Generic rule for compiling C code
-$(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.c
-	if [ "$(KERNEL_SOURCES_C_INTHDLR)" == *"$<"* ]; then \
-		$(KERNEL_CC) $(KERNEL_CFLAGS) $(KERNEL_INTHLDR_CFLAGS) $< -o $@; \
-	else \
-		$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@; \
-	fi
 
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.cpp
 	if [ "$(KERNEL_SOURCES_CPP_INTHDLR)" == *"$<"* ]; then \

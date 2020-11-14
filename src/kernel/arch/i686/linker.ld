@@ -33,5 +33,13 @@ SECTIONS {
         *(.bss)
     }
 
+    .init ALIGN(0x1000): AT(ADDR(.init) - 0xc0000000) {
+        *(.init)
+    }
+
+    .fini ALIGN(0x1000): AT(ADDR(.fini) - 0xc0000000) {
+        *(.fini)
+    }
+
     __kernel_end = .;
 }

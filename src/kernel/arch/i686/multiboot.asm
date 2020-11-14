@@ -118,8 +118,10 @@ section .text
 .restoreRegisters:
     mov eax, edx
 
+extern _init
 .callKernel:
     push eax
+    call _init
     call kernel_main
 
 .halt:
