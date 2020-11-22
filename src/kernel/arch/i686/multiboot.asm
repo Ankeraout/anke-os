@@ -101,7 +101,7 @@ section .text
     mov dword [kernel_pageDirectory], 0
 
 .setupStack:
-    mov esp, kernel_stack_top
+    mov esp, kernel_stack_bottom
 
 .reloadGDT:
     lgdt [kernel_gdtr]
