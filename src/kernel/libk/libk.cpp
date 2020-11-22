@@ -82,6 +82,10 @@ namespace std {
     }
 
     char *strrev(char *str) {
+        if(!*str) {
+            return str;
+        }
+
         size_t i = 0;
         size_t j = strlen(str) - 1;
 
@@ -198,8 +202,19 @@ namespace std {
         return 0;
     }
 
-    DEF_HEX(8);
+    //DEF_HEX(8);
     DEF_HEX(16);
     DEF_HEX(32);
     DEF_HEX(64);
+
+    char *hex8(uint8_t value, char *str) {
+        for(int i = 0; i < 2; i++) {
+            str[i] = "0123456789abcdef"[value & 0x0f];
+            value >>= 4;
+        }
+        
+        str[2] = '\0';
+    
+        return strrev(str);
+    }
 }

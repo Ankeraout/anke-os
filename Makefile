@@ -6,8 +6,7 @@ BINDIR=bin
 KERNEL_CPP=i686-elf-g++ -c
 KERNEL_LD=i686-elf-g++
 KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc
-KERNEL_CPPFLAGS=-W -Wall -Wextra -std=gnu++17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel -fno-exceptions -fno-rtti
-KERNEL_INTHLDR_CPPFLAGS=-mgeneral-regs-only
+KERNEL_CPPFLAGS=-W -Wall -Wextra -std=gnu++17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel -fno-exceptions -fno-rtti -mgeneral-regs-only
 KERNEL_AS=nasm
 KERNEL_ASFLAGS=-f elf
 KERNEL_CRTBEGIN=$(shell $(KERNEL_CPP) $(KERNEL_CPPFLAGS) -print-file-name=crtbegin.o)
@@ -18,6 +17,7 @@ KERNEL_CRTN=$(SRCDIR)/kernel/crtn.o
 KERNEL_SOURCES_ASM=	\
 	$(SRCDIR)/kernel/arch/i686/isr.asm \
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
+	$(SRCDIR)/kernel/arch/i686/mutex.asm \
 	$(SRCDIR)/kernel/arch/i686/ring3.asm \
 	$(SRCDIR)/kernel/arch/i686/syscall.asm
 
@@ -32,7 +32,9 @@ KERNEL_SOURCES_CPP= \
 	$(SRCDIR)/kernel/arch/i686/idt.cpp \
 	$(SRCDIR)/kernel/arch/i686/pic.cpp \
 	$(SRCDIR)/kernel/arch/i686/tss.cpp \
+	$(SRCDIR)/kernel/driver/eth.cpp \
 	$(SRCDIR)/kernel/driver/pci.cpp \
+	$(SRCDIR)/kernel/driver/rtl8139.cpp \
 	$(SRCDIR)/kernel/libk/libk.cpp \
 	$(SRCDIR)/kernel/mm/mm.cpp \
 	$(SRCDIR)/kernel/mm/pmm.cpp \
@@ -43,8 +45,8 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o) $(KER
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
-QEMU=qemu-system-x86_64
-QEMUFLAGS=-m 2 -serial stdio -d cpu_reset --enable-kvm
+QEMU=qemu-system-i386
+QEMUFLAGS=-m 2 -serial stdio -d cpu_reset -net nic,model=rtl8139
 ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)

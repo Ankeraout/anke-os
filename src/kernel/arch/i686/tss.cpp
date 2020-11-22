@@ -2,7 +2,11 @@
 #include "arch/i686/tss.hpp"
 #include "libk/libk.hpp"
 
+#define KERNEL_INTERRUPT_STACK_SIZE 4096
+
 namespace kernel {
+    uint8_t interruptStack[KERNEL_INTERRUPT_STACK_SIZE];
+
     tss_t tss;
 
     void tss_init() {
@@ -30,7 +34,7 @@ namespace kernel {
         std::memset(&tss, 0, sizeof(tss_t));
 
         tss.ss0 = 0x10;
-        tss.esp0 = 0xc0200000;
+        tss.esp0 = (uint32_t)&interruptStack[KERNEL_INTERRUPT_STACK_SIZE];
     }
 
     void tss_flush() {
