@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "debug.hpp"
 #include "acpi/acpi.hpp"
 #include "arch/i686/idt.hpp"
 #include "arch/i686/io.hpp"
@@ -34,65 +35,65 @@ namespace kernel {
     void kmain(uint32_t multiboot_magic) {
         kernel_tty.cls();
         kernel_tty.setAttr(0x0f);
-        kernel_tty.puts("       db                      88                      ,ad8888ba,     ad88888ba ");
-        kernel_tty.puts("      d88b                     88                     d8\"'    `\"8b   d8\"     \"8b");
-        kernel_tty.puts("     d8'`8b                    88                    d8'        `8b  Y8,        ");
-        kernel_tty.puts("    d8'  `8b      8b,dPPYba,   88   ,d8   ,adPPYba,  88          88  `Y8aaaaa,  ");
-        kernel_tty.puts("   d8YaaaaY8b     88P'   `\"8a  88 ,a8\"   a8P_____88  88          88    `\"\"\"\"\"8b,");
-        kernel_tty.puts("  d8\"\"\"\"\"\"\"\"8b    88       88  8888[     8PP\"\"\"\"\"\"\"  Y8,        ,8P          `8b");
-        kernel_tty.puts(" d8'        `8b   88       88  88`\"Yba,  \"8b,   ,aa   Y8a.    .a8P   Y8a     a8P");
-        kernel_tty.puts("d8'          `8b  88       88  88   `Y8a  `\"Ybbd8\"'    `\"Y8888Y\"'     \"Y88888P\" ");
+        debug("       db                      88                      ,ad8888ba,     ad88888ba ");
+        debug("      d88b                     88                     d8\"'    `\"8b   d8\"     \"8b");
+        debug("     d8'`8b                    88                    d8'        `8b  Y8,        ");
+        debug("    d8'  `8b      8b,dPPYba,   88   ,d8   ,adPPYba,  88          88  `Y8aaaaa,  ");
+        debug("   d8YaaaaY8b     88P'   `\"8a  88 ,a8\"   a8P_____88  88          88    `\"\"\"\"\"8b,");
+        debug("  d8\"\"\"\"\"\"\"\"8b    88       88  8888[     8PP\"\"\"\"\"\"\"  Y8,        ,8P          `8b");
+        debug(" d8'        `8b   88       88  88`\"Yba,  \"8b,   ,aa   Y8a.    .a8P   Y8a     a8P");
+        debug("d8'          `8b  88       88  88   `Y8a  `\"Ybbd8\"'    `\"Y8888Y\"'     \"Y88888P\" ");
         kernel_tty.putc('\n');
         kernel_tty.setAttr(0x07);
 
         if(multiboot_magic == 0x2badb002) {
             kernel_tty.setAttr(0x0a);
-            kernel_tty.puts("Good multiboot signature.\n");
+            debug("Good multiboot signature.\n");
             kernel_tty.setAttr(0x07);
         } else {
             kernel_tty.setAttr(0x0c);
-            kernel_tty.puts("Wrong multiboot signature. System halted.\n");
+            debug("Wrong multiboot signature. System halted.\n");
             halt();
         }
 
-        kernel_tty.puts("Welcome to AnkeOS!");
+        debug("Welcome to AnkeOS!");
 
         kernel_tty.putc('\n');
 
         if(!(kernel_multibootInfo.flags & (1 << 6))) {
             kernel_tty.setAttr(0x0c);
-            kernel_tty.puts("The bootloader did not provide a memory map. System halted.\n");
+            debug("The bootloader did not provide a memory map. System halted.\n");
             halt();
         }
         
-        kernel_tty.puts("Initializing IDT... ");
+        debug("Initializing IDT... ");
         idt_init();
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Initializing PIC... ");
+        debug("Initializing PIC... ");
         pic_init();
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Enabling interrupts... ");
+        debug("Enabling interrupts... ");
         sti();
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Initializing PMM... ");
+        debug("Initializing PMM... ");
         pmm_init(kernel_memoryMap, kernel_memoryMapLength / sizeof(multiboot_info_mmap_entry_t));
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Initializing ACPI...\n");
+        debug("Initializing ACPI...\n");
         acpi_init();
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Initializing PCI... ");
+        debug("Initializing PCI... ");
         pci_init(PCI_CSAM_2);
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
-        kernel_tty.puts("Initializing TSS... ");
+        debug("Initializing TSS... ");
         tss_init();
         tss_flush();
-        kernel_tty.puts("Done.\n");
+        debug("Done.\n");
 
         while(true) {
             hlt();

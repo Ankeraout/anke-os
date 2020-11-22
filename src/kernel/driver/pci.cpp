@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/i686/io.hpp"
+#include "arch/i686/isr.hpp"
 #include "debug.hpp"
 #include "driver/pci.hpp"
 #include "driver/rtl8139.hpp"
@@ -265,6 +266,10 @@ namespace kernel {
 
         return 0;
     }
+    
+    void PCIDevice::irqHandlerWrapper(PCIDevice *dev) {
+        dev->irqHandler();
+    }
 
     PCIDevice::PCIDevice(uint8_t bus, uint8_t slot, uint8_t func) {
         this->bus = bus;
@@ -310,10 +315,22 @@ namespace kernel {
                 i++;
             }
         }
+
+        uint8_t irqLine = pci_csam2_readConfig8(bus, slot, func, 0x3f);
+
+        if(irqLine != 0xff) {
+            char buffer[3];
+            debug("PCI interrupt line: 0x");
+            debug(std::hex8(irqLine, buffer));
+            debug("\n");
+
+            // Register interrupt
+            isr_registerIRQHandler(irqLine & 0x0f, (void (*)(void *))&PCIDevice::irqHandlerWrapper, this);
+        }
     }
 
     PCIDevice::~PCIDevice() {
-
+        
     }
 
     uint8_t PCIDevice::getBus() {

@@ -6,6 +6,8 @@
 #include "arch/i686/isr.hpp"
 #include "syscall.hpp"
 
+#define INSTALL_IRQ(n) idt_initEntry(&idt[32 + n], isr_handler_##n, true, 3, false, GATE_INT32, 0x08)
+
 namespace kernel {
     // Gate types
     enum {
@@ -49,22 +51,30 @@ namespace kernel {
             idt_initEntry(&idt[i], isr_handler_exception, true, 3, false, GATE_TRP32, 0x08);
         }
 
-        // IRQs 0-7
-        for(int i = 32; i < 40; i++) {
-            idt_initEntry(&idt[i], isr_handler0_7, true, 3, false, GATE_INT32, 0x08);
-        }
-
-        // IRQs 8-15
-        for(int i = 40; i < 48; i++) {
-            idt_initEntry(&idt[i], isr_handler8_15, true, 3, false, GATE_INT32, 0x08);
-        }
+        // IRQs
+        INSTALL_IRQ(0);
+        INSTALL_IRQ(1);
+        INSTALL_IRQ(2);
+        INSTALL_IRQ(3);
+        INSTALL_IRQ(4);
+        INSTALL_IRQ(5);
+        INSTALL_IRQ(6);
+        INSTALL_IRQ(7);
+        INSTALL_IRQ(8);
+        INSTALL_IRQ(9);
+        INSTALL_IRQ(10);
+        INSTALL_IRQ(11);
+        INSTALL_IRQ(12);
+        INSTALL_IRQ(13);
+        INSTALL_IRQ(14);
+        INSTALL_IRQ(15);
         
         // Empty entries
         for(int i = 48; i < 256; i++) {
             idt_initEntry(&idt[i], NULL, false, 0, 0, 0, 0);
         }
 
-        // Kernel service ISR (todo: enable and set function)
+        // Kernel syscall
         idt_initEntry(&idt[0x80], syscall_wrapper, true, 3, false, GATE_TRP32, 0x08);
 
         // Load IDT

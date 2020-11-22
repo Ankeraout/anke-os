@@ -33,6 +33,9 @@ namespace kernel {
         io_wait();
         outb(PIC2_DATA, ICW4_8086);
         io_wait();
+
+        // Unmask all interrupts
+        pic_enableIRQs();
     }
 
     void pic_disableIRQ(int irqNumber) {

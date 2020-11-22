@@ -19,6 +19,7 @@ namespace kernel {
         virtual void writeReg8(uint8_t offset, uint8_t value);
         virtual void writeReg16(uint8_t offset, uint16_t value);
         virtual void writeReg32(uint8_t offset, uint32_t value);
+        virtual void irqHandler();
 
         public:
         RTL8139(uint8_t bus, uint8_t slot, uint8_t func);

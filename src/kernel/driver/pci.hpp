@@ -33,9 +33,11 @@ namespace kernel {
         uint8_t pif;
         uint8_t revisionID;
         pci_headerType_t headerType;
+        static void irqHandlerWrapper(PCIDevice *dev);
 
         protected:
         pci_bar_t bar[6];
+        virtual void irqHandler() = 0;
 
         public:
         PCIDevice(uint8_t bus, uint8_t slot, uint8_t func);
