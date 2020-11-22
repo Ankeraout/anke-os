@@ -1,6 +1,8 @@
 #ifndef __KERNEL_MM_VMM_HPP__
 #define __KERNEL_MM_VMM_HPP__
 
+#include <stddef.h>
+
 namespace kernel {
     /**
      *  Summary:

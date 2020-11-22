@@ -6,7 +6,9 @@
 #include "arch/i686/isr.hpp"
 #include "syscall.hpp"
 
-#define INSTALL_IRQ(n) idt_initEntry(&idt[32 + n], isr_handler_##n, true, 3, false, GATE_INT32, 0x08)
+#define INSTALL_IRQ(n) idt_initEntry(&idt[32 + n], irq_handler_##n, true, 3, false, GATE_INT32, 0x08)
+
+extern "C" void syscall_wrapper();
 
 namespace kernel {
     // Gate types

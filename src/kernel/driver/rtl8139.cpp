@@ -2,7 +2,6 @@
 
 #include "debug.hpp"
 #include "arch/i686/io.hpp"
-#include "arch/i686/isr.hpp"
 #include "driver/pci.hpp"
 #include "driver/rtl8139.hpp"
 #include "libk/libk.hpp"

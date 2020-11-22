@@ -7,7 +7,6 @@ namespace kernel {
     };
 
     extern "C" size_t syscall_call(size_t function, size_t argument);
-    extern "C" void syscall_wrapper();
 }
 
 #endif

@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "arch/i686/io.hpp"
-#include "arch/i686/isr.hpp"
+#include "irq.hpp"
 #include "debug.hpp"
 #include "driver/pci.hpp"
 #include "driver/rtl8139.hpp"
@@ -325,7 +325,7 @@ namespace kernel {
             debug("\n");
 
             // Register interrupt
-            isr_registerIRQHandler(irqLine & 0x0f, (void (*)(void *))&PCIDevice::irqHandlerWrapper, this);
+            irq_register(irqLine & 0x0f, (void (*)(void *))&PCIDevice::irqHandlerWrapper, this);
         }
     }
 

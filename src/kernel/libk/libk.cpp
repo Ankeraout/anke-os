@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 #include "panic.hpp"
-#include "arch/i686/io.hpp"
 #include "libk/libk.hpp"
 #include "mm/mm.hpp"
 #include "mm/pmm.hpp"

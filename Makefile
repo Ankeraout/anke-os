@@ -15,6 +15,7 @@ KERNEL_CRTI=$(SRCDIR)/kernel/crti.o
 KERNEL_CRTN=$(SRCDIR)/kernel/crtn.o
 
 KERNEL_SOURCES_ASM=	\
+	$(SRCDIR)/kernel/arch/i686/irq.asm \
 	$(SRCDIR)/kernel/arch/i686/isr.asm \
 	$(SRCDIR)/kernel/arch/i686/multiboot.asm \
 	$(SRCDIR)/kernel/arch/i686/mutex.asm \
@@ -24,12 +25,15 @@ KERNEL_SOURCES_ASM=	\
 KERNEL_SOURCES_CPP= \
 	$(SRCDIR)/kernel/cpp.cpp \
 	$(SRCDIR)/kernel/debug.cpp \
+	$(SRCDIR)/kernel/irq.cpp \
 	$(SRCDIR)/kernel/main.cpp \
 	$(SRCDIR)/kernel/panic.cpp \
 	$(SRCDIR)/kernel/syscall.cpp \
 	$(SRCDIR)/kernel/acpi/acpi.cpp \
 	$(SRCDIR)/kernel/acpi/rsdp.cpp \
+	$(SRCDIR)/kernel/arch/i686/halt.cpp \
 	$(SRCDIR)/kernel/arch/i686/idt.cpp \
+	$(SRCDIR)/kernel/arch/i686/init.cpp \
 	$(SRCDIR)/kernel/arch/i686/pic.cpp \
 	$(SRCDIR)/kernel/arch/i686/tss.cpp \
 	$(SRCDIR)/kernel/driver/eth.cpp \

@@ -1,8 +1,10 @@
 bits 32
 
+extern irq_wrapper
+
 %macro DEF_IRQ_HANDLER 1
-global isr_handler_%1
-isr_handler_%1:
+global irq_handler_%1
+irq_handler_%1:
     pushad
     mov ax, ds
     push eax
@@ -12,12 +14,8 @@ isr_handler_%1:
     mov fs, ax
     mov gs, ax
 
-    mov eax, [isr_irqHandlers + %1 * 4]
-    test eax, eax
-    jz .eoi
-
-    push dword [isr_irqHandlerParameters + %1 * 4]
-    call [isr_irqHandlers + %1 * 4]
+    push dword %1
+    call irq_wrapper
 
     add esp, 4
 
@@ -67,34 +65,5 @@ isr_handler_exception:
     popad
     iret
 
-global isr_registerIRQHandler
-%define arg_irq (ebp + 8)
-%define arg_handler (ebp + 12)
-%define arg_arg (ebp + 16)
-isr_registerIRQHandler:
-    push ebp
-    mov ebp, esp
-
-    mov ecx, [arg_irq]
-    shl ecx, 2
-    lea eax, [isr_irqHandlers + ecx]
-    mov edx, [arg_handler]
-    mov [eax], edx
-    lea eax, [isr_irqHandlerParameters + ecx]
-    mov edx, [arg_arg]
-    mov [eax], edx
-
-    pop ebp
-    ret
-%undef arg_irq
-%undef arg_handler
-%undef arg_arg
-
 section .rodata
 msg_kernelPanic db "Unhandled CPU exception", 13, 10, 0
-
-section .data
-isr_irqHandlers:
-    times 16 dd 0
-isr_irqHandlerParameters:
-    times 16 dd 0
