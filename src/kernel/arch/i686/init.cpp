@@ -1,4 +1,5 @@
 #include "debug.hpp"
+#include "panic.hpp"
 #include "acpi/acpi.hpp"
 #include "arch/arch.hpp"
 #include "arch/i686/idt.hpp"
@@ -17,6 +18,7 @@ extern "C" {
     extern kernel::multiboot_info_t kernel_multibootInfo;
     extern kernel::multiboot_info_mmap_entry_t kernel_memoryMap[];
     extern uint32_t kernel_memoryMapLength;
+    extern uint32_t kernel_multibootMagic;
 }
 
 namespace kernel {
@@ -25,15 +27,11 @@ namespace kernel {
     void arch_preinit() {
         kernel_tty.cls();
         
-        /*
-        if(multiboot_magic == 0x2badb002) {
+        if(kernel_multibootMagic == 0x2badb002) {
             debug("Good multiboot signature.\n");
         } else {
-            kernel_tty.setAttr(0x0c);
-            debug("Wrong multiboot signature. System halted.\n");
-            halt();
+            panic("Wrong multiboot signature.");
         }
-        */
 
         if(!(kernel_multibootInfo.flags & (1 << 6))) {
             kernel_tty.setAttr(0x0c);

@@ -11,10 +11,6 @@
 
 %define VIRTUAL_TO_PHYSICAL_ADDR(address) (address - 0xc0000000)
 
-section .multiboot.data
-align 4
-saved_eax: dd 0
-
 section .multiboot.text
 
 ;Multiboot header
@@ -27,13 +23,13 @@ global _start
 extern kernel_main
 _start:
 .saveRegisters:
-    ; Save EAX and EBX for later
-    mov [saved_eax], eax
+    ; Save EAX
+    mov [VIRTUAL_TO_PHYSICAL_ADDR(kernel_multibootMagic)], eax
 
 .copyMultibootInfo:
     mov edi, VIRTUAL_TO_PHYSICAL_ADDR(kernel_multibootInfo)
     mov esi, ebx
-    mov ecx, 116 << 2
+    mov ecx, 116 >> 2
     repz movsd
 
 .copyMemoryMap:
@@ -88,9 +84,6 @@ _start:
     or eax, 0x80000000
     mov cr0, eax
 
-.loadSavedRegisters:
-    mov edx, [saved_eax] ;We load it in EDX for now because EAX is used later.
-
 .jumpToHigherHalf:
     lea ecx, [.higherHalfStart]
     jmp ecx
@@ -120,7 +113,6 @@ section .text
 
 extern _init
 .callKernel:
-    push eax
     call _init
     call kernel_main
 
@@ -158,6 +150,11 @@ align 4
 global kernel_multibootInfo
 kernel_multibootInfo:
     resb 116
+
+align 4
+global kernel_multibootMagic
+kernel_multibootMagic:
+    resd 1
 
 section .data
 global kernel_gdt
