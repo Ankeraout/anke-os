@@ -38,13 +38,13 @@ namespace kernel {
             debug("The bootloader did not provide a memory map. System halted.\n");
             halt();
         }
-
-        debug("Initializing PMM... ");
-        pmm_init(kernel_memoryMap, kernel_memoryMapLength / sizeof(multiboot_info_mmap_entry_t));
-        debug("Done.\n");
     }
 
     void arch_init() {
+        debug("Initializing PMM... ");
+        pmm_init(kernel_memoryMap, kernel_memoryMapLength / sizeof(multiboot_info_mmap_entry_t));
+        debug("Done.\n");
+
         debug("Initializing IDT... ");
         idt_init();
         debug("Done.\n");
