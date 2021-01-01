@@ -65,11 +65,7 @@ $(BINDIR):
 	mkdir $(BINDIR)
 
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.cpp
-	if [ "$(KERNEL_SOURCES_CPP_INTHDLR)" == *"$<"* ]; then \
-		$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $(KERNEL_INTHLDR_CPPFLAGS) $< -o $@; \
-	else \
-		$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $< -o $@; \
-	fi
+	$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $< -o $@;
 
 $(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.asm
 	$(KERNEL_AS) $(KERNEL_ASFLAGS) $< -o $@
