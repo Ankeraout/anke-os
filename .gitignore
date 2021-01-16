@@ -4,3 +4,4 @@ bin
 *.img
 *.iso
 *.bxrc
+Makefile.config

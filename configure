@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# Default values
+CONFIG_ARCH=i686
+CONFIG_BOOTSTRAP=multiboot
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+    arg="$1"
+
+    case $arg in
+        --arch=*)
+            CONFIG_ARCH="${arg#*=}"
+            shift
+            ;;
+
+        --bootstrap=*)
+            CONFIG_BOOTSTRAP="${arg#*=}"
+            shift
+            ;;
+
+        *)
+            echo "Error: Unknown argument '$arg'"
+            exit 1
+    esac
+done
+
+# Check the selected options
+if [ "$CONFIG_ARCH" = "i686" ]; then
+    echo "Configuring for i686 architecture"
+
+    if [ "$CONFIG_BOOTSTRAP" = "multiboot" ]; then
+        echo "Configuring for multiboot bootstrap"
+    else
+        echo "Error: Unknown bootstrap '$CONFIG_BOOTSTRAP' for architecture '$CONFIG_ARCH'."
+        exit 1
+    fi
+
+else
+    echo "Error: Unknown architecture '$CONFIG_ARCH'."
+    exit 1
+fi
+
+# Check the system environment
+check_command() {
+    echo -n "Checking for the presence of $1... "
+    which $1
+    if [ $? -ne 0 ]; then
+        echo "Not found"
+        exit 1
+    fi
+}
+
+if [ "$CONFIG_ARCH" = "i686" ]; then
+    check_command "i686-elf-gcc"
+    check_command "nasm"
+    check_command "grub-mkrescue"
+fi
+
+# Empty Makefile.config
+echo "Writing configuration file..."
+
+> Makefile.config
+
+if [ "$CONFIG_ARCH" = "i686" ]; then
+    echo "KERNEL_CC=i686-elf-gcc -c" >> Makefile.config
+    echo "KERNEL_CFLAGS=-W -Wall -Wextra -std=gnu17 -fno-builtin -nostdlib -g -O0 -ffreestanding -Isrc/kernel -mgeneral-regs-only" >> Makefile.config
+    echo "KERNEL_LD=i686-elf-gcc" >> Makefile.config
+    echo "KERNEL_LDFLAGS=-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc" >> Makefile.config
+    echo "KERNEL_ASM=nasm" >> Makefile.config
+    echo "KERNEL_ASMFLAGS=-f elf -g -F dwarf" >> Makefile.config
+    echo "KERNEL_ARCH=$CONFIG_ARCH" >> Makefile.config
+    echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bootstrap.asm" >> Makefile.config
+    echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bioscall.asm" >> Makefile.config
+    echo "KERNEL_SOURCES_C=\$(SRCDIR)/kernel/arch/i686/arch.c" >> Makefile.config
+
+    if [ "$CONFIG_BOOTSTRAP" = "multiboot" ]; then
+        echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bootstraps/multiboot/multiboot.asm" >> Makefile.config
+        echo "KERNEL_LDFLAGS+= -T \$(SRCDIR)/kernel/arch/i686/bootstraps/multiboot/multiboot.ld" >> Makefile.config
+    fi
+fi
