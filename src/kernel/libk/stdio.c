@@ -151,6 +151,24 @@ int sprintf(char *s, const char *format, ...) {
             // TODO: what to do here?
         }
 
+        if(parserState == STATE_MINFW) {
+            if(minfw == -1) {
+                minfw = 0;
+            }
+
+            minfw *= 10;
+            minfw += c - '0';
+        }
+
+        if(parserState == STATE_MAXFW) {
+            if(maxfw == -1) {
+                maxfw = 0;
+            }
+
+            maxfw *= 10;
+            maxfw += c - '0';
+        }
+
         if(flag_identifier) {
             char identifier = c;
 

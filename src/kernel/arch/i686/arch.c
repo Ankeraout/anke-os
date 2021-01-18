@@ -14,7 +14,7 @@ void arch_init() {
 
     char buffer[4096];
 
-    sprintf(buffer, "%#08x\n", 0xdeadbeef);
+    sprintf(buffer, "%#08x\n", 0x0000dead);
 
     video_puts(buffer);
 
