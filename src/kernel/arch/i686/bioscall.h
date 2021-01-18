@@ -3,6 +3,26 @@
 
 #include <stdint.h>
 
+enum {
+    BIOSCALL_CONTEXT_EFLAGS_CF = 0x0001,
+    BIOSCALL_CONTEXT_EFLAGS_PF = 0x0004,
+    BIOSCALL_CONTEXT_EFLAGS_AF = 0x0010,
+    BIOSCALL_CONTEXT_EFLAGS_ZF = 0x0040,
+    BIOSCALL_CONTEXT_EFLAGS_SF = 0x0080,
+    BIOSCALL_CONTEXT_EFLAGS_TF = 0x0100,
+    BIOSCALL_CONTEXT_EFLAGS_IF = 0x0200,
+    BIOSCALL_CONTEXT_EFLAGS_DF = 0x0400,
+    BIOSCALL_CONTEXT_EFLAGS_OF = 0x0800,
+    BIOSCALL_CONTEXT_EFLAGS_IOPL = 0x0300,
+    BIOSCALL_CONTEXT_EFLAGS_NT = 0x4000,
+    BIOSCALL_CONTEXT_EFLAGS_RF = 0x00010000,
+    BIOSCALL_CONTEXT_EFLAGS_VM = 0x00020000,
+    BIOSCALL_CONTEXT_EFLAGS_AC = 0x00040000,
+    BIOSCALL_CONTEXT_EFLAGS_VIF = 0x00080000,
+    BIOSCALL_CONTEXT_EFLAGS_VIP = 0x00100000,
+    BIOSCALL_CONTEXT_EFLAGS_ID = 0x00200000
+};
+
 typedef struct {
     union {
         uint32_t edi;
@@ -71,6 +91,6 @@ typedef struct {
 } __attribute__((packed)) bioscall_context_t;
 
 void bioscall_init();
-void bioscall(bioscall_context_t *context, uint8_t interruptNumber);
+void bioscall(uint8_t interruptNumber, bioscall_context_t *context);
 
 #endif

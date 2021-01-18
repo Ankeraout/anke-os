@@ -1,6 +1,7 @@
 bits 32
 
-%define RM_PROCEDURE_ADDRESS 0x00008000
+%define RM_CONTEXT_ADDRESS 0x00000f00
+%define RM_PROCEDURE_ADDRESS 0x00000500
 %define ADDR_IN_BIOSCALL_WRAPPED(symbol) (RM_PROCEDURE_ADDRESS + symbol - bioscall_wrapped)
 
 extern kernel_pageDirectory
@@ -46,14 +47,14 @@ bioscall:
     push edi
     push ebx
     
-    ; copy interrupt context to 0x00020000
-    mov esi, [ebp + 8]
-    mov edi, 0x20000
+    ; copy interrupt context
+    mov esi, [ebp + 12]
+    mov edi, RM_CONTEXT_ADDRESS
     mov ecx, 10
     repz movsd
 
     ; Modify int opcode
-    mov eax, [ebp + 12]
+    mov eax, [ebp + 8]
     lea ebx, [ADDR_IN_BIOSCALL_WRAPPED(bioscall_wrapped.int) + 1]
     mov [ebx], al
 
@@ -93,9 +94,9 @@ bioscall:
     mov ss, ax
     mov esp, [.saved_esp]
 
-    ; copy interrupt context from 0x00020000
-    mov edi, [ebp + 8]
-    mov esi, 0x20000
+    ; copy interrupt context
+    mov edi, [ebp + 12]
+    mov esi, RM_CONTEXT_ADDRESS
     mov ecx, 10
     repz movsd
 
@@ -140,7 +141,7 @@ bioscall_wrapped:
     lidt [ADDR_IN_BIOSCALL_WRAPPED(.rmode_idtr)]
 
 .loadInterruptContext:
-    mov ax, 0x2000
+    mov ax, RM_CONTEXT_ADDRESS >> 4
     mov ss, ax
     mov sp, 0
 

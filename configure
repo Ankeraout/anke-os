@@ -72,7 +72,10 @@ if [ "$CONFIG_ARCH" = "i686" ]; then
     echo "KERNEL_ARCH=$CONFIG_ARCH" >> Makefile.config
     echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bootstrap.asm" >> Makefile.config
     echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bioscall.asm" >> Makefile.config
-    echo "KERNEL_SOURCES_C=\$(SRCDIR)/kernel/arch/i686/arch.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/arch.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mmap.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/video.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mm/mm.c" >> Makefile.config
 
     if [ "$CONFIG_BOOTSTRAP" = "multiboot" ]; then
         echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bootstraps/multiboot/multiboot.asm" >> Makefile.config

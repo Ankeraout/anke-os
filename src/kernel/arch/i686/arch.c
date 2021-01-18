@@ -1,4 +1,8 @@
 #include "arch/i686/bioscall.h"
+#include "arch/i686/mm/mm.h"
+#include "arch/i686/video.h"
+
+#include "libk/stdio.h"
 
 void arch_init();
 void arch_disableInterrupts();
@@ -6,15 +10,13 @@ void arch_halt();
 
 void arch_init() {
     bioscall_init();
+    video_init();
 
-    bioscall_context_t context = {
-        .ah = 0x0e,
-        .al = '!',
-        .bh = 0,
-        .bl = 0x07
-    };
+    char buffer[4096];
 
-    bioscall(&context, 0x10);
+    sprintf(buffer, "%#08x\n", 0xdeadbeef);
+
+    video_puts(buffer);
 
     while(1);
 }

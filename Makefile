@@ -10,9 +10,11 @@ KERNEL_SOURCES_ASM+= \
 
 
 KERNEL_SOURCES_C+= \
-	$(SRCDIR)/kernel/main.c
+	$(SRCDIR)/kernel/main.c \
+	$(SRCDIR)/kernel/libk/stdio.c \
+	$(SRCDIR)/kernel/libk/string.c
 
-KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.o) $(KERNEL_SOURCES_C:%.c=%.o)
+KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.asm.o) $(KERNEL_SOURCES_C:%.c=%.c.o)
 
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
@@ -32,10 +34,10 @@ $(BINDIR)/kernel: $(BINDIR)
 $(BINDIR):
 	mkdir $(BINDIR)
 
-$(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.c
+$(SRCDIR)/kernel/%.c.o: $(SRCDIR)/kernel/%.c
 	$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@
 
-$(SRCDIR)/kernel/%.o: $(SRCDIR)/kernel/%.asm
+$(SRCDIR)/kernel/%.asm.o: $(SRCDIR)/kernel/%.asm
 	$(KERNEL_ASM) $(KERNEL_ASMFLAGS) $< -o $@
 
 iso: $(BINDIR)/$(ISO)
