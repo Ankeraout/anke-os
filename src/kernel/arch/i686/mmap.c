@@ -2,6 +2,7 @@
 
 #include "arch/i686/bioscall.h"
 #include "arch/i686/mmap.h"
+#include "libk/stdio.h"
 #include "libk/string.h"
 
 #include "arch/i686/video.h"
@@ -26,6 +27,7 @@ static void mmap_print();
 
 void mmap_init() {
     if(mmap_init_e820()) {
+        video_puts("Failed to read memory map using e820 method.\n");
         // TODO: die
     }
 
@@ -35,6 +37,19 @@ void mmap_init() {
 
 void mmap_print() {
     video_puts("Memory map:\n");
+
+    video_puts("+--------------------------------------+\n");
+    video_puts("| Base       | Length     | Type       |\n");
+    video_puts("+------------+------------+------------+\n");
+
+    char buffer[100];
+
+    for(int i = 0; i < mmap_length; i++) {
+        sprintf(buffer, "| %#08x | %#08x | %#08x |\n", mmap_buffer[i].base_low, mmap_buffer[i].length_low, mmap_buffer[i].type);
+        video_puts(buffer);
+    }
+
+    video_puts("+------------+------------+------------+\n");
 }
 
 static int mmap_init_e820() {
@@ -65,7 +80,7 @@ static int mmap_init_e820() {
             return 0;
         }
 
-        memcpy(&mmap_buffer[mmap_length++], (const void *)MMAP_BUFFER_ADDRESS, sizeof(mmap_entry_t));
+        memcpy(&mmap_buffer[mmap_length], (const void *)MMAP_BUFFER_ADDRESS, sizeof(mmap_entry_t));
 
         if((context.ebx == 0) || (mmap_length == MAX_MMAP_LENGTH)) {
             return 0;
@@ -78,8 +93,8 @@ static int mmap_init_e820() {
 }
 
 static void mmap_arrange() {
-    mmap_fix();
     mmap_sort();
+    mmap_fix();
 }
 
 static void mmap_remove(int index) {

@@ -25,15 +25,15 @@ int sprintf(char *s, const char *format, ...) {
 
     char c = *format;
     bool flag_llu;
-    bool flag_identifier;
+    bool flag_identifier = false;
     bool flag_leftJustify;
     bool flag_pad0;
     bool flag_alwaysSign;
     bool flag_blank;
     bool flag_sharp;
     bool flag_error;
-    int minfw = -1;
-    int maxfw = -1;
+    int minfw;
+    int maxfw;
     int index = 0;
     sprintf_parser_state_t parserState = STATE_NORMAL;
 
@@ -50,6 +50,8 @@ int sprintf(char *s, const char *format, ...) {
                     flag_blank = false;
                     flag_sharp = false;
                     flag_error = false;
+                    minfw = -1;
+                    maxfw = -1;
                 } else {
                     s[index++] = c;
                 }
@@ -270,6 +272,8 @@ int sprintf(char *s, const char *format, ...) {
                     index += bytesToCopy;
                 }
             }
+
+            flag_identifier = false;
         }
 
         format++;

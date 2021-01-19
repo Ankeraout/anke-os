@@ -1,6 +1,7 @@
 #include "arch/i686/bioscall.h"
-#include "arch/i686/mm/mm.h"
+#include "arch/i686/mmap.h"
 #include "arch/i686/video.h"
+#include "arch/i686/mm/mm.h"
 
 #include "libk/stdio.h"
 
@@ -11,6 +12,8 @@ void arch_halt();
 void arch_init() {
     bioscall_init();
     video_init();
+    mm_init();
+    mmap_init();
 
     char buffer[4096];
 

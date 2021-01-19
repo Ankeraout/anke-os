@@ -42,10 +42,12 @@ global bioscall
 bioscall:
     push ebp
     mov ebp, esp
-
+    
+    ; Save context
     push esi
     push edi
     push ebx
+    push ebp
     
     ; copy interrupt context
     mov esi, [ebp + 12]
@@ -93,6 +95,9 @@ bioscall:
     mov gs, ax
     mov ss, ax
     mov esp, [.saved_esp]
+
+    ; Restore EBP
+    pop ebp
 
     ; copy interrupt context
     mov edi, [ebp + 12]
