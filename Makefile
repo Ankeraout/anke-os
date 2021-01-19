@@ -10,7 +10,9 @@ KERNEL_SOURCES_ASM+= \
 
 
 KERNEL_SOURCES_C+= \
+	$(SRCDIR)/kernel/irq.c \
 	$(SRCDIR)/kernel/main.c \
+	$(SRCDIR)/kernel/syscall.c \
 	$(SRCDIR)/kernel/libk/stdio.c \
 	$(SRCDIR)/kernel/libk/string.c
 
