@@ -3,8 +3,7 @@
 
 typedef enum {
     MM_SERVICE_PMM,
-    MM_SERVICE_VMM,
-    MM_SERVICE_E820
+    MM_SERVICE_VMM
 } mm_service_t;
 
 void mm_init();

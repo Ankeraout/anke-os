@@ -2,6 +2,7 @@
 #include "arch/i686/mmap.h"
 #include "arch/i686/video.h"
 #include "arch/i686/mm/mm.h"
+#include "arch/i686/mm/pmm.h"
 
 #include "libk/stdio.h"
 
@@ -14,12 +15,7 @@ void arch_init() {
     video_init();
     mm_init();
     mmap_init();
-
-    char buffer[4096];
-
-    sprintf(buffer, "%#08x\n", 0x0000dead);
-
-    video_puts(buffer);
+    pmm_init();
 
     while(1);
 }
