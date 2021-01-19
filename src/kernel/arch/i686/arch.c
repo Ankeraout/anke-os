@@ -1,6 +1,7 @@
 #include "arch/i686/bioscall.h"
 #include "arch/i686/idt.h"
 #include "arch/i686/mmap.h"
+#include "arch/i686/pic.h"
 #include "arch/i686/video.h"
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
@@ -14,6 +15,7 @@ void arch_halt();
 void arch_init() {
     bioscall_init();
     idt_init();
+    pic_init();
 
     asm("cli");
 
