@@ -32,6 +32,13 @@ irq_handler_%1:
     iret
 %endmacro
 
+%macro DEF_EXCEPTION_HANDLER 1
+global isr_handler_exception_%1
+isr_handler_exception_%1:
+    mov eax, %1
+    jmp isr_handler_exception
+%endmacro
+
 extern irq_wrapper
 extern kernel_panic
 extern syscall
@@ -41,6 +48,12 @@ section .text
 %assign i 0
 %rep 16
     DEF_IRQ_HANDLER i
+%assign i i + 1
+%endrep
+
+%assign i 0
+%rep 32
+    DEF_EXCEPTION_HANDLER i
 %assign i i + 1
 %endrep
 

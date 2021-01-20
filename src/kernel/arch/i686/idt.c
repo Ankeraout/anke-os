@@ -31,9 +31,38 @@ static void idt_initEntry(idt_entry_t *entry, void interruptHandler(), bool pres
 
 void idt_init() {
     // CPU exceptions
-    for(int i = 0; i < 32; i++) {
-        idt_initEntry(&idt[i], isr_handler_exception, true, 3, false, GATE_TRP32, 0x08);
-    }
+    idt_initEntry(&idt[0], isr_handler_exception_0, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[1], isr_handler_exception_1, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[2], isr_handler_exception_2, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[3], isr_handler_exception_3, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[4], isr_handler_exception_4, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[5], isr_handler_exception_5, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[6], isr_handler_exception_6, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[7], isr_handler_exception_7, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[8], isr_handler_exception_8, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[9], isr_handler_exception_9, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[10], isr_handler_exception_10, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[11], isr_handler_exception_11, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[12], isr_handler_exception_12, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[13], isr_handler_exception_13, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[14], isr_handler_exception_14, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[15], isr_handler_exception_15, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[16], isr_handler_exception_16, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[17], isr_handler_exception_17, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[18], isr_handler_exception_18, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[19], isr_handler_exception_19, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[20], isr_handler_exception_20, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[21], isr_handler_exception_21, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[22], isr_handler_exception_22, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[23], isr_handler_exception_23, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[24], isr_handler_exception_24, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[25], isr_handler_exception_25, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[26], isr_handler_exception_26, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[27], isr_handler_exception_27, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[28], isr_handler_exception_28, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[29], isr_handler_exception_29, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[30], isr_handler_exception_30, true, 3, false, GATE_TRP32, 0x08);
+    idt_initEntry(&idt[31], isr_handler_exception_31, true, 3, false, GATE_TRP32, 0x08);
 
     // IRQs
     idt_initEntry(&idt[32], irq_handler_0, true, 3, false, GATE_INT32, 0x08);

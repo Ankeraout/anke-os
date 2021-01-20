@@ -44,10 +44,14 @@ bioscall:
     mov ebp, esp
     
     ; Save context
+    pushfd
     push esi
     push edi
     push ebx
     push ebp
+
+    ; Save ESP
+    mov [.saved_esp], esp
     
     ; copy interrupt context
     mov esi, [ebp + 12]
@@ -76,9 +80,6 @@ bioscall:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-
-    ; Save ESP
-    mov [.saved_esp], esp
 
     ; Disable paging
     mov eax, cr0
@@ -112,6 +113,7 @@ bioscall:
     pop ebx
     pop edi
     pop esi
+    popfd
     pop ebp
     ret
     
@@ -140,8 +142,6 @@ bioscall_wrapped:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    mov ss, ax
-    mov sp, 0xfffe
     sidt [ADDR_IN_BIOSCALL_WRAPPED(.pmode_idtr)]
     lidt [ADDR_IN_BIOSCALL_WRAPPED(.rmode_idtr)]
 

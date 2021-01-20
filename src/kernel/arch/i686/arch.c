@@ -17,13 +17,13 @@ void arch_init() {
     idt_init();
     pic_init();
 
-    asm("cli");
+    asm("sti");
 
     video_init();
     mm_init();
     mmap_init();
     pmm_init();
-
+    
     while(1);
 }
 
