@@ -5,6 +5,7 @@
 #include "arch/i686/video.h"
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
+#include "arch/i686/mm/vmm.h"
 
 #include "libk/stdio.h"
 
@@ -14,6 +15,7 @@ void arch_halt();
 
 void arch_init() {
     bioscall_init();
+    
     idt_init();
     pic_init();
 
@@ -23,7 +25,8 @@ void arch_init() {
     mm_init();
     mmap_init();
     pmm_init();
-    
+    vmm_init();
+
     while(1);
 }
 

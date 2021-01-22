@@ -52,7 +52,7 @@ void *mm_mapTemporary(const void *pageAddress, mm_service_t service) {
         .zero = 0,
         .global = 0,
         .available = 0,
-        .pageAddress = (((size_t)pageAddress) - 0xc0000000) >> 12
+        .pageAddress = ((size_t)pageAddress) >> 12
     };
 
     mm_temporaryPageTable[service] = newEntry;

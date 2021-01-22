@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 
-// We don't care about the type, only the symbol is interesting
-extern int kernel_pageDirectory;
-
 typedef union {
     uint32_t value;
 
@@ -40,5 +37,7 @@ typedef union {
         uint32_t pageAddress : 20;
     } __attribute__((packed));
 } pageTableEntry_t;
+
+extern pageDirectoryEntry_t kernel_pageDirectory[1024];
 
 #endif
