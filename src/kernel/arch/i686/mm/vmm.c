@@ -9,6 +9,8 @@
 static pageDirectoryEntry_t *vmm_pageDirectory = (pageDirectoryEntry_t *)(((size_t)&kernel_pageDirectory) + 0xc0000000);
 
 void vmm_init();
+static void *vmm_map_search(size_t n, bool high);
+static int vmm_createPageTable(size_t pageDirectoryIndex);
 void *vmm_map(const void *paddr, size_t n, bool high);
 void *vmm_map2(const void *paddr, void *vaddr, size_t n);
 int vmm_unmap(const void *vaddr, size_t n);
@@ -46,7 +48,7 @@ void vmm_init() {
     }
 }
 
-void *vmm_map_search(size_t n, bool high) {
+static void *vmm_map_search(size_t n, bool high) {
     size_t pageDirectoryIndex = high ? 768 : 0;
     int searchLength = high ? 256 : 768;
     size_t pageTableIndex = 0;
@@ -94,7 +96,7 @@ void *vmm_map_search(size_t n, bool high) {
     return NULL;
 }
 
-int vmm_createPageTable(size_t pageDirectoryIndex) {
+static int vmm_createPageTable(size_t pageDirectoryIndex) {
     void *pageTableP = pmm_alloc(1);
 
     if(!pageTableP) {
