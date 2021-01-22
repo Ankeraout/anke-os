@@ -19,6 +19,7 @@ typedef struct tty_api {
     void (*setBackgroundColor)(struct tty *tty, int color);
     void (*setForegroundColor)(struct tty *tty, int color);
     void (*write)(struct tty *tty, const char *s);
+    void (*clear)(struct tty *tty);
 } tty_api_t;
 
 typedef struct tty {
@@ -35,5 +36,6 @@ void tty_setCursorPosition(tty_t *tty, int x, int y);
 void tty_setBackgroundColor(tty_t *tty, int color);
 void tty_setForegroundColor(tty_t *tty, int color);
 void tty_write(tty_t *tty, const char *s);
+void tty_clear(tty_t *tty);
 
 #endif

@@ -24,6 +24,7 @@ static void tty_text16_setBackgroundColor(struct tty *tty, int color);
 static void tty_text16_setForegroundColor(struct tty *tty, int color);
 static void tty_text16_write(struct tty *tty, const char *s);
 static void tty_text16_setCursorPosition(tty_t *tty, int x, int y);
+static void tty_text16_clear(struct tty *tty);
 
 static tty_api_t tty_text16 = {
     .getTerminalWidth = tty_text16_getTerminalWidth,
@@ -33,6 +34,7 @@ static tty_api_t tty_text16 = {
     .setForegroundColor = tty_text16_setForegroundColor,
     .setCursorPosition = tty_text16_setCursorPosition,
     .write = tty_text16_write,
+    .clear = tty_text16_clear
 };
 
 void tty_text16_init(tty_t *tty, void *buffer, int terminalWidth, int terminalHeight, void (*setCursorPosition)(tty_t *tty, int x, int y)) {
@@ -78,8 +80,12 @@ static inline void tty_text16_checkCursorPosition(tty_text16_t *tty) {
         int lineCount = tty->cursorY - tty->terminalHeight + 1;
 
         if(lineCount >= tty->terminalHeight - 1) {
-            memset(tty->buffer, 0, tty->terminalWidth * tty->terminalHeight * 2);
+            tty->cursorX = 0;
             tty->cursorY = 0;
+
+            for(int i = 0; i < tty->terminalWidth * tty->terminalHeight; i++) {
+                ((uint16_t *)tty->buffer)[i] = 0x0700;
+            }
         } else {
             size_t offset = tty->terminalWidth * lineCount * 2;
             size_t totalLength = tty->terminalWidth * tty->terminalHeight * 2;
@@ -132,4 +138,17 @@ static void tty_text16_setCursorPosition(tty_t *tty, int x, int y) {
     tty_text16_checkCursorPosition(tty2);
 
     tty2->setCursorPosition((tty_t *)tty2, tty2->cursorX, tty2->cursorY);
+}
+
+static void tty_text16_clear(tty_t *tty) {
+    tty_text16_t *tty2 = (tty_text16_t *)tty;
+
+    tty2->cursorX = 0;
+    tty2->cursorY = 0;
+
+    for(int i = 0; i < tty2->terminalWidth * tty2->terminalHeight; i++) {
+        ((uint16_t *)tty2->buffer)[i] = tty2->attr << 8;
+    }
+
+    tty2->setCursorPosition(tty, 0, 0);
 }

@@ -35,7 +35,8 @@ void arch_init() {
 
     tty_text16_init(&kernel_tty, tty_buffer, 80, 25, arch_setCursorPosition);
 
-    kernel_tty.api.write(&kernel_tty, "Hello world!");
+    tty_clear(&kernel_tty);
+    tty_write(&kernel_tty, "Test");
 
     while(1);
 }
