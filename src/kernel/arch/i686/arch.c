@@ -6,12 +6,16 @@
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
 #include "arch/i686/mm/vmm.h"
+#include "arch/i686/tty/text16.h"
 
 #include "libk/stdio.h"
 
 void arch_init();
+static void arch_setCursorPosition(tty_t *tty, int x, int y);
 void arch_disableInterrupts();
 void arch_halt();
+
+tty_t kernel_tty;
 
 void arch_init() {
     bioscall_init();
@@ -27,7 +31,17 @@ void arch_init() {
     pmm_init();
     vmm_init();
 
+    void *tty_buffer = vmm_map((const void *)0xb8000, 1, true);
+
+    tty_text16_init(&kernel_tty, tty_buffer, 80, 25, arch_setCursorPosition);
+
+    kernel_tty.api.write(&kernel_tty, "Hello world!");
+
     while(1);
+}
+
+static void arch_setCursorPosition(tty_t *tty, int x, int y) {
+    
 }
 
 void arch_disableInterrupts() {
