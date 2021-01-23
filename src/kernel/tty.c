@@ -9,6 +9,8 @@ void tty_setForegroundColor(tty_t *tty, int color);
 void tty_write(tty_t *tty, const char *s);
 void tty_clear(tty_t *tty);
 
+tty_t kernel_tty;
+
 int tty_getTerminalWidth(tty_t *tty) {
     return tty->api.getTerminalWidth(tty);
 }

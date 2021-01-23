@@ -5,8 +5,6 @@
 #include "libk/stdio.h"
 #include "libk/string.h"
 
-#include "arch/i686/video.h"
-
 #define MAX_MMAP_LENGTH 100
 #define MMAP_BUFFER_ADDRESS 0x10000
 #define MMAP_BUFFER_SEGMENT (MMAP_BUFFER_ADDRESS >> 4)
@@ -26,8 +24,6 @@ int mmap_getLength();
 
 void mmap_init() {
     if(mmap_init_e820()) {
-        video_puts("mmap_init() failed\n");
-
         while(true) {
             asm("cli");
             asm("hlt");
