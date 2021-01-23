@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "tty.h"
 #include "libk/string.h"
 
 #define IS_IDENTIFIER(c) (c == 'd' || c == 'i' || c == 'o' || c == 'x' || c == 'X' || c == 'u' || c == 'c' || c == 's' || c == 'f' || c == 'e' || c == 'E' || c == 'g' || c == 'G' || c == 'p' || c == 'n')
@@ -18,11 +19,21 @@ typedef enum {
 } sprintf_parser_state_t;
 
 int sprintf(char *s, const char *format, ...);
+int vsprintf(char *s, const char *format, va_list arguments);
+int printf(const char *format, ...);
 
 int sprintf(char *s, const char *format, ...) {
     va_list arguments;
     va_start(arguments, format);
 
+    int returnValue = vsprintf(s, format, arguments);
+
+    va_end(arguments);
+
+    return returnValue;
+}
+
+int vsprintf(char *s, const char *format, va_list arguments) {
     char c = *format;
     bool flag_llu;
     bool flag_identifier = false;
@@ -271,6 +282,8 @@ int sprintf(char *s, const char *format, ...) {
                     memcpy(&s[index], buffer + trailingZeros, bytesToCopy);
                     index += bytesToCopy;
                 }
+            } else if(identifier == 'd') {
+                
             }
 
             flag_identifier = false;
@@ -282,7 +295,20 @@ int sprintf(char *s, const char *format, ...) {
 
     s[index] = '\0';
 
+    return index;
+}
+
+int printf(const char *format, ...) {
+    char buffer[4096];
+
+    va_list arguments;
+    va_start(arguments, format);
+
+    int returnValue = vsprintf(buffer, format, arguments);
+
     va_end(arguments);
 
-    return index;
+    tty_write(&kernel_tty, buffer);
+
+    return returnValue;
 }

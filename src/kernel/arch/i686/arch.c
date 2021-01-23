@@ -2,6 +2,7 @@
 #include "arch/i686/idt.h"
 #include "arch/i686/io.h"
 #include "arch/i686/mmap.h"
+#include "arch/i686/pci.h"
 #include "arch/i686/pic.h"
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
@@ -33,7 +34,7 @@ void arch_init() {
     tty_clear(&kernel_tty);
 
     // From this point, a tty terminal is now available.
-
+    pci_init();
 }
 
 static void arch_setCursorPosition(tty_t *tty, int x, int y) {

@@ -57,6 +57,9 @@ static int tty_text16_getTerminalHeight(tty_t *tty) {
 }
 
 static tty_colorMode_t tty_text16_getTerminalColorMode(tty_t *tty) {
+    // Remove compilation warning about unused parameter
+    (void)tty;
+
     return TTY_COLORMODE_4;
 }
 

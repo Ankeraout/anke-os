@@ -6,6 +6,11 @@
 #include "arch/i686/mm/pmm.h"
 #include "libk/string.h"
 
+enum {
+    VMM_FLAG_ALLOCATED = 1 << 0,
+    VMM_FLAG_SYSTEM = 1 << 1
+};
+
 static pageDirectoryEntry_t *vmm_pageDirectory = (pageDirectoryEntry_t *)(((size_t)&kernel_pageDirectory) + 0xc0000000);
 
 void vmm_init();
@@ -14,6 +19,9 @@ static int vmm_createPageTable(size_t pageDirectoryIndex);
 void *vmm_map(const void *paddr, size_t n, bool high);
 void *vmm_map2(const void *paddr, void *vaddr, size_t n);
 int vmm_unmap(const void *vaddr, size_t n);
+int vmm_unmap2(const void *vaddr, size_t n);
+void *vmm_alloc(size_t n, bool high);
+int vmm_free(const void *vaddr, size_t n);
 
 void vmm_init() {
     // Transform page directory PSE entries to page table entries
@@ -62,7 +70,7 @@ static void *vmm_map_search(size_t n, bool high) {
             pageTableEntry_t *pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
 
             for(int j = 0; j < 1024; j++) {
-                if(pageTable[j].present) {
+                if(pageTable[j].present || (pageTable[j].available & (VMM_FLAG_ALLOCATED | VMM_FLAG_SYSTEM))) {
                     consecutiveFreePageCount = 0;
                 } else {
                     if(consecutiveFreePageCount == 0) {
@@ -131,15 +139,15 @@ void *vmm_map2(const void *paddr, void *vaddr, size_t n) {
     pageTableEntry_t *pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
 
     for(size_t i = 0; i < n; i++) {
-        pageTableEntry_t pageTableEntry;
-
-        pageTableEntry.value = 0;
-        pageTableEntry.pageAddress = pageNumber;
-        pageTableEntry.writeThrough = 1;
-        pageTableEntry.writePermission = 1;
-        pageTableEntry.present = 1;
-
-        pageTable[pageTableIndex] = pageTableEntry;
+        pageTable[pageTableIndex].pageAddress = pageNumber;
+        pageTable[pageTableIndex].global = 0;
+        pageTable[pageTableIndex].zero = 0;
+        pageTable[pageTableIndex].dirty = 0;
+        pageTable[pageTableIndex].accessed = 0;
+        pageTable[pageTableIndex].disableCache = 0;
+        pageTable[pageTableIndex].writeThrough = 1;
+        pageTable[pageTableIndex].writePermission = 1;
+        pageTable[pageTableIndex].present = 1;
 
         pageTableIndex++;
         pageNumber++;
@@ -182,7 +190,7 @@ int vmm_unmap(const void *vaddr, size_t n) {
 
     for(size_t i = 0; i < n; i++) {
         if(pageTable) {
-            pageTable[pageTableIndex].value = 0;
+            pageTable[pageTableIndex].present = 0;
         }
 
         pageTableIndex++;
@@ -196,6 +204,130 @@ int vmm_unmap(const void *vaddr, size_t n) {
             } else {
                 pageTable = NULL;
             }
+        }
+    }
+
+    return 0;
+}
+
+int vmm_unmap2(const void *vaddr, size_t n) {
+    size_t address = (size_t)vaddr;
+    size_t pageDirectoryIndex = address >> 22;
+    size_t pageTableIndex = (address >> 12) & 0x3ff;
+
+    pageTableEntry_t *pageTable = NULL;
+
+    if(vmm_pageDirectory[pageDirectoryIndex].present) {
+        pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
+    }
+
+    for(size_t i = 0; i < n; i++) {
+        if(pageTable) {
+            pmm_free((const void *)(pageTable[pageTableIndex].pageAddress << 12), 1);
+            pageTable[pageTableIndex].present = 0;
+        }
+
+        pageTableIndex++;
+
+        if(pageTableIndex == 1024) {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+
+            if(vmm_pageDirectory[pageDirectoryIndex].present) {
+                pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
+            } else {
+                pageTable = NULL;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void *vmm_alloc(size_t n, bool high) {
+    void *vaddr = vmm_map_search(n, high);
+
+    if(vaddr == NULL) {
+        return NULL;
+    }
+
+    size_t address = (size_t)vaddr;
+    size_t pageDirectoryIndex = address >> 22;
+    size_t pageTableIndex = (address >> 12) & 0x3ff;
+
+    if(!vmm_pageDirectory[pageDirectoryIndex].present) {
+        if(vmm_createPageTable(pageDirectoryIndex)) {
+            return NULL;
+        }
+    }
+    
+    pageTableEntry_t *pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
+
+    for(size_t i = 0; i < n; i++) {
+        pageTableEntry_t pageTableEntry;
+
+        pageTableEntry.value = 0;
+        pageTableEntry.available = VMM_FLAG_ALLOCATED;
+
+        pageTable[pageTableIndex] = pageTableEntry;
+
+        pageTableIndex++;
+
+        if(pageTableIndex == 1024) {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+
+            if(!vmm_pageDirectory[pageDirectoryIndex].present) {
+                vmm_createPageTable(pageDirectoryIndex);
+            } else {
+                mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
+            }
+        }
+    }
+
+    return vaddr;
+}
+
+int vmm_free(const void *vaddr, size_t n) {
+    size_t address = (size_t)vaddr;
+    size_t pageDirectoryIndex = address >> 22;
+    size_t pageTableIndex = (address >> 12) & 0x3ff;
+
+    while(!vmm_pageDirectory[pageDirectoryIndex].present) {
+        if(n > 1024) {
+            n -= 1024;
+            pageDirectoryIndex++;
+        } else {
+            return 0;
+        }
+    }
+    
+    pageTableEntry_t *pageTable = mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
+
+    for(size_t i = 0; i < n; i++) {
+        pageTableEntry_t pageTableEntry;
+
+        pageTableEntry.value = 0;
+        pageTableEntry.available &= ~VMM_FLAG_ALLOCATED;
+
+        pageTable[pageTableIndex] = pageTableEntry;
+
+        pageTableIndex++;
+
+        if(pageTableIndex == 1024) {
+            pageTableIndex = 0;
+            pageDirectoryIndex++;
+
+            while(!vmm_pageDirectory[pageDirectoryIndex].present) {
+                if(n > 1024) {
+                    n -= 1024;
+                    pageDirectoryIndex++;
+                } else {
+                    return 0;
+                }
+            }
+
+            mm_mapTemporary((const void *)(vmm_pageDirectory[pageDirectoryIndex].pageTableAddress << 12), MM_SERVICE_VMM);
         }
     }
 
