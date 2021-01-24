@@ -1,8 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+int memcmp(const void *ptr1, const void *ptr2, size_t size);
 void *memcpy(void *destination, const void *source, size_t size);
 void *memset(void *dst, int c, size_t n);
+int strcmp(const char *s1, const char *s2);
 char *strcpy(char *dst, const char *src);
 size_t strlen(const char *s);
 
@@ -72,4 +74,34 @@ size_t strlen(const char *s) {
     }
 
     return n;
+}
+
+int strcmp(const char *s1, const char *s2) {
+    while((*s1 == *s2) && *s1) {
+        s1++;
+        s2++;
+    }
+
+    if(s1 < s2) {
+        return -1;
+    } else if(s1 > s2) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+int memcmp(const void *ptr1, const void *ptr2, size_t size) {
+    const uint8_t *buffer1 = (const uint8_t *)ptr1;
+    const uint8_t *buffer2 = (const uint8_t *)ptr2;
+    
+    for(size_t i = 0; i < size; i++) {
+        if(buffer1[i] < buffer2[i]) {
+            return -1;
+        } else if(buffer1[i] > buffer2[i]) {
+            return 1;
+        }
+    }
+
+    return 0;
 }

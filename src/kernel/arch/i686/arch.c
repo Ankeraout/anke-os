@@ -4,6 +4,7 @@
 #include "arch/i686/mmap.h"
 #include "arch/i686/pci.h"
 #include "arch/i686/pic.h"
+#include "acpi.h"
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
 #include "arch/i686/mm/vmm.h"
@@ -35,6 +36,7 @@ void arch_init() {
 
     // From this point, a tty terminal is now available.
     pci_init();
+    acpi_init();
 }
 
 static void arch_setCursorPosition(tty_t *tty, int x, int y) {
