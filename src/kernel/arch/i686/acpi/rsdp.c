@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "arch/i686/acpi/rsdp.h"
+#include "acpi/rsdp.h"
 #include "arch/i686/mm/vmm.h"
 
 #include "libk/string.h"
@@ -11,7 +11,6 @@ const acpi_rsdp_t *acpi_rsdp_locate();
 void acpi_rsdp_unmap();
 static const acpi_rsdp_t *acpi_rsdp_locate_ebda();
 static const acpi_rsdp_t *acpi_rsdp_locate_bios();
-static bool acpi_rsdp_isChecksumValid(acpi_rsdp_t *rsdp);
 
 static int foundMethod;
 
@@ -92,31 +91,6 @@ static const acpi_rsdp_t *acpi_rsdp_locate_bios() {
     vmm_unmap(rsdp_data.bios, 32);
 
     return NULL;
-}
-
-static bool acpi_rsdp_isChecksumValid(acpi_rsdp_t *rsdp) {
-    uint8_t *buffer = (uint8_t *)rsdp;
-    uint8_t sum = 0;
-
-    for(int i = 0; i < 20; i++) {
-        sum += buffer[i];
-    }
-
-    if(sum != 0) {
-        return false;
-    } else if(rsdp->revision == 0) {
-        return true;
-    } else if(rsdp->revision == 2) {
-        for(int i = 0; i < 16; i++) {
-            sum += buffer[i + 20];
-        }
-
-        return sum == 0;
-    } else {
-        return false;
-    }
-
-    return true;
 }
 
 void acpi_rsdp_unmap() {

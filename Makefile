@@ -15,6 +15,10 @@ KERNEL_SOURCES_C+= \
 	$(SRCDIR)/kernel/panic.c \
 	$(SRCDIR)/kernel/syscall.c \
 	$(SRCDIR)/kernel/tty.c \
+	$(SRCDIR)/kernel/acpi/acpi.c \
+	$(SRCDIR)/kernel/acpi/madt.c \
+	$(SRCDIR)/kernel/acpi/rsdp.c \
+	$(SRCDIR)/kernel/acpi/sdt.c \
 	$(SRCDIR)/kernel/libk/stdio.c \
 	$(SRCDIR)/kernel/libk/string.c
 
@@ -23,7 +27,7 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.asm.o) $(KERNEL_SOURCES_C:%.c=%.c.o)
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
 QEMU=qemu-system-i386
-QEMUFLAGS=-m 32 -serial stdio -d cpu_reset -net nic,model=rtl8139
+QEMUFLAGS=-m 32 -serial stdio -d cpu_reset -net nic,model=rtl8139 -smp 2
 ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)

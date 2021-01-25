@@ -1,5 +1,5 @@
-#ifndef __KERNEL_ARCH_I686_ACPI_SDT_H__
-#define __KERNEL_ARCH_I686_ACPI_SDT_H__
+#ifndef __KERNEL_ACPI_SDT_H__
+#define __KERNEL_ACPI_SDT_H__
 
 #include <stdbool.h>
 #include <stdint.h>

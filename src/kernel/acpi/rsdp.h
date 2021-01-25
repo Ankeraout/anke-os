@@ -1,5 +1,5 @@
-#ifndef __KERNEL_ARCH_I686_ACPI_RSDP_H__
-#define __KERNEL_ARCH_I686_ACPI_RSDP_H__
+#ifndef __KERNEL_ACPI_RSDP_H__
+#define __KERNEL_ACPI_RSDP_H__
 
 #include <stdint.h>
 
@@ -15,6 +15,7 @@ typedef struct {
     uint8_t reserved[3];
 } acpi_rsdp_t;
 
+bool acpi_rsdp_isChecksumValid(acpi_rsdp_t *rsdp);
 const acpi_rsdp_t *acpi_rsdp_locate();
 void acpi_rsdp_unmap();
 

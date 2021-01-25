@@ -1,10 +1,15 @@
 #include <stdbool.h>
+#include <stddef.h>
 
-#include "arch/i686/acpi/rsdp.h"
-#include "arch/i686/acpi/rsdt.h"
-#include "arch/i686/acpi/sdt.h"
-#include "arch/i686/acpi/xsdt.h"
+#include "acpi/fadt.h"
+#include "acpi/hpet.h"
+#include "acpi/madt.h"
+#include "acpi/rsdp.h"
+#include "acpi/rsdt.h"
+#include "acpi/sdt.h"
+#include "acpi/xsdt.h"
 #include "libk/stdio.h"
+#include "libk/string.h"
 
 bool acpi_supported = true;
 bool acpi_initialized = false;
@@ -37,6 +42,10 @@ void acpi_init() {
     }
 }
 
+void acpi_readRsdp(const acpi_rsdp_t *rsdp) {
+
+}
+
 static void acpi_readRsdt(const acpi_rsdt_t *rsdt) {
     size_t entriesCount = (rsdt->header.length - sizeof(acpi_sdt_header_t)) >> 2;
 
@@ -56,11 +65,27 @@ static void acpi_readXsdt(const acpi_xsdt_t *xsdt) {
 static void acpi_addSdt(const acpi_sdt_t *sdt_p) {
     const acpi_sdt_t *sdt = acpi_sdt_mapTable(sdt_p);
 
-    printf("acpi: found table with signature \"%.4s\"\n", sdt->header.signature);
-
     if(acpi_sdt_isChecksumValid(sdt)) {
-        printf("acpi: checksum of table is valid\n");
+        printf("acpi: found table \"%.4s\"\n", sdt->header.signature);
+
+        if(memcmp(sdt->header.signature, "FACP", 4) == 0) {
+            printf("acpi: identified FADT\n");
+
+            const acpi_fadt_t *fadt = (const acpi_fadt_t *)sdt;
+        } else if(memcmp(sdt->header.signature, "APIC", 4) == 0) {
+            printf("acpi: identified MADT\n");
+
+            const acpi_madt_t *madt = (const acpi_madt_t *)sdt;
+
+            acpi_madt_init(madt);
+        } else if(memcmp(sdt->header.signature, "HPET", 4) == 0) {
+            printf("acpi: identified HPET\n");
+
+            const acpi_hpet_t *hpet = (const acpi_hpet_t *)sdt;
+        } else {
+            printf("acpi: ignoring table \"%.4s\" with unknown signature\n", sdt->header.signature);
+        }
     } else {
-        printf("acpi: checksum of table is invalid\n");
+        printf("acpi: ignoring table \"%.4s\" with invalid checksum\n", sdt->header.signature);
     }
 }
