@@ -3,6 +3,7 @@
 
 #include "arch/i686/bioscall.h"
 #include "arch/i686/io.h"
+#include "arch/i686/dev/ide.h"
 #include "libk/stdio.h"
 
 #define PCI_CONFIG_ADDRESS 0xcf8
@@ -27,8 +28,10 @@ void pci_init() {
     pci_detectCsam();
 
     if(pci_csam == PCI_CSAM_NONE) {
+        printf("pci: unsupported configuration space access mechanism\n");
         return;
     } else if(pci_csam == PCI_CSAM_2) {
+        printf("pci: unsupported configuration space access mechanism\n");
         return;
     } else if(pci_csam == PCI_CSAM_1) {
         for(int bus = 0; bus <= pci_lastBusNumber; bus++) {
@@ -49,7 +52,16 @@ void pci_init() {
                         uint16_t deviceId = pci_csam1_read16(bus, device, function, 2);
 
                         if(deviceId != 0xffff) {
-                            printf("pci: found device at %02x:%02x.%1x: (vendor=%#04x, device=%#04x).\n", bus, device, function, vendorId, deviceId);
+                            uint8_t class = pci_csam1_read8(bus, device, function, 8);
+                            uint8_t subclass = pci_csam1_read8(bus, device, function, 9);
+                            uint8_t pif = pci_csam1_read8(bus, device, function, 10);
+
+                            printf("pci: %02x:%02x.%1x: ven=%#04x, dev=%#04x, c=%#02x, s=%#02x, pif=%#02x.\n", bus, device, function, vendorId, deviceId, class, subclass, pif);
+
+                            if(class == 0x01 && subclass == 0x01) {
+                                ide_controller_t *ide_controller = ide_constructor(0x01f0, 0x03f6, 0x0170, 0x0376, 0x0000);
+                                ide_init(ide_controller);
+                            }
                         }
                     }
                 }
