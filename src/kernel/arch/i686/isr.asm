@@ -1,5 +1,7 @@
 bits 32
 
+section .text
+
 %macro DEF_IRQ_HANDLER 1
 global irq_handler_%1
 irq_handler_%1:
@@ -40,7 +42,7 @@ isr_handler_exception_%1:
 %endmacro
 
 extern irq_wrapper
-extern kernel_panic
+extern printf
 extern syscall
 
 section .text
@@ -67,8 +69,12 @@ isr_handler_exception:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    push dword msg_kernelPanic
-    call kernel_panic
+
+    push dword msg_exception
+    call printf
+
+    cli
+    hlt
     add esp, 4
     pop eax
     mov ds, ax
@@ -111,4 +117,4 @@ isr_syscall:
     iret
 
 section .rodata
-msg_kernelPanic db "Unhandled CPU exception", 13, 10, 0
+msg_exception db "CPU exception %#02x", 10, 0
