@@ -31,6 +31,8 @@ if [ "$CONFIG_ARCH" = "i686" ]; then
 
     if [ "$CONFIG_BOOTSTRAP" = "multiboot" ]; then
         echo "Configuring for multiboot bootstrap"
+    elif [ "$CONFIG_BOOTSTRAP" = "aout" ]; then
+        echo "Configuring for a.out bootstrap"
     else
         echo "Error: Unknown bootstrap '$CONFIG_BOOTSTRAP' for architecture '$CONFIG_ARCH'."
         exit 1
@@ -54,7 +56,6 @@ check_command() {
 if [ "$CONFIG_ARCH" = "i686" ]; then
     check_command "i686-elf-gcc"
     check_command "nasm"
-    check_command "grub-mkrescue"
 fi
 
 # Empty Makefile.config
@@ -82,7 +83,8 @@ if [ "$CONFIG_ARCH" = "i686" ]; then
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/pic.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/acpi/rsdp.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/acpi/sdt.c" >> Makefile.config
-    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/dev/ide.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/dev/ata.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/dev/pci_ide.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mm/mm.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mm/pmm.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mm/vmm.c" >> Makefile.config
@@ -91,5 +93,7 @@ if [ "$CONFIG_ARCH" = "i686" ]; then
     if [ "$CONFIG_BOOTSTRAP" = "multiboot" ]; then
         echo "KERNEL_SOURCES_ASM+= \$(SRCDIR)/kernel/arch/i686/bootstraps/multiboot/multiboot.asm" >> Makefile.config
         echo "KERNEL_LDFLAGS+= -T \$(SRCDIR)/kernel/arch/i686/bootstraps/multiboot/multiboot.ld" >> Makefile.config
+    elif [ "$CONFIG_BOOTSTRAP" = "aout" ]; then
+        echo "KERNEL_LDFLAGS+= -T \$(SRCDIR)/kernel/arch/i686/bootstraps/aout/aout.ld" >> Makefile.config
     fi
 fi

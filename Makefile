@@ -34,7 +34,6 @@ all: $(KERNEL_EXEC)
 
 $(KERNEL_EXEC): $(BINDIR)/kernel $(KERNEL_OBJECTS)
 	$(KERNEL_LD) $(KERNEL_OBJECTS) $(KERNEL_LDFLAGS) -o $(KERNEL_EXEC)
-	grub-file --is-x86-multiboot $@
 
 $(BINDIR)/kernel: $(BINDIR)
 	mkdir $(BINDIR)/kernel
