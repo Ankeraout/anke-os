@@ -9,5 +9,6 @@ void *memset(void *dst, int c, size_t n);
 int strcmp(const char *s1, const char *s2);
 char *strcpy(char *dst, const char *src);
 size_t strlen(const char *s);
+char *strrev(char *s);
 
 #endif

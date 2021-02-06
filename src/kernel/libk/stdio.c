@@ -6,7 +6,7 @@
 #include "tty.h"
 #include "libk/string.h"
 
-#define IS_IDENTIFIER(c) (c == 'd' || c == 'i' || c == 'o' || c == 'x' || c == 'X' || c == 'u' || c == 'c' || c == 's' || c == 'f' || c == 'e' || c == 'E' || c == 'g' || c == 'G' || c == 'p' || c == 'n')
+#define IS_IDENTIFIER(c) (c == '%' || c == 'd' || c == 'i' || c == 'o' || c == 'x' || c == 'X' || c == 'u' || c == 'c' || c == 's' || c == 'f' || c == 'e' || c == 'E' || c == 'g' || c == 'G' || c == 'p' || c == 'n')
 
 typedef enum {
     STATE_NORMAL,
@@ -282,8 +282,60 @@ int vsprintf(char *s, const char *format, va_list arguments) {
                     memcpy(&s[index], buffer + trailingZeros, bytesToCopy);
                     index += bytesToCopy;
                 }
-            } else if(identifier == 'd') {
-                
+            } else if(identifier == 'd' || identifier == 'i') {
+                int arg = va_arg(arguments, int);
+
+                char buffer[11];
+                int bufferLength = 0;
+
+                bool negative = arg < 0;
+
+                if(negative) {
+                    arg = -arg;
+                }
+
+                if(arg == 0) {
+                    buffer[0] = '0';
+                    bufferLength = 1;
+                } else if(arg == INT32_MIN) {
+                    memcpy(buffer, "8463847412", 10);
+                    bufferLength = 10;
+                } else {
+                    while(arg > 0) {
+                        buffer[bufferLength++] = '0' + (arg % 10);
+                        arg /= 10;
+                    }
+                }
+
+                if(flag_pad0) {
+                    while(bufferLength < minfw) {
+                        buffer[bufferLength++] = '0';
+                    }
+
+                    if(negative) {
+                        buffer[bufferLength - 1] = '-';
+                    } else if(flag_blank) {
+                        buffer[bufferLength - 1] = ' ';
+                    }
+                } else {
+                    if(negative) {
+                        buffer[bufferLength++] = '-';
+                    }
+
+                    while(bufferLength < minfw) {
+                        buffer[bufferLength++] = ' ';
+                    }
+                }
+
+                buffer[bufferLength] = '\0';
+
+                strrev(buffer);
+
+                memcpy(&s[index], buffer, bufferLength);
+
+                index += bufferLength;
+            } else if(identifier == '%') {
+                s[index++] = '%';
             }
 
             flag_identifier = false;

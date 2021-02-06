@@ -105,3 +105,21 @@ int memcmp(const void *ptr1, const void *ptr2, size_t size) {
 
     return 0;
 }
+
+char *strrev(char *s) {
+    size_t stringLength = strlen(s);
+
+    size_t i = 0;
+    size_t j = stringLength - 1;
+
+    while(i < j) {
+        char exchange = s[i];
+        s[i] = s[j];
+        s[j] = exchange;
+
+        i++;
+        j--;
+    }
+
+    return s;
+}
