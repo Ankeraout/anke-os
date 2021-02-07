@@ -47,49 +47,92 @@
 void ata_init(ata_channel_t *channel, uint16_t io_ctl_base, uint16_t io_cmd_base);
 static void ata_identify(ata_channel_t *channel, int drive);
 static void ata_waitBsyEnd(ata_channel_t *channel);
+static void ata_waitDrq(ata_channel_t *channel);
 static void ata_receive(ata_channel_t *channel, void *buffer);
-static void ata_selectDrive(ata_channel_t *channel, int drive);
+static void ata_wait(ata_channel_t *channel);
 
 void ata_init(ata_channel_t *channel, uint16_t commandPort, uint16_t controlPort) {
-    printf("ata: Detected ATA channel (io_cmd=%#04x, io_ctl=%#04x)\n", commandPort, controlPort);
+    printf("ata: detected ATA channel (io_cmd=%#04x, io_ctl=%#04x)\n", commandPort, controlPort);
 
-    /*
+    channel->commandIoBase = commandPort;
+    channel->controlIoBase = controlPort;
+    channel->selectedDrive = -1;
+
     ata_identify(channel, 0);
     ata_identify(channel, 1);
-    */
 }
 
 static void ata_identify(ata_channel_t *channel, int drive) {
     ata_identify_t identify;
 
-    uint8_t tmp = inb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD);
-    tmp &= ~(1 << 4);
-    tmp |= (drive & 1) << 4;
-    outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, tmp);
+    outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, 0xa0 | ((drive & 1) << 4));
 
-    ata_waitBsyEnd(channel);
+    ata_wait(channel); // Unnecessary?
 
-    printf("ata: sending IDENTIFY command...\n");
+    outb(channel->commandIoBase + ATA_CMDREG_SECTOR_COUNT, 0);
+    outb(channel->commandIoBase + ATA_CMDREG_LBA_0_7, 0);
+    outb(channel->commandIoBase + ATA_CMDREG_LBA_8_15, 0);
+    outb(channel->commandIoBase + ATA_CMDREG_LBA_16_23, 0);
     outb(channel->commandIoBase + ATA_CMDREG_COMMAND, ATA_COMMAND_IDENTIFY);
+    
+    ata_wait(channel); // Unnecessary?
 
-    printf("ata: waiting for drive to be ready...\n");
-    while(!(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_DATA_REQUEST_READY));
+    if(!inb(channel->commandIoBase + ATA_CMDREG_STATUS)) {
+        printf("ata: no %s drive detected on this channel\n", drive ? "slave" : "master");
+        return;
+    } else {
+        printf("ata: detected drive\n");
+    }
 
-    printf("ata: receiving IDENTIFY data...\n");
+    printf("ata: waiting for BUSY bit to clear...\n");
+    ata_waitBsyEnd(channel);
+    printf("ata: BUSY bit cleared\n");
+
+    if(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_ERROR) {
+        uint8_t firstByte = inb(channel->commandIoBase + ATA_CMDREG_CYLINDER_LOW);
+        uint8_t secondByte = inb(channel->commandIoBase + ATA_CMDREG_CYLINDER_HIGH);
+
+        if(firstByte == 0x00 && secondByte == 0x00) {
+            printf("ata: detected PATA device\n");
+        } else if(firstByte == 0x14 && secondByte == 0xeb) {
+            printf("ata: detected PATAPI device\n");
+        } else if(firstByte == 0x3c && secondByte == 0xc3) {
+            printf("ata: detected SATA device\n");
+        } else if(firstByte == 0x69 && secondByte == 0x96) {
+            printf("ata: detected SATAPI device\n");
+        } else {
+            printf("ata: unknown device identification: %#02x %#02x\n", firstByte, secondByte);
+        }
+        
+        return;
+    }
+
+    printf("ata: waiting for DRQ bit to be set...\n");
+    ata_waitDrq(channel);
+    printf("ata: DRQ bit is set.\n");
+
     ata_receive(channel, &identify);
 
-    printf("ata: found device: %.40s\n", identify.modelNumber);
+    printf("ata: device identification: %.40s\n", identify.modelNumber);
 }
 
 static void ata_waitBsyEnd(ata_channel_t *channel) {
-    printf("ata: waiting for BSY bit to clear...\n");
     while(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_BUSY);
-    printf("ata: BSY bit cleared\n");
+}
+
+static void ata_waitDrq(ata_channel_t *channel) {
+    while(!(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_DATA_REQUEST_READY));
 }
 
 static void ata_receive(ata_channel_t *channel, void *buffer) {
     for(int i = 0; i < 256; i++) {
         uint16_t tmp = inw(channel->commandIoBase + ATA_CMDREG_DATA);
         ((uint16_t *)buffer)[i] = (tmp >> 8) | (tmp << 8);
+    }
+}
+
+static void ata_wait(ata_channel_t *channel) {
+    for(int i = 0; i < 4; i++) {
+        inb(channel->commandIoBase + ATA_CMDREG_STATUS);
     }
 }

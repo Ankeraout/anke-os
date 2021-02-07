@@ -4,6 +4,7 @@
 #include "arch/i686/mmap.h"
 #include "arch/i686/pci.h"
 #include "arch/i686/pic.h"
+#include "arch/i686/pit.h"
 #include "arch/i686/ring3.h"
 #include "arch/i686/tss.h"
 #include "acpi.h"
@@ -24,6 +25,7 @@ void arch_init() {
     
     idt_init();
     pic_init();
+    pit_init();
 
     asm("sti");
 
@@ -32,8 +34,15 @@ void arch_init() {
     pmm_init();
     vmm_init();
 
-    void *tty_buffer = vmm_map((const void *)0xb8000, 1, true);
-    tty_text16_init(&kernel_tty, tty_buffer, 80, 25, arch_setCursorPosition);
+    bioscall_context_t bioscall_context = {
+        .ax = 0x1112,
+        .bl = 0x00
+    };
+
+    bioscall(0x10, &bioscall_context);
+
+    void *tty_buffer = vmm_map((const void *)0xb8000, 2, true);
+    tty_text16_init(&kernel_tty, tty_buffer, 80, 50, arch_setCursorPosition);
     tty_clear(&kernel_tty);
 
     // From this point, a tty terminal is now available.

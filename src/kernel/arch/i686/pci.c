@@ -25,12 +25,22 @@ static void pci_registerDevice(const pci_dev_t *dev);
 static uint8_t pci_csam1_read8(const pci_dev_t *dev, uint8_t offset);
 static uint16_t pci_csam1_read16(const pci_dev_t *dev, uint8_t offset);
 static uint32_t pci_csam1_read32(const pci_dev_t *dev, uint8_t offset);
+static void pci_csam1_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value);
+static void pci_csam1_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value);
+static void pci_csam1_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value);
 static uint8_t pci_csam2_read8(const pci_dev_t *dev, uint8_t offset);
 static uint16_t pci_csam2_read16(const pci_dev_t *dev, uint8_t offset);
 static uint32_t pci_csam2_read32(const pci_dev_t *dev, uint8_t offset);
+static void pci_csam2_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value);
+static void pci_csam2_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value);
+static void pci_csam2_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value);
 uint8_t pci_csam_read8(const pci_dev_t *dev, uint8_t offset);
 uint16_t pci_csam_read16(const pci_dev_t *dev, uint8_t offset);
 uint32_t pci_csam_read32(const pci_dev_t *dev, uint8_t offset);
+void pci_csam_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value);
+void pci_csam_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value);
+void pci_csam_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value);
+uint64_t pci_bar_getSize(const pci_bar_t *bar);
 
 void pci_init() {
     pci_detectCsam();
@@ -167,6 +177,27 @@ static uint32_t pci_csam1_read32(const pci_dev_t *dev, uint8_t offset) {
     return inl(PCI_CONFIG_DATA);
 }
 
+static void pci_csam1_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
+static void pci_csam1_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
+static void pci_csam1_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
 static uint8_t pci_csam2_read8(const pci_dev_t *dev, uint8_t offset) {
     return inl(0xc000 | (dev->csam2.deviceNumber << 8) | (offset & 0xfc)) >> ((3 - (offset & 3)) << 3);
 }
@@ -179,26 +210,84 @@ static uint32_t pci_csam2_read32(const pci_dev_t *dev, uint8_t offset) {
     return inl(0xc000 | (dev->csam2.deviceNumber << 8) | (offset & 0xfc));
 }
 
+static void pci_csam2_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
+static void pci_csam2_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
+static void pci_csam2_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value) {
+    // TODO
+    (void)dev;
+    (void)offset;
+    (void)value;
+}
+
 uint8_t pci_csam_read8(const pci_dev_t *dev, uint8_t offset) {
     if(pci_csam == PCI_CSAM_1) {
         return pci_csam1_read8(dev, offset);
-    } else {
+    } else if(pci_csam == PCI_CSAM_2) {
         return pci_csam2_read8(dev, offset);
+    } else {
+        return 0xff;
     }
 }
 
 uint16_t pci_csam_read16(const pci_dev_t *dev, uint8_t offset) {
     if(pci_csam == PCI_CSAM_1) {
         return pci_csam1_read16(dev, offset);
-    } else {
+    } else if(pci_csam == PCI_CSAM_2) {
         return pci_csam2_read16(dev, offset);
+    } else {
+        return 0xffff;
     }
 }
 
 uint32_t pci_csam_read32(const pci_dev_t *dev, uint8_t offset) {
     if(pci_csam == PCI_CSAM_1) {
         return pci_csam1_read32(dev, offset);
-    } else {
+    } else if(pci_csam == PCI_CSAM_2) {
         return pci_csam2_read32(dev, offset);
+    } else {
+        return 0xffffffff;
     }
+}
+
+void pci_csam_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value) {
+    if(pci_csam == PCI_CSAM_1) {
+        pci_csam1_write8(dev, offset, value);
+    } else if(pci_csam == PCI_CSAM_2) {
+        pci_csam2_write8(dev, offset, value);
+    }
+}
+
+void pci_csam_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value) {
+    if(pci_csam == PCI_CSAM_1) {
+        pci_csam1_write16(dev, offset, value);
+    } else if(pci_csam == PCI_CSAM_2) {
+        pci_csam2_write16(dev, offset, value);
+    }
+}
+
+void pci_csam_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value) {
+    if(pci_csam == PCI_CSAM_1) {
+        pci_csam1_write32(dev, offset, value);
+    } else if(pci_csam == PCI_CSAM_2) {
+        pci_csam2_write32(dev, offset, value);
+    }
+}
+
+uint64_t pci_bar_getSize(const pci_bar_t *bar) {
+    // TODO
+    (void)bar;
+
+    return 0;
 }

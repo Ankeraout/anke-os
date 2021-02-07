@@ -14,6 +14,7 @@ KERNEL_SOURCES_C+= \
 	$(SRCDIR)/kernel/main.c \
 	$(SRCDIR)/kernel/panic.c \
 	$(SRCDIR)/kernel/syscall.c \
+	$(SRCDIR)/kernel/time.c \
 	$(SRCDIR)/kernel/tty.c \
 	$(SRCDIR)/kernel/acpi/acpi.c \
 	$(SRCDIR)/kernel/acpi/madt.c \

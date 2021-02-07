@@ -83,6 +83,7 @@ if [ "$CONFIG_ARCH" = "i686" ]; then
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/mmap.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/pci.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/pic.c" >> Makefile.config
+    echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/pit.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/tss.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/acpi/rsdp.c" >> Makefile.config
     echo "KERNEL_SOURCES_C+= \$(SRCDIR)/kernel/arch/i686/acpi/sdt.c" >> Makefile.config
