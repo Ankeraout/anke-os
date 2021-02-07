@@ -43,7 +43,7 @@ void acpi_init() {
 }
 
 void acpi_readRsdp(const acpi_rsdp_t *rsdp) {
-
+    (void)rsdp;
 }
 
 static void acpi_readRsdt(const acpi_rsdt_t *rsdt) {
@@ -72,6 +72,8 @@ static void acpi_addSdt(const acpi_sdt_t *sdt_p) {
             printf("acpi: identified FADT\n");
 
             const acpi_fadt_t *fadt = (const acpi_fadt_t *)sdt;
+
+            (void)fadt;
         } else if(memcmp(sdt->header.signature, "APIC", 4) == 0) {
             printf("acpi: identified MADT\n");
 
@@ -82,6 +84,8 @@ static void acpi_addSdt(const acpi_sdt_t *sdt_p) {
             printf("acpi: identified HPET\n");
 
             const acpi_hpet_t *hpet = (const acpi_hpet_t *)sdt;
+
+            (void)hpet;
         } else {
             printf("acpi: ignoring table \"%.4s\" with unknown signature\n", sdt->header.signature);
         }

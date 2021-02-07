@@ -48,6 +48,10 @@ int vsprintf(char *s, const char *format, va_list arguments) {
     int index = 0;
     sprintf_parser_state_t parserState = STATE_NORMAL;
 
+    // Temporary: removes warnings
+    (void)flag_alwaysSign;
+    (void)flag_leftJustify;
+
     while(c) {
         switch(parserState) {
             case STATE_NORMAL:

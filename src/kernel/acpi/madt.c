@@ -68,11 +68,12 @@ static void acpi_madt_readRecord_ioApic(const acpi_madt_record_ioApic_t *record)
 }
 
 static void acpi_madt_readRecord_interruptSourceOverride(const acpi_madt_record_interruptSourceOverride_t *record) {
-    
+    // TODO
+    (void)record;
 }
 
 static void acpi_madt_readRecord_nonMaskableInterrupts(const acpi_madt_record_nonMaskableInterrupts_t *record) {
-    
+    (void)record;
 }
 
 static void acpi_madt_readRecord_localApicAddressOverride(const acpi_madt_record_localApicAddressOverride_t *record) {
