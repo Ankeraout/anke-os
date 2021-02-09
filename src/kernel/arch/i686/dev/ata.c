@@ -68,32 +68,24 @@ static void ata_identify(ata_channel_t *channel, int drive) {
 
     outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, 0xa0 | ((drive & 1) << 4));
 
-    ata_wait(channel); // Unnecessary?
+    sleep(50);
 
     outb(channel->commandIoBase + ATA_CMDREG_SECTOR_COUNT, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_0_7, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_8_15, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_16_23, 0);
     outb(channel->commandIoBase + ATA_CMDREG_COMMAND, ATA_COMMAND_IDENTIFY);
-    
-    ata_wait(channel); // Unnecessary?
+
+    sleep(50);
 
     uint8_t status = inb(channel->commandIoBase + ATA_CMDREG_STATUS);
 
     if(!status) {
         printf("ata: no %s drive detected on this channel\n", drive ? "slave" : "master");
         return;
-    } else {
-        printf("ata: detected drive\n");
     }
-
-    printf("ata: status=%#02x\n", status);
-
-    printf("ata: waiting for BUSY bit to clear...\n");
     
-    uint64_t startTime = kernel_timer;
     ata_waitBsyEnd(channel);
-    printf("ata: BUSY bit cleared (took %d ms)\n", kernel_timer - startTime);
 
     if(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_ERROR) {
         uint8_t firstByte = inb(channel->commandIoBase + ATA_CMDREG_CYLINDER_LOW);
@@ -114,9 +106,7 @@ static void ata_identify(ata_channel_t *channel, int drive) {
         return;
     }
 
-    printf("ata: waiting for DRQ bit to be set...\n");
     ata_waitDrq(channel);
-    printf("ata: DRQ bit is set.\n");
 
     ata_receive(channel, &identify);
 
