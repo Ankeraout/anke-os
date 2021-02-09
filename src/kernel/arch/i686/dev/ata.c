@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "time.h"
 #include "arch/i686/io.h"
 #include "arch/i686/dev/ata.h"
 #include "libk/stdio.h"
@@ -77,16 +78,22 @@ static void ata_identify(ata_channel_t *channel, int drive) {
     
     ata_wait(channel); // Unnecessary?
 
-    if(!inb(channel->commandIoBase + ATA_CMDREG_STATUS)) {
+    uint8_t status = inb(channel->commandIoBase + ATA_CMDREG_STATUS);
+
+    if(!status) {
         printf("ata: no %s drive detected on this channel\n", drive ? "slave" : "master");
         return;
     } else {
         printf("ata: detected drive\n");
     }
 
+    printf("ata: status=%#02x\n", status);
+
     printf("ata: waiting for BUSY bit to clear...\n");
+    
+    uint64_t startTime = kernel_timer;
     ata_waitBsyEnd(channel);
-    printf("ata: BUSY bit cleared\n");
+    printf("ata: BUSY bit cleared (took %d ms)\n", kernel_timer - startTime);
 
     if(inb(channel->commandIoBase + ATA_CMDREG_STATUS) & ATA_STATUS_ERROR) {
         uint8_t firstByte = inb(channel->commandIoBase + ATA_CMDREG_CYLINDER_LOW);

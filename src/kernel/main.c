@@ -7,6 +7,8 @@
 void kernel_main() {
     arch_init();
 
+    printf("Welcome to AnkeOS!\n");
+
     while(true) {
         arch_halt();
     }
