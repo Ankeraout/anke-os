@@ -142,6 +142,7 @@ typedef struct {
 } __attribute__((packed)) ata_identify_t;
 
 typedef enum {
+    ATA_DEVICETYPE_NONE,
     ATA_DEVICETYPE_PATA,
     ATA_DEVICETYPE_PATAPI,
     ATA_DEVICETYPE_SATA,

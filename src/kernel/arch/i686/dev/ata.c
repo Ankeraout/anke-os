@@ -68,7 +68,7 @@ static void ata_identify(ata_channel_t *channel, int drive) {
 
     outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, 0xa0 | ((drive & 1) << 4));
 
-    sleep(50);
+    sleep(1);
 
     outb(channel->commandIoBase + ATA_CMDREG_SECTOR_COUNT, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_0_7, 0);
@@ -76,7 +76,7 @@ static void ata_identify(ata_channel_t *channel, int drive) {
     outb(channel->commandIoBase + ATA_CMDREG_LBA_16_23, 0);
     outb(channel->commandIoBase + ATA_CMDREG_COMMAND, ATA_COMMAND_IDENTIFY);
 
-    sleep(50);
+    sleep(1);
 
     uint8_t status = inb(channel->commandIoBase + ATA_CMDREG_STATUS);
 
@@ -125,11 +125,5 @@ static void ata_receive(ata_channel_t *channel, void *buffer) {
     for(int i = 0; i < 256; i++) {
         uint16_t tmp = inw(channel->commandIoBase + ATA_CMDREG_DATA);
         ((uint16_t *)buffer)[i] = (tmp >> 8) | (tmp << 8);
-    }
-}
-
-static void ata_wait(ata_channel_t *channel) {
-    for(int i = 0; i < 4; i++) {
-        inb(channel->commandIoBase + ATA_CMDREG_STATUS);
     }
 }
