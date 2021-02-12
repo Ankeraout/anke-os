@@ -19,6 +19,7 @@ KERNEL_SOURCES_C+= \
 	$(SRCDIR)/kernel/acpi/madt.c \
 	$(SRCDIR)/kernel/acpi/rsdp.c \
 	$(SRCDIR)/kernel/acpi/sdt.c \
+	$(SRCDIR)/kernel/libk/list.c \
 	$(SRCDIR)/kernel/libk/stdio.c \
 	$(SRCDIR)/kernel/libk/string.c
 
