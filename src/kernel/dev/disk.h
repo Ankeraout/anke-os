@@ -7,12 +7,16 @@
 
 typedef uint64_t lba_t;
 
-typedef struct {
-    int (*read)(dev_disk_t *device, void *buffer, lba_t lba);
-    int (*write)(dev_disk_t *device, const void *buffer, lba_t lba);
+struct dev_disk_s;
+struct dev_disk_api_s;
+
+typedef struct dev_disk_api_s {
+    int (*read)(struct dev_disk_s *device, void *buffer, lba_t lba);
+    int (*write)(struct dev_disk_s *device, const void *buffer, lba_t lba);
+    void (*getDeviceName)(struct dev_disk_s *device, char *buffer, size_t size);
 } dev_disk_api_t;
 
-typedef struct {
+typedef struct dev_disk_s {
     dev_disk_api_t api;
     size_t blockSize;
     lba_t blockCount;
@@ -23,6 +27,7 @@ typedef struct {
     uint8_t reserved[256];
 } dev_disk_t;
 
+void disk_init();
 void disk_registerDevice(dev_disk_t *disk);
 
 #endif

@@ -6,6 +6,7 @@ void *memcpy(void *destination, const void *source, size_t size);
 void *memset(void *dst, int c, size_t n);
 int strcmp(const char *s1, const char *s2);
 char *strcpy(char *dst, const char *src);
+char *strncpy(char *dst, const char *src, size_t n);
 size_t strlen(const char *s);
 
 void *memcpy(void *destination, const void *source, size_t size) {
@@ -122,4 +123,17 @@ char *strrev(char *s) {
     }
 
     return s;
+}
+
+char *strncpy(char *dst, const char *src, size_t n) {
+    size_t i = 0;
+
+    while(src[i] && i < n) {
+        dst[i] = src[i];
+        i++;
+    }
+
+    dst[i] = '\0';
+
+    return dst;
 }

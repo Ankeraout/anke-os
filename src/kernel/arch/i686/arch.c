@@ -15,12 +15,13 @@
 
 #include "libk/stdio.h"
 
+void arch_preinit();
 void arch_init();
 static void arch_setCursorPosition(tty_t *tty, int x, int y);
 void arch_disableInterrupts();
 void arch_halt();
 
-void arch_init() {
+void arch_preinit() {
     bioscall_init();
     
     idt_init();
@@ -44,8 +45,9 @@ void arch_init() {
     void *tty_buffer = vmm_map((const void *)0xb8000, 2, true);
     tty_text16_init(&kernel_tty, tty_buffer, 80, 50, arch_setCursorPosition);
     tty_clear(&kernel_tty);
+}
 
-    // From this point, a tty terminal is now available.
+void arch_init() {
     pci_init();
     acpi_init();
 

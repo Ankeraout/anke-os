@@ -45,7 +45,7 @@ void pmm_init() {
     // Mark kernel pages as used
     size_t kernel_size = ((size_t)&__kernel_end) - ((size_t)&__kernel_start);
     size_t kernel_pages = (kernel_size + 0xfff) >> 12;
-    size_t pageNumber = 0x00100000 >> 12;
+    size_t pageNumber = (((size_t)&__kernel_start) - 0xc0000000) >> 12;
     pmm_mark(pageNumber, kernel_pages, true);
 
     // Mark < 1MB addresses as used

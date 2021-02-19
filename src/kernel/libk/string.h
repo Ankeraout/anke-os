@@ -8,6 +8,7 @@ void *memcpy(void *destination, const void *source, size_t size);
 void *memset(void *dst, int c, size_t n);
 int strcmp(const char *s1, const char *s2);
 char *strcpy(char *dst, const char *src);
+char *strncpy(char *dst, const char *src, size_t n);
 size_t strlen(const char *s);
 char *strrev(char *s);
 

@@ -6,9 +6,6 @@ BINDIR=bin
 CONFIG=Makefile.config
 include ${CONFIG}
 
-KERNEL_SOURCES_ASM+= \
-
-
 KERNEL_SOURCES_C+= \
 	$(SRCDIR)/kernel/irq.c \
 	$(SRCDIR)/kernel/main.c \
@@ -19,6 +16,7 @@ KERNEL_SOURCES_C+= \
 	$(SRCDIR)/kernel/acpi/madt.c \
 	$(SRCDIR)/kernel/acpi/rsdp.c \
 	$(SRCDIR)/kernel/acpi/sdt.c \
+	$(SRCDIR)/kernel/dev/disk.c \
 	$(SRCDIR)/kernel/libk/list.c \
 	$(SRCDIR)/kernel/libk/stdio.c \
 	$(SRCDIR)/kernel/libk/string.c
@@ -28,7 +26,7 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_ASM:%.asm=%.asm.o) $(KERNEL_SOURCES_C:%.c=%.c.o)
 KERNEL_EXEC=$(BINDIR)/kernel/kernel.elf
 
 QEMU=qemu-system-i386
-QEMUFLAGS=-m 32 -serial stdio -d cpu_reset -net nic,model=rtl8139
+QEMUFLAGS=-m 32 -serial stdio -d cpu_reset -net nic,model=rtl8139 -hda bochs_hdd.img
 ISO=anke-os.iso
 
 all: $(KERNEL_EXEC)

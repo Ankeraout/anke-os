@@ -1,9 +1,14 @@
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "time.h"
 #include "arch/i686/io.h"
 #include "arch/i686/dev/ata.h"
+#include "dev/disk.h"
 #include "libk/stdio.h"
+#include "libk/stdlib.h"
+#include "libk/string.h"
 
 #define ATA_STATUS_BUSY 0x80
 #define ATA_STATUS_DRIVE_READY 0x40
@@ -45,12 +50,37 @@
 #define ATA_CMDREG_STATUS 0x0007
 #define ATA_CMDREG_COMMAND 0x0007
 
+typedef struct {
+    dev_disk_t disk;
+    char deviceName[41];
+    ata_channel_t *channel;
+    int drive;
+    bool lbaMode;
+    uint16_t cylinders;
+    uint8_t heads;
+    uint8_t sectorsPerTrack;
+} ata_disk_t;
+
+typedef struct {
+    uint16_t cylinder;
+    uint8_t head;
+    uint8_t sector;
+} ata_chs_t;
+
 void ata_init(ata_channel_t *channel, uint16_t io_ctl_base, uint16_t io_cmd_base);
 static void ata_identify(ata_channel_t *channel, int drive);
 static void ata_waitBsyEnd(ata_channel_t *channel);
 static void ata_waitDrq(ata_channel_t *channel);
 static void ata_receive(ata_channel_t *channel, void *buffer);
-static void ata_wait(ata_channel_t *channel);
+static void ata_selectDrive(ata_channel_t *channel, int drive);
+static void ata_selectLba(ata_disk_t *disk, lba_t lba);
+static void ata_lbaToChs(ata_chs_t *chs, ata_disk_t *disk, lba_t lba);
+static int ata_api_read(ata_disk_t *disk, void *buffer, lba_t lba);
+static int ata_api_write(ata_disk_t *disk, void *buffer, lba_t lba);
+static void ata_api_getDeviceName(ata_disk_t *disk, char *buffer, size_t n);
+static inline uint16_t read16(const void *buffer, size_t offset);
+static inline uint32_t read32(const void *buffer, size_t offset);
+static inline void readString(void *dst, const void *src, size_t n);
 
 void ata_init(ata_channel_t *channel, uint16_t commandPort, uint16_t controlPort) {
     printf("ata: detected ATA channel (io_cmd=%#04x, io_ctl=%#04x)\n", commandPort, controlPort);
@@ -64,12 +94,9 @@ void ata_init(ata_channel_t *channel, uint16_t commandPort, uint16_t controlPort
 }
 
 static void ata_identify(ata_channel_t *channel, int drive) {
-    ata_identify_t identify;
+    uint8_t identify[512];
 
-    outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, 0xa0 | ((drive & 1) << 4));
-
-    sleep(1);
-
+    ata_selectDrive(channel, drive);
     outb(channel->commandIoBase + ATA_CMDREG_SECTOR_COUNT, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_0_7, 0);
     outb(channel->commandIoBase + ATA_CMDREG_LBA_8_15, 0);
@@ -110,7 +137,40 @@ static void ata_identify(ata_channel_t *channel, int drive) {
 
     ata_receive(channel, &identify);
 
-    printf("ata: device identification: %.40s\n", identify.modelNumber);
+    char buffer[41];
+
+    readString(buffer, &identify[54], 40);
+
+    printf("ata: registering device: \"%s\"\n", buffer);
+    printf("ata: disk geometry: C=%d H=%d S=%d\n", read16(identify, 2), read16(identify, 6), read16(identify, 12));
+
+    ata_disk_t *disk = malloc(sizeof(ata_disk_t));
+
+    strncpy(disk->deviceName, (const char *)buffer, 40);
+    disk->channel = channel;
+    disk->drive = drive;
+    disk->disk.hotplug = false;
+    disk->disk.inserted = true;
+    disk->disk.partition = false;
+    disk->disk.writable = true;
+    disk->disk.blockSize = 512;
+    
+    if(read16(identify, 98) & (1 << 9)) {
+        disk->disk.blockCount = read32(identify, 120);
+    } else {
+        disk->disk.blockCount = read16(identify, 2) * read16(identify, 6) * read16(identify, 12);
+    }
+    
+    disk->lbaMode = false;
+    disk->cylinders = read16(identify, 2);
+    disk->heads = read16(identify, 6);
+    disk->sectorsPerTrack = read16(identify, 12);
+
+    disk->disk.api.getDeviceName = ata_api_getDeviceName;
+    disk->disk.api.read = ata_api_read;
+    disk->disk.api.write = ata_api_write;
+
+    disk_registerDevice((ata_disk_t *)disk);
 }
 
 static void ata_waitBsyEnd(ata_channel_t *channel) {
@@ -123,7 +183,96 @@ static void ata_waitDrq(ata_channel_t *channel) {
 
 static void ata_receive(ata_channel_t *channel, void *buffer) {
     for(int i = 0; i < 256; i++) {
-        uint16_t tmp = inw(channel->commandIoBase + ATA_CMDREG_DATA);
-        ((uint16_t *)buffer)[i] = (tmp >> 8) | (tmp << 8);
+        ((uint16_t *)buffer)[i] = inw(channel->commandIoBase + ATA_CMDREG_DATA);
     }
+}
+
+static void ata_selectDrive(ata_channel_t *channel, int drive) {
+    if(channel->selectedDrive != drive) {
+        outb(channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, 0xa0 | ((drive & 1) << 4));
+        sleep(1);
+        channel->selectedDrive = drive;
+    }
+}
+
+static void ata_lbaToChs(ata_chs_t *chs, ata_disk_t *disk, lba_t lba) {
+    uint16_t sectorsPerCylinder = disk->sectorsPerTrack * disk->heads;
+
+    chs->cylinder = lba / sectorsPerCylinder;
+    chs->head = (lba % sectorsPerCylinder) / disk->sectorsPerTrack;
+    chs->sector = (lba % disk->sectorsPerTrack) + 1;
+}
+
+static void ata_selectLba(ata_disk_t *disk, lba_t lba) {
+    if(disk->lbaMode) {
+        // TODO
+    } else {
+        ata_chs_t chs;
+
+        ata_lbaToChs(&chs, disk, lba);
+
+        outb(disk->channel->commandIoBase + ATA_CMDREG_SECTOR_NUMBER, chs.sector);
+        outb(disk->channel->commandIoBase + ATA_CMDREG_CYLINDER_LOW, chs.cylinder);
+        outb(disk->channel->commandIoBase + ATA_CMDREG_CYLINDER_HIGH, chs.cylinder >> 8);
+        outb(disk->channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD, (inb(disk->channel->commandIoBase + ATA_CMDREG_DRIVE_HEAD) & 0xf0) | (chs.head & 0x0f));
+    }
+}
+
+static inline uint16_t read16(const void *buffer, size_t offset) {
+    uint8_t *castedBuffer = (uint8_t *)buffer;
+
+    return
+        castedBuffer[offset]
+        | (castedBuffer[offset + 1] << 8);
+}
+
+static inline uint32_t read32(const void *buffer, size_t offset) {
+    uint8_t *castedBuffer = (uint8_t *)buffer;
+
+    return 
+        (castedBuffer[offset] << 16)
+        | (castedBuffer[offset + 1] << 24)
+        | castedBuffer[offset + 2]
+        | (castedBuffer[offset + 3] << 8);
+}
+
+static inline void readString(void *dst, const void *src, size_t n) {
+    uint16_t *castedSrc = (uint16_t *)src;
+    uint16_t *castedDst = (uint16_t *)dst;
+    
+    n >>= 1;
+
+    for(size_t i = 0; i < n; i++) {
+        castedDst[i] = (castedSrc[i] >> 8) | (castedSrc[i] << 8);
+    }
+
+    ((uint8_t *)dst)[n << 1] = '\0';
+}
+
+static int ata_api_read(ata_disk_t *disk, void *buffer, lba_t lba) {
+    ata_selectDrive(disk->channel, disk->drive);
+    outb(disk->channel->commandIoBase + ATA_CMDREG_SECTOR_COUNT, 1);
+    ata_selectLba(disk, lba);
+
+    outb(disk->channel->commandIoBase + ATA_CMDREG_COMMAND, ATA_COMMAND_READ_PIO);
+
+    ata_waitBsyEnd(disk->channel);
+
+    uint8_t status = inb(disk->channel->commandIoBase + ATA_CMDREG_STATUS);
+
+    ata_waitDrq(disk->channel);
+
+    ata_receive(disk->channel, buffer);
+
+    return 0;
+}
+
+static int ata_api_write(ata_disk_t *disk, void *buffer, lba_t lba) {
+    ata_selectDrive(disk->channel, disk->drive);
+
+    return 1;
+}
+
+static void ata_api_getDeviceName(ata_disk_t *disk, char *buffer, size_t n) {
+    strncpy(buffer, disk->deviceName, n);
 }

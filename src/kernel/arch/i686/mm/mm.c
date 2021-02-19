@@ -6,6 +6,7 @@
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
 #include "arch/i686/mm/vmm.h"
+#include "libk/stdio.h"
 
 void mm_init();
 void *mm_mapTemporary(const void *pageAddress, mm_service_t service);

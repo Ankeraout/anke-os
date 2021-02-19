@@ -1,6 +1,8 @@
 #include <stddef.h>
+#include <stdint.h>
 
 #include "libk/list.h"
+#include "libk/stdio.h"
 #include "libk/stdlib.h"
 
 list_t *list_create();
@@ -26,7 +28,7 @@ void list_add(list_t *list, void *element) {
         list_expand(list);
     }
 
-    list->elements[list->length - 1] = element;
+    list->elements[list->length] = element;
     list->length++;
 }
 
@@ -55,6 +57,12 @@ void list_insert(list_t *list, size_t index, void *element) {
     if(list->internalLength == list->length) {
         list_expand(list);
     }
+
+    for(size_t i = list->length; i > index; i--) {
+        list->elements[i] = list->elements[i - 1];
+    }
+
+    list->elements[index] = element;
 }
 
 void list_destroy(list_t *list) {
@@ -65,7 +73,7 @@ void list_destroy(list_t *list) {
 static void list_expand(list_t *list) {
     void **elements = malloc(list->internalLength * 2 * sizeof(void *));
 
-    for(int i = 0; i < list->internalLength; i++) {
+    for(size_t i = 0; i < list->internalLength; i++) {
         elements[i] = list->elements[i];
     }
 
