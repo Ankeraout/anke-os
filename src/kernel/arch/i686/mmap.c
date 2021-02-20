@@ -41,7 +41,9 @@ void mmap_init() {
     size_t ramTotal = 0;
 
     for(int i = 0; i < mmap_length; i++) {
-        ramTotal += mmap_buffer[i].length >> 20;
+        if(mmap_buffer[i].type == 1) {
+            ramTotal += mmap_buffer[i].length >> 20;
+        }
     }
 
     printf("mmap: detected %d MiB of usable memory\n", (int)ramTotal);
