@@ -1,4 +1,4 @@
-#include "dev/disk.h"
+#include "dev/disk/disk.h"
 #include "libk/list.h"
 #include "libk/stdio.h"
 

@@ -15,6 +15,7 @@ int mmap_length = 0;
 
 void mmap_init();
 static int mmap_init_e820();
+static int mmap_init_e801();
 static void mmap_arrange();
 static void mmap_remove(int index);
 static void mmap_fix();
@@ -24,15 +25,26 @@ int mmap_getLength();
 
 void mmap_init() {
     if(mmap_init_e820()) {
-        while(true) {
-            asm("cli");
-            asm("hlt");
-        }
+        if(mmap_init_e801()) {
+            printf("mmap: could not get memory map\n");
+            printf("mmap: system halted\n");
 
-        // TODO: die
+            while(true) {
+                asm("cli");
+                asm("hlt");
+            }
+        }
     }
 
     mmap_arrange();
+
+    size_t ramTotal = 0;
+
+    for(int i = 0; i < mmap_length; i++) {
+        ramTotal += mmap_buffer[i].length >> 20;
+    }
+
+    printf("mmap: detected %d MiB of usable memory\n", (int)ramTotal);
 }
 
 static int mmap_init_e820() {
@@ -45,6 +57,8 @@ static int mmap_init_e820() {
         .di = MMAP_BUFFER_OFFSET
     };
 
+    mmap_length = 0;
+
     while(true) {
         context.eax = 0xe820;
         context.edx = 0x534d4150;
@@ -52,10 +66,13 @@ static int mmap_init_e820() {
         bioscall(0x15, &context);
 
         if(context.eax != 0x534d4150) {
+            printf("e820: wrong signature in EAX (expected 0x534d4150, got %#08x)\n", context.eax);
+            printf("e820: failed after %d BIOS calls\n", mmap_length);
             return 1;
         }
 
         if(context.ecx != 20) {
+            printf("e820: wrong value in ECX (expected 20, got %d)\n", context.ecx);
             return 1;
         }
 
@@ -71,6 +88,56 @@ static int mmap_init_e820() {
             return 0;
         }
     }
+
+    return 0;
+}
+
+static int mmap_init_e801() {
+    bioscall_context_t context = {
+        .ax = 0xe801,
+        .cx = 0,
+        .dx = 0
+    };
+
+    bioscall(0x15, &context);
+
+    if(context.flags & BIOSCALL_CONTEXT_EFLAGS_CF) {
+        printf("e801: BIOS call returned carry flag\n");
+        return 1;
+    }
+
+    if((context.ah == 0x86) || (context.ah == 0x80)) {
+        printf("e801: BIOS call returned AH=%02x\n", context.ah);
+        return 1;
+    }
+
+    printf("e801: ax=%#04x bx=%#04x cx=%#04x dx=%#04x\n", context.ax, context.bx, context.cx, context.dx);
+
+    size_t ramUnder16mb;
+    size_t ramOver16mb;
+
+    if((context.ax == 0) && (context.bx == 0)) {
+        if((context.cx == 0) && (context.dx == 0)) {
+            printf("e801: BIOS call returned 0 MB\n");
+            return 1;
+        } else {
+            ramUnder16mb = context.cx * 1024;
+            ramOver16mb = context.dx * 65536;
+        }
+    } else {
+        ramUnder16mb = context.ax * 1024;
+        ramOver16mb = context.bx * 65536;
+    }
+
+    mmap_length = 2;
+
+    mmap_buffer[0].base = 0x00100000;
+    mmap_buffer[0].length = ramUnder16mb;
+    mmap_buffer[0].type = 1;
+
+    mmap_buffer[1].base = 0x01000000;
+    mmap_buffer[1].length = ramOver16mb;
+    mmap_buffer[1].type = 1;
 
     return 0;
 }

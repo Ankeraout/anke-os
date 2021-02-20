@@ -5,7 +5,7 @@
 #include "time.h"
 #include "arch/i686/io.h"
 #include "arch/i686/dev/ata.h"
-#include "dev/disk.h"
+#include "dev/disk/disk.h"
 #include "libk/stdio.h"
 #include "libk/stdlib.h"
 #include "libk/string.h"
@@ -170,7 +170,7 @@ static void ata_identify(ata_channel_t *channel, int drive) {
     disk->disk.api.read = ata_api_read;
     disk->disk.api.write = ata_api_write;
 
-    disk_registerDevice((ata_disk_t *)disk);
+    disk_registerDevice((dev_disk_t *)disk);
 }
 
 static void ata_waitBsyEnd(ata_channel_t *channel) {
@@ -258,8 +258,6 @@ static int ata_api_read(ata_disk_t *disk, void *buffer, lba_t lba) {
 
     ata_waitBsyEnd(disk->channel);
 
-    uint8_t status = inb(disk->channel->commandIoBase + ATA_CMDREG_STATUS);
-
     ata_waitDrq(disk->channel);
 
     ata_receive(disk->channel, buffer);
@@ -269,6 +267,10 @@ static int ata_api_read(ata_disk_t *disk, void *buffer, lba_t lba) {
 
 static int ata_api_write(ata_disk_t *disk, void *buffer, lba_t lba) {
     ata_selectDrive(disk->channel, disk->drive);
+
+    (void)disk;
+    (void)buffer;
+    (void)lba;
 
     return 1;
 }

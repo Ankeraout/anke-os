@@ -23,6 +23,10 @@ tty_colorMode_t tty_getTerminalColorMode(tty_t *tty) {
     return tty->api.getTerminalColorMode(tty);
 }
 
+void tty_getCursorPosition(tty_t *tty, int *x, int *y) {
+    return tty->api.getCursorPosition(tty, x, y);
+}
+
 void tty_setCursorPosition(tty_t *tty, int x, int y) {
     tty->api.setCursorPosition(tty, x, y);
 }

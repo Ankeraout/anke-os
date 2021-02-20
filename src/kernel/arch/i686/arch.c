@@ -11,6 +11,7 @@
 #include "arch/i686/mm/mm.h"
 #include "arch/i686/mm/pmm.h"
 #include "arch/i686/mm/vmm.h"
+#include "arch/i686/tty/bios.h"
 #include "arch/i686/tty/text16.h"
 
 #include "libk/stdio.h"
@@ -23,17 +24,6 @@ void arch_halt();
 
 void arch_preinit() {
     bioscall_init();
-    
-    idt_init();
-    pic_init();
-    pit_init();
-
-    asm("sti");
-
-    mm_init();
-    mmap_init();
-    pmm_init();
-    vmm_init();
 
     bioscall_context_t bioscall_context = {
         .ax = 0x1112,
@@ -42,9 +32,38 @@ void arch_preinit() {
 
     bioscall(0x10, &bioscall_context);
 
+    tty_bios_init(&kernel_tty);
+
+    printf("arch: initializing IDT...\n");
+    idt_init();
+    printf("arch: initializing PIC...\n");
+    pic_init();
+    printf("arch: initializing PIT...\n");
+    pit_init();
+
+    asm("sti");
+    printf("arch: interrupts are now enabled\n");
+
+    printf("arch: initializing memory manager...\n");
+    mm_init();
+    printf("arch: initializing memory map...\n");
+    mmap_init();
+    printf("arch: initializing physical memory manager\n");
+    pmm_init();
+    printf("arch: initializing virtual memory manager\n");
+    vmm_init();
+    printf("arch: initializing tty driver...\n");
+
     void *tty_buffer = vmm_map((const void *)0xb8000, 2, true);
+
+    int textCursorX;
+    int textCursorY;
+
+    kernel_tty.api.getCursorPosition(&kernel_tty, &textCursorX, &textCursorY);
+
     tty_text16_init(&kernel_tty, tty_buffer, 80, 50, arch_setCursorPosition);
-    tty_clear(&kernel_tty);
+
+    kernel_tty.api.setCursorPosition(&kernel_tty, textCursorX, textCursorY);
 }
 
 void arch_init() {

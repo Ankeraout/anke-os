@@ -24,6 +24,7 @@ static void tty_text16_setBackgroundColor(struct tty *tty, int color);
 static void tty_text16_setForegroundColor(struct tty *tty, int color);
 static void tty_text16_write(struct tty *tty, const char *s);
 static void tty_text16_setCursorPosition(tty_t *tty, int x, int y);
+static void tty_text16_getCursorPosition(tty_t *tty, int *x, int *y);
 static void tty_text16_clear(struct tty *tty);
 
 static tty_api_t tty_text16 = {
@@ -32,6 +33,7 @@ static tty_api_t tty_text16 = {
     .getTerminalColorMode = tty_text16_getTerminalColorMode,
     .setBackgroundColor = tty_text16_setBackgroundColor,
     .setForegroundColor = tty_text16_setForegroundColor,
+    .getCursorPosition = tty_text16_getCursorPosition,
     .setCursorPosition = tty_text16_setCursorPosition,
     .write = tty_text16_write,
     .clear = tty_text16_clear
@@ -141,6 +143,13 @@ static void tty_text16_setCursorPosition(tty_t *tty, int x, int y) {
     tty_text16_checkCursorPosition(tty2);
 
     tty2->setCursorPosition((tty_t *)tty2, tty2->cursorX, tty2->cursorY);
+}
+
+static void tty_text16_getCursorPosition(tty_t *tty, int *x, int *y) {
+    tty_text16_t *tty2 = (tty_text16_t *)tty;
+
+    *x = tty2->cursorX;
+    *y = tty2->cursorY;
 }
 
 static void tty_text16_clear(tty_t *tty) {

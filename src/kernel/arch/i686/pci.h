@@ -1,5 +1,5 @@
-#ifndef __KENREL_ARCH_I686_PCI_H__
-#define __KENREL_ARCH_I686_PCI_H__
+#ifndef __KERNEL_ARCH_I686_PCI_H__
+#define __KERNEL_ARCH_I686_PCI_H__
 
 #include <stddef.h>
 #include <stdint.h>

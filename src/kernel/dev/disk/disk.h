@@ -1,5 +1,5 @@
-#ifndef __KERNEL_DEV_DISK_H__
-#define __KERNEL_DEV_DISK_H__
+#ifndef __KERNEL_DEV_DISK_DISK_H__
+#define __KERNEL_DEV_DISK_DISK_H__
 
 #include <stdbool.h>
 #include <stddef.h>

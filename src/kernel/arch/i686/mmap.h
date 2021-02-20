@@ -23,6 +23,7 @@ typedef struct {
     };
 
     uint32_t type;
+    uint32_t padding;
 } __attribute__((packed)) mmap_entry_t;
 
 void mmap_init();

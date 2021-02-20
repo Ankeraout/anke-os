@@ -16,6 +16,7 @@ typedef struct tty_api {
     int (*getTerminalHeight)(struct tty *tty);
     tty_colorMode_t (*getTerminalColorMode)(struct tty *tty);
     void (*setCursorPosition)(struct tty *tty, int x, int y);
+    void (*getCursorPosition)(struct tty *tty, int *x, int *y);
     void (*setBackgroundColor)(struct tty *tty, int color);
     void (*setForegroundColor)(struct tty *tty, int color);
     void (*write)(struct tty *tty, const char *s);
@@ -33,6 +34,7 @@ int tty_getTerminalWidth(tty_t *tty);
 int tty_getTerminalHeight(tty_t *tty);
 tty_colorMode_t tty_getTerminalColorMode(tty_t *tty);
 void tty_setCursorPosition(tty_t *tty, int x, int y);
+void tty_getCursorPosition(tty_t *tty, int *x, int *y);
 void tty_setBackgroundColor(tty_t *tty, int color);
 void tty_setForegroundColor(tty_t *tty, int color);
 void tty_write(tty_t *tty, const char *s);

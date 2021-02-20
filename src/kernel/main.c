@@ -2,7 +2,7 @@
 
 #include "time.h"
 #include "arch/arch.h"
-#include "dev/disk.h"
+#include "dev/disk/disk.h"
 #include "libk/stdio.h"
 
 void kernel_main() {
