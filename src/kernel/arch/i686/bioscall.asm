@@ -1,6 +1,6 @@
 bits 32
 
-%define RM_CONTEXT_ADDRESS 0x00000f00
+%define RM_CONTEXT_ADDRESS 0x00008000
 %define RM_PROCEDURE_ADDRESS 0x00000500
 %define ADDR_IN_BIOSCALL_WRAPPED(symbol) (RM_PROCEDURE_ADDRESS + symbol - bioscall_wrapped)
 
@@ -14,7 +14,7 @@ bioscall_init:
     push edi
     push ebx
 
-    ; Copy the bioscall_wrapped procedure to 0x00010000
+    ; Copy the bioscall_wrapped procedure
     mov esi, bioscall_wrapped
     mov edi, RM_PROCEDURE_ADDRESS
     mov ecx, bioscall_wrapped.end - bioscall_wrapped
@@ -146,9 +146,9 @@ bioscall_wrapped:
     lidt [ADDR_IN_BIOSCALL_WRAPPED(.rmode_idtr)]
 
 .loadInterruptContext:
-    mov ax, RM_CONTEXT_ADDRESS >> 4
+    xor ax, ax
     mov ss, ax
-    mov sp, 0
+    mov sp, RM_CONTEXT_ADDRESS
 
     pop edi
     pop esi
