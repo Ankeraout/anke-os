@@ -197,9 +197,9 @@ checkA20:
     push es
     mov ax, 0xff00
     mov es, ax
-    mov byte es:[0x2000], 0x55
-    mov byte ds:[0x1000], 0xaa
-    mov al, es:[0x2000]
+    mov byte [es:0x2000], 0x55
+    mov byte [ds:0x1000], 0xaa
+    mov al, [es:0x2000]
     cmp al, 0x55
     jz .enabled
     
