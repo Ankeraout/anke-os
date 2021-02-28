@@ -5,6 +5,7 @@
 #include "arch/i686/io.h"
 #include "arch/i686/pci.h"
 #include "arch/i686/dev/pci_ide.h"
+#include "arch/i686/dev/rtl8139.h"
 #include "libk/stdio.h"
 
 #define PCI_CONFIG_ADDRESS 0xcf8
@@ -114,6 +115,8 @@ static void pci_registerDevice(const pci_dev_t *dev) {
         ide_controller_t ide_controller;
         
         ide_init(dev, &ide_controller);
+    } else if(vendorId == 0x10ec && deviceId == 0x8139) {
+        rtl8139_init(dev);
     }
 }
 

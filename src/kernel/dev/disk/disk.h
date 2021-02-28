@@ -24,7 +24,6 @@ typedef struct dev_disk_s {
     bool hotplug;
     bool inserted;
     bool partition;
-    uint8_t reserved[256];
 } dev_disk_t;
 
 void disk_init();
