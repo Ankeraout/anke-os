@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "irq.h"
 #include "arch/i686/io.h"
 #include "arch/i686/pci.h"
@@ -14,6 +16,9 @@ typedef struct {
     uint16_t io_base;
     uint8_t *rxBuffer_v;
     uint8_t *rxBuffer_p;
+    uint8_t *txBuffer_v;
+    uint8_t *txBuffer_p;
+    volatile bool rts;
 } rtl8139_t;
 
 int rtl8139_init(const pci_dev_t *dev);
@@ -33,6 +38,8 @@ int rtl8139_init(const pci_dev_t *dev) {
     // Allocate netif
     rtl8139_t *rtl = malloc(sizeof(rtl8139_t));
 
+    rtl->rts = true;
+
     // Find I/O space address
     rtl->io_base = pci_csam_read32(dev, 0x10) & 0xfffffffc;
     printf("rtl8139: I/O base address: %#08x\n", rtl->io_base);
@@ -41,8 +48,15 @@ int rtl8139_init(const pci_dev_t *dev) {
     rtl->rxBuffer_p = pmm_alloc(3);
     rtl->rxBuffer_v = vmm_map(rtl->rxBuffer_p, 3, true);
 
-    printf("rtl8139: buffer physical address: %#08x\n", (uint32_t)rtl->rxBuffer_p);
-    printf("rtl8139: buffer virtual address: %#08x\n", (uint32_t)rtl->rxBuffer_v);
+    printf("rtl8139: receive buffer physical address: %#08x\n", (uint32_t)rtl->rxBuffer_p);
+    printf("rtl8139: receive buffer virtual address: %#08x\n", (uint32_t)rtl->rxBuffer_v);
+
+    // Allocate send buffer
+    rtl->txBuffer_p = pmm_alloc(2);
+    rtl->txBuffer_v = vmm_map(rtl->txBuffer_p, 2, true);
+
+    printf("rtl8139: transmit buffer physical address: %#08x\n", (uint32_t)rtl->txBuffer_p);
+    printf("rtl8139: transmit buffer virtual address: %#08x\n", (uint32_t)rtl->txBuffer_v);
 
     // Get IRQ number
     uint8_t irq = pci_csam_read8(dev, 0x3f);
@@ -89,6 +103,16 @@ int rtl8139_init(const pci_dev_t *dev) {
 
 static void rtl8139_irq_handler(rtl8139_t *rtl) {
     printf("rtl8139: interrupt\n");
+
+    uint16_t isr = inw(rtl->io_base + 0x3e);
+
+    if(isr & (1 << 2)) {
+        rtl->rts = true;
+        outw(rtl->io_base + 0x3e, (1 << 2));
+    } else {
+        // Packet received
+        outw(rtl->io_base + 0x3e, (1 << 0));
+    }
 }
 
 static void rtl8139_api_getLinkAddress(netif_t *netif, netif_addr_t *linkAddress) {
@@ -101,6 +125,16 @@ static void rtl8139_api_getLinkAddress(netif_t *netif, netif_addr_t *linkAddress
 
 static int rtl8139_api_send(netif_t *netif, const void *buffer, size_t size) {
     rtl8139_t *rtl = (rtl8139_t *)netif;
+
+    while(!rtl->rts) {
+
+    }
+
+    rtl->rts = false;
+
+    memcpy(rtl->txBuffer_v, buffer, size);
+    outl(rtl->io_base + 0x20, rtl->txBuffer_p);
+    outl(rtl->io_base + 0x10, size);
 }
 
 static int rtl8139_api_setLinkAddress(netif_t *netif, const netif_addr_t *linkAddress) {
