@@ -12,4 +12,4 @@ kernel:
 clean:
 	$(MAKE) -C src/kernel clean
 
-.PHONY: clean
+.PHONY: clean kernel

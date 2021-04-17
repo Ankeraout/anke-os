@@ -1,9 +1,9 @@
-extern kinit
+extern arch_bootstrap
 
 bits 32
 
-section .text
+section .bootstrap
 
 global _start
 _start:
-    jmp kinit
+    jmp arch_bootstrap

@@ -7,3 +7,4 @@ bin
 *.iso
 *.bxrc
 Makefile.config
+src/kernel/kernel

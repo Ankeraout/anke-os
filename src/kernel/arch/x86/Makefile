@@ -15,6 +15,9 @@ arch.a: $(OBJECTS)
 %.c.o: %.c
 	$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@
 
+%.asm.o: %.asm
+	$(KERNEL_AS) $(KERNEL_ASFLAGS) $< -o $@
+
 clean:
 	rm -f $(OBJECTS) arch.a
 
