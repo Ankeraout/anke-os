@@ -1,5 +1,7 @@
 .vscode
 bin
+*.elf
+*.a
 *.o
 *.img
 *.iso
