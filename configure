@@ -4,12 +4,30 @@ from typing import Any
 from typing import Dict
 from typing import List
 
+import os
 import sys
 
 # ===== DEFAULT PARAMETER VALUES ==============================================
 DEFAULT_TARGET: str = 'x86-elf-multiboot'
 
 # ===== PROGRAM ===============================================================
+def detectTargets(programSettings: Dict[str, Any]) -> None:
+    '''Summary:
+        Detects the supported targets of the kernel by looking into the
+        src/kernel/target directory.
+    
+    Args:
+        - programSettings: The program settings object.
+
+    Exceptions:
+        - Exception if an error occurs while searching in the directory.
+    '''
+
+    for fileName in os.listdir('src/kernel/target'):
+        targetName = '.'.join(fileName.split('.')[:-1])
+
+        programSettings['targetList'].append(targetName)
+
 def parseCommandArguments(programSettings: Dict[str, Any]) -> None:
     '''Summary:
         Parses the command-line arguments and sets the program settings
@@ -60,11 +78,7 @@ def checkSettings(programSettings: Dict[str, Any]) -> None:
     '''
 
     # Check the value of target
-    if programSettings['target'] not in (
-        'x86-elf-multiboot',
-        'x86-aout-multiboot',
-        'x86-aout-none'
-    ):
+    if programSettings['target'] not in programSettings['targetList']:
         raise Exception('Unknown target: "{}"'.format(programSettings['target']))
 
 def parseTarget(programSettings: Dict[str, Any]) -> None:
@@ -138,11 +152,13 @@ def main() -> None:
         'kernel_asflags': None,
         'kernel_cflags': None,
         'kernel_ldflags': None,
-        'kernel_ar': None
+        'kernel_ar': None,
+        'targetList': []
     }
 
     try:
         parseCommandArguments(programSettings)
+        detectTargets(programSettings)
         checkSettings(programSettings)
         parseTarget(programSettings)
         writeConfig(programSettings)
