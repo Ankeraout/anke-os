@@ -7,7 +7,7 @@ KERNEL_EXEC=kernel.elf
 
 all: $(KERNEL_EXEC)
 
-$(KERNEL_EXEC): target/$(TARGET)/linker.ld arch bootstrap
+$(KERNEL_EXEC): target/$(TARGET).ld arch bootstrap
 	$(KERNEL_LD) $(KERNEL_LDFLAGS) -o $@ -T $< bootstrap/bootstrap.a arch/arch.a
 
 arch: arch/arch.a
