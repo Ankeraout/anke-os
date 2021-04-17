@@ -4,6 +4,9 @@ CONFIG=Makefile.config
 
 include ${CONFIG}
 
+QEMU=qemu-system-i386
+QEMUFLAGS=-m 32 -serial stdio -d cpu_reset
+
 all: kernel
 
 kernel: src/kernel/kernel
@@ -25,9 +28,15 @@ anke-os.iso: src/grub/grub.cfg src/kernel/kernel
 	grub-mkrescue -o anke-os.iso /tmp/anke-os-iso
 	
 qemu_kernel: src/kernel/kernel
-	qemu-system-i386 -m 32 -kernel src/kernel/kernel
+	$(QEMU) $(QEMUFLAGS) -kernel src/kernel/kernel
+
+qemu_kernel_debug: src/kernel/kernel
+	$(QEMU) $(QEMUFLAGS) -kernel src/kernel/kernel -S -s
 
 qemu_iso: iso
-	qemu-system-i386 -m 32 -cdrom anke-os.iso
+	$(QEMU) $(QEMUFLAGS) -cdrom anke-os.iso
+
+qemu_iso_debug: iso
+	$(QEMU) $(QEMUFLAGS) -cdrom anke-os.iso -S -s
 
 .PHONY: clean iso kernel qemu_kernel qemu_iso
