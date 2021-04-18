@@ -96,12 +96,14 @@ def parseTarget(programSettings: Dict[str, Any]) -> None:
 
     programSettings['architecture'] = targetTriplet[0]
 
+    currentWorkingDirectory = os.getcwd()
+
     if targetTriplet[0] == 'x86':
         programSettings['kernel_as'] = 'nasm'
         programSettings['kernel_cc'] = 'i686-elf-gcc'
         programSettings['kernel_ld'] = 'i686-elf-gcc'
         programSettings['kernel_asflags'] = '-f elf -g -F dwarf'
-        programSettings['kernel_cflags'] = '-c -W -Wall -Wextra -std=gnu17 -fno-builtin -nostdlib -g -O0 -ffreestanding -mgeneral-regs-only'
+        programSettings['kernel_cflags'] = '-c -W -Wall -Wextra -std=gnu17 -fno-builtin -nostdlib -g -O0 -ffreestanding -mgeneral-regs-only -I' + currentWorkingDirectory + '/include'
         programSettings['kernel_ldflags'] = '-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc'
         programSettings['kernel_ar'] = 'i686-elf-ar'
 
