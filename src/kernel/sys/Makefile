@@ -3,7 +3,7 @@ MAKEFLAGS+=--no-builtin-rules
 CONFIG=../../../Makefile.config
 include ${CONFIG}
 
-SOURCES=$(shell find `pwd` -name *.c)
+SOURCES=$(shell find `pwd` -name '*.c')
 OBJECTS=$(SOURCES:%.c=%.c.o)
 
 all: sys.a

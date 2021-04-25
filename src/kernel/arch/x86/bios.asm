@@ -118,6 +118,7 @@ bios_call:
     ret
     
 section .bss
+align 4096
 .pageDirectory:
     resb 4096
 
