@@ -4,7 +4,7 @@
 #include "kernel/arch/x86/mm/pmm.h"
 #include "kernel/arch/x86/mm/vmm.h"
 
-#include "kernel/arch/x86/dev/tty/biosconsole.h"
+#include "kernel/arch/x86/dev/tty/vgaconsole.h"
 
 void arch_preinit();
 void arch_init();
@@ -16,7 +16,7 @@ void arch_preinit() {
     pmm_init();
     vmm_init();
 
-    biosconsole_init();
+    vgaconsole_init();
 }
 
 void arch_init() {

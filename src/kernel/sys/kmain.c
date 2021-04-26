@@ -5,7 +5,7 @@
 void kmain() {
     arch_preinit();
 
-    puts("Hello world!\n");
+    puts("Welcome to AnkeOS!\n");
 
     while(1) {
         
