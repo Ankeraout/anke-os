@@ -9,6 +9,6 @@ typedef struct tty_driver_s {
 
 void tty_driver_register(tty_driver_t *driver);
 void tty_driver_input(tty_driver_t *driver, const void *str, size_t n);
-const tty_driver_t *tty_getDefault();
+tty_driver_t *tty_getDefault();
 
 #endif

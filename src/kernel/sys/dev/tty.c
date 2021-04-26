@@ -1,5 +1,6 @@
 #include <stddef.h>
 
+#include "common.h"
 #include "kernel/sys/dev/tty.h"
 
 void tty_driver_register(tty_driver_t *tty_driver);
@@ -14,11 +15,11 @@ void tty_driver_register(tty_driver_t *driver) {
 }
 
 void tty_driver_input(tty_driver_t *driver, const void *str, size_t n) {
-    (void)driver;
-    (void)str;
-    (void)n;
+    UNUSED_PARAMETER(driver);
+    UNUSED_PARAMETER(str);
+    UNUSED_PARAMETER(n);
 }
 
-const tty_driver_t *tty_getDefault() {
+tty_driver_t *tty_getDefault() {
     return kernel_tty;
 }
