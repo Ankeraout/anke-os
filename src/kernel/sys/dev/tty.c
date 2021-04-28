@@ -15,9 +15,7 @@ void tty_driver_register(tty_driver_t *driver) {
 }
 
 void tty_driver_input(tty_driver_t *driver, const void *str, size_t n) {
-    UNUSED_PARAMETER(driver);
-    UNUSED_PARAMETER(str);
-    UNUSED_PARAMETER(n);
+    driver->write(driver, str, n);
 }
 
 tty_driver_t *tty_getDefault() {
