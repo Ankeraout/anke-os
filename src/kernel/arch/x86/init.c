@@ -6,8 +6,11 @@
 #include "kernel/arch/x86/mm/pmm.h"
 #include "kernel/arch/x86/mm/vmm.h"
 
+#include "kernel/arch/x86/dev/pci.h"
 #include "kernel/arch/x86/dev/keyboard/ps2kbd.h"
 #include "kernel/arch/x86/dev/tty/vgaconsole.h"
+
+#include "kernel/libk/stdio.h"
 
 void arch_preinit();
 void arch_init();
@@ -20,15 +23,14 @@ void arch_preinit() {
     vmm_init();
 
     vgaconsole_init();
+}
 
+void arch_init() {
     idt_init();
     pic_init();
 
     asm("sti");
-    
-    ps2kbd_init();
-}
 
-void arch_init() {
-
+    printf("Initializing PCI...\n");
+    pci_init();
 }

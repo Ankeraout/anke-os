@@ -7,7 +7,9 @@ void kmain() {
 
     puts("Welcome to AnkeOS!\n");
 
+    arch_init();
+
     while(1) {
-        
+        arch_halt();
     }
 }
