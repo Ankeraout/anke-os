@@ -9,6 +9,8 @@ void kmain() {
 
     arch_init();
 
+    puts("Initialization completed.\n");
+
     while(1) {
         arch_halt();
     }

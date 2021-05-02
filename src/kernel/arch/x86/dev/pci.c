@@ -5,7 +5,10 @@
 #include "kernel/arch/x86/assembly.h"
 #include "kernel/arch/x86/bios.h"
 #include "kernel/arch/x86/dev/pci.h"
+#include "kernel/libk/list.h"
 #include "kernel/libk/stdio.h"
+
+#include "kernel/arch/x86/dev/disk/pci_ide.h"
 
 #define PCI_CONFIG_ADDRESS 0xcf8
 #define PCI_CONFIG_DATA 0xcfc
@@ -18,7 +21,10 @@ typedef enum {
 
 static pci_csam_t pci_csam;
 static int pci_lastBusNumber;
+static list_t *driverList;
 
+static void pci_registerDrivers();
+void pci_registerDriver(const pci_driver_t *driver);
 void pci_init();
 static void pci_detectCsam();
 static void pci_registerDevice(const pci_dev_t *dev);
@@ -40,9 +46,17 @@ uint32_t pci_csam_read32(const pci_dev_t *dev, uint8_t offset);
 void pci_csam_write8(const pci_dev_t *dev, uint8_t offset, uint8_t value);
 void pci_csam_write16(const pci_dev_t *dev, uint8_t offset, uint16_t value);
 void pci_csam_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value);
-uint64_t pci_bar_getSize(const pci_bar_t *bar);
+
+static void pci_registerDrivers() {
+    pci_ide_init();
+}
+
+void pci_registerDriver(const pci_driver_t *driver) {
+    list_add(driverList, driver);
+}
 
 void pci_init() {
+    pci_registerDrivers();
     pci_detectCsam();
 
     if(pci_csam == PCI_CSAM_NONE) {
@@ -153,7 +167,23 @@ static void pci_registerDevice(const pci_dev_t *dev) {
         printf("pci: %#x", dev->csam2.deviceNumber);
     }
 
-    printf(": ven=%#04x, dev=%#04x, c=%#02x, s=%#02x, pif=%#02x.\n", vendorId, deviceId, class, subclass, pif);
+    printf(": vid=%#04x, did=%#04x, c=%#02x, s=%#02x, pif=%#02x: ", vendorId, deviceId, class, subclass, pif);
+
+    list_t *driverListElement = driverList;
+
+    while(driverListElement != NULL) {
+        pci_driver_t *driver = driverListElement->element;
+
+        if(driver->supportsDevice(deviceId, vendorId, class, subclass, pif)) {
+            printf("%s\n", driver->deviceName);
+            driver->initDevice(dev);
+            return;
+        }
+
+        driverListElement = driverListElement->next;
+    }
+
+    printf("Unknown device\n");
 }
 
 static uint8_t pci_csam1_read8(const pci_dev_t *dev, uint8_t offset) {

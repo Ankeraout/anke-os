@@ -1,6 +1,7 @@
 #ifndef __KERNEL_ARCH_X86_DEV_PCI_H__
 #define __KERNEL_ARCH_X86_DEV_PCI_H__
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -29,6 +30,13 @@ typedef union {
     int barCount;
 } pci_dev_t;
 
+typedef struct {
+    bool (*supportsDevice)(uint16_t deviceId, uint16_t vendorId, uint8_t class, uint8_t subclass, uint8_t progIf);
+    int (*initDevice)(const pci_dev_t *dev);
+    const char *deviceName;
+} pci_driver_t;
+
+void pci_registerDriver(const pci_driver_t *driver);
 void pci_init();
 uint8_t pci_csam_read8(const pci_dev_t *dev, uint8_t offset);
 uint16_t pci_csam_read16(const pci_dev_t *dev, uint8_t offset);

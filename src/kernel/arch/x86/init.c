@@ -33,4 +33,5 @@ void arch_init() {
 
     printf("Initializing PCI...\n");
     pci_init();
+    ps2kbd_init();
 }
