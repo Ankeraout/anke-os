@@ -100,10 +100,10 @@ def parseTarget(programSettings: Dict[str, Any]) -> None:
 
     if targetTriplet[0] == 'x86':
         programSettings['kernel_as'] = 'nasm'
-        programSettings['kernel_cc'] = 'i686-elf-gcc'
-        programSettings['kernel_ld'] = 'i686-elf-gcc'
+        programSettings['kernel_cpp'] = 'i686-elf-g++'
+        programSettings['kernel_ld'] = 'i686-elf-g++'
         programSettings['kernel_asflags'] = '-f elf -g -F dwarf'
-        programSettings['kernel_cflags'] = '-c -W -Wall -Wextra -std=gnu17 -fno-builtin -nostdlib -g -O0 -ffreestanding -mgeneral-regs-only -I' + currentWorkingDirectory + '/include'
+        programSettings['kernel_cppflags'] = '-c -W -Wall -Wextra -std=gnu++11 -fno-builtin -nostdlib -g -O0 -ffreestanding -mgeneral-regs-only -I' + currentWorkingDirectory + '/include'
         programSettings['kernel_ldflags'] = '-fno-builtin -nostdlib -ffreestanding -g -O0 -lgcc'
         programSettings['kernel_ar'] = 'i686-elf-ar'
 
@@ -130,10 +130,10 @@ def writeConfig(programSettings: Dict[str, Any]) -> None:
         'ARCHITECTURE={}'.format(programSettings['architecture']),
         'BOOTSTRAP={}'.format(programSettings['bootstrap']),
         'KERNEL_AS={}'.format(programSettings['kernel_as']),
-        'KERNEL_CC={}'.format(programSettings['kernel_cc']),
+        'KERNEL_CPP={}'.format(programSettings['kernel_cpp']),
         'KERNEL_LD={}'.format(programSettings['kernel_ld']),
         'KERNEL_ASFLAGS={}'.format(programSettings['kernel_asflags']),
-        'KERNEL_CFLAGS={}'.format(programSettings['kernel_cflags']),
+        'KERNEL_CPPFLAGS={}'.format(programSettings['kernel_cppflags']),
         'KERNEL_LDFLAGS={}'.format(programSettings['kernel_ldflags']),
         'KERNEL_AR={}'.format(programSettings['kernel_ar'])
     ]
@@ -149,10 +149,10 @@ def main() -> None:
         'architecture': None,
         'bootstrap': None,
         'kernel_as': None,
-        'kernel_cc': None,
+        'kernel_cpp': None,
         'kernel_ld': None,
         'kernel_asflags': None,
-        'kernel_cflags': None,
+        'kernel_cppflags': None,
         'kernel_ldflags': None,
         'kernel_ar': None,
         'targetList': []

@@ -3,17 +3,17 @@ MAKEFLAGS+=--no-builtin-rules
 CONFIG=../../../../Makefile.config
 include ${CONFIG}
 
-SOURCES_C=$(shell find `pwd` -name '*.c')
+SOURCES_CPP=$(shell find `pwd` -name '*.cpp')
 SOURCES_ASM=$(shell find `pwd` -name '*.asm')
-OBJECTS_C=$(SOURCES_C:%.c=%.c.o)
+OBJECTS_CPP=$(SOURCES_CPP:%.cpp=%.cpp.o)
 OBJECTS_ASM=$(SOURCES_ASM:%.asm=%.asm.o)
-OBJECTS=$(OBJECTS_C) $(OBJECTS_ASM)
+OBJECTS=$(OBJECTS_CPP) $(OBJECTS_ASM)
 
 arch.a: $(OBJECTS)
 	$(KERNEL_AR) rcs $@ $^
 
-%.c.o: %.c
-	$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@
+%.cpp.o: %.cpp
+	$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $< -o $@
 
 %.asm.o: %.asm
 	$(KERNEL_AS) $(KERNEL_ASFLAGS) $< -o $@

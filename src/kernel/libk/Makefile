@@ -3,16 +3,16 @@ MAKEFLAGS+=--no-builtin-rules
 CONFIG=../../../Makefile.config
 include ${CONFIG}
 
-SOURCES=$(shell find `pwd` -name '*.c')
-OBJECTS=$(SOURCES:%.c=%.c.o)
+SOURCES=$(shell find `pwd` -name '*.cpp')
+OBJECTS=$(SOURCES:%.cpp=%.cpp.o)
 
 all: libk.a
 
 libk.a: $(OBJECTS)
 	$(KERNEL_AR) rcs $@ $^
 
-%.c.o: %.c
-	$(KERNEL_CC) $(KERNEL_CFLAGS) $< -o $@
+%.cpp.o: %.cpp
+	$(KERNEL_CPP) $(KERNEL_CPPFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJECTS)

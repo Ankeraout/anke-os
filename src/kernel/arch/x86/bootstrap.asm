@@ -2,6 +2,7 @@
 
 extern __kernel_end
 extern kmain
+extern _init
 
 bits 32
 
@@ -96,6 +97,10 @@ section .text
     mov gs, ax
     mov ss, ax
 
+    ; Call global constructors
+    call _init
+
+    ; Go to kernel code
     jmp dword 0x08:kmain
 
 section .bootstrap

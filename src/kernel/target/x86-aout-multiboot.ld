@@ -18,6 +18,8 @@ SECTIONS {
 
     .text ALIGN(0x1000): AT(ADDR(.text) - 0xc0000000) {
         *(.text)
+        *(.init)
+        *(.fini)
     }
 
     .rodata ALIGN(0x1000): AT(ADDR(.rodata) - 0xc0000000) {
