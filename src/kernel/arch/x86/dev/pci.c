@@ -9,6 +9,7 @@
 #include "kernel/libk/stdio.h"
 
 #include "kernel/arch/x86/dev/disk/pci_ide.h"
+#include "kernel/arch/x86/dev/video/vga.h"
 
 #define PCI_CONFIG_ADDRESS 0xcf8
 #define PCI_CONFIG_DATA 0xcfc
@@ -49,6 +50,7 @@ void pci_csam_write32(const pci_dev_t *dev, uint8_t offset, uint32_t value);
 
 static void pci_registerDrivers() {
     pci_ide_init();
+    vga_init();
 }
 
 void pci_registerDriver(const pci_driver_t *driver) {
