@@ -11,10 +11,11 @@ CFLAGS += -MMD -MP
 CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
 CFLAGS += -g3 -O0
-CFLAGS += -nostdlib -fno-builtin
+CFLAGS += -ffreestanding -nostdlib
+CFLAGS += -Isrc
 LDFLAGS += -T src/kernel.ld
 LDFLAGS += -g3 -O0
-LDFLAGS += -nostdlib -fno-builtin
+LDFLAGS += -ffreestanding -nostdlib
 
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
