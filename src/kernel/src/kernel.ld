@@ -50,4 +50,13 @@ SECTIONS {
     }
 
     g_kernelEnd = .;
+
+    /**************************************************************************
+     * Symbol definitions                                                     *
+     **************************************************************************/
+    g_kernelPageDirectory = g_kernelPageDirectoryLow + 0xc0000000;
+    g_kernelSelfMapPageTable = g_kernelSelfMapPageTableLow + 0xc0000000;
+    g_kernelMemoryMap = g_kernelMemoryMapLow + 0xc0000000;
+    g_kernelMemoryMapSize = g_kernelMemoryMapSizeLow + 0xc0000000;
+    g_kernelPageTables = 0xffc00000;
 }

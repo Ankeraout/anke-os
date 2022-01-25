@@ -3,6 +3,18 @@
 
 #include <stdint.h>
 
+static inline void cli(void) {
+    asm volatile("cli");
+}
+
+static inline void sti(void) {
+    asm volatile("sti");
+}
+
+static inline void hlt(void) {
+    asm volatile("hlt");
+}
+
 static inline uint8_t inb(uint16_t p_port) {
     uint8_t l_value;
 
@@ -36,11 +48,7 @@ static inline void lgdt(void *p_base, uint16_t p_size) {
         .size = p_size
     };
 
-    asm(
-        "lgdt %0"
-        :
-        : "m"(l_gdtr)
-    );
+    asm("lgdt %0" :: "m"(l_gdtr));
 }
 
 static inline void lidt(void *p_base, uint16_t p_size) {

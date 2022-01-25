@@ -55,8 +55,8 @@ multibootHeaderStart:
     dw C_MULTIBOOT2_TAG_ID_FRAMEBUFFER
     dw C_MULTIBOOT2_TAG_MANDATORY
     dd 20 ; Size
-    dd 0 ; Width: ? pixels
-    dd 0 ; Height: ? pixels
+    dd 640 ; Width
+    dd 480 ; Height
     dd 32 ; Depth: 32 bits per pixel
 
     ; Tag 0: End of tags
@@ -70,6 +70,10 @@ multibootHeaderEnd:
 section .text_low
 global _start
 _start:
+    ; Save status
+    mov [kernelBootStatus.eax], eax
+    mov [kernelBootStatus.ebx], ebx
+
     ; Initialize lower-half kernel stack
     mov esp, kernelInitialStackBottom
 
@@ -79,11 +83,22 @@ _start:
     ; Initialize paging structures
     call kernelInitPagingStructures
 
+    ; Copy memory map from GRUB
+    call kernelCopyMemoryMap
+
     ; Enable paging
     call enablePaging
 
+    ; The stack has now moved to higher-half
+    add esp, 0xc0000000
+
+    ; Restore EAX and EBX
+    lea ebp, [kernelBootStatus + 0xc0000000]
+    push dword [ebp + 4]
+    push dword [ebp]
+
     ; Jump to higher-half
-    jmp kernelMain
+    call kernelMain
 
 kernelLoadInitialGdt:
     ; Initialize stack frame
@@ -149,21 +164,43 @@ kernelInitPagingStructures:
     or eax, 0x00000003
 
     ; Set the entry 0 of the page directory (lower-half)
-    mov dword [kernelInitialPageDirectory], eax
+    mov dword [g_kernelPageDirectoryLow], eax
 
     ; Set the entry 768 of the page directory (higher-half)
-    mov dword [kernelInitialPageDirectory + 768 * 4], eax
+    mov dword [g_kernelPageDirectoryLow + 768 * 4], eax
 
     ; Restore EDI
     pop edi
 
+.mapPageTables:
+    ; Map self-mapping page table
+    mov eax, g_kernelSelfMapPageTableLow
+
+    or eax, 0x00000003
+    mov [g_kernelPageDirectoryLow + 1023 * 4], eax
+
+    ; Map page table 0
+    mov eax, kernelInitialPageTable
+    or eax, 0x00000003
+    mov [g_kernelSelfMapPageTableLow], eax
+
+    ; Map page table 768
+    mov [g_kernelSelfMapPageTableLow + 768 * 4], eax
+
+    ; Map page table 1023
+    mov eax, g_kernelSelfMapPageTableLow
+
+    or eax, 0x00000003
+    mov [g_kernelSelfMapPageTableLow + 1023 * 4], eax
+
+.return:
     ; Return
     pop ebp
     ret
 
 enablePaging:
     ; Set page directory address
-    mov eax, kernelInitialPageDirectory
+    mov eax, g_kernelPageDirectoryLow
     mov cr3, eax
 
     ; Enable paging bit in CR0
@@ -174,17 +211,95 @@ enablePaging:
     ; Return
     ret
 
+kernelCopyMemoryMap:
+    push ebp
+    mov ebp, esp
+
+    push esi
+    push edi
+
+    ; Find the memory map in the Multiboot 2 structure
+    mov esi, [kernelBootStatus.ebx]
+
+    ; We do not care about the first 8 bytes of the structure
+    add esi, 8
+
+.checkTag:
+    mov eax, [esi]
+
+    ; If the tag type is C_MULTIBOOT2_INFO_ID_MEMORY_MAP, get out of the
+    ; loop
+    cmp eax, C_MULTIBOOT2_INFO_ID_MEMORY_MAP
+    jz .foundTag
+
+    ; Get the tag size
+    mov eax, [esi + 4]
+    add esi, eax
+
+    ; If the tag size is not 64-bits aligned, align it.
+    test eax, 0x00000007
+    jnz .alignNextTag
+
+    jmp .checkTag
+
+.alignNextTag:
+    mov edx, eax
+    and edx, 0x00000007
+    mov eax, 8
+    sub eax, edx
+    add esi, eax
+    jmp .checkTag
+
+.foundTag:
+    ; Compute the memory map size
+    mov ecx, [esi + 4]
+    sub ecx, 16
+
+    ; Save the memory map size
+    mov [g_kernelMemoryMapSizeLow], ecx
+
+    shr ecx, 2
+
+    ; Copy the memory map
+    add esi, 16
+    mov edi, g_kernelMemoryMapLow
+    repz movsd
+
+    ; Return
+    pop edi
+    pop esi
+
+    pop ebp
+    ret
+
 section .data_low
 align 0x1000
 kernelInitialStackTop:
     times 0x1000 db 0
 kernelInitialStackBottom:
 
-kernelInitialPageDirectory:
+global g_kernelPageDirectoryLow
+g_kernelPageDirectoryLow:
     times 0x1000 db 0
 
 kernelInitialPageTable:
     times 0x1000 db 0
+
+global g_kernelSelfMapPageTableLow
+g_kernelSelfMapPageTableLow:
+    times 0x1000 db 0
+
+global g_kernelMemoryMapLow
+g_kernelMemoryMapLow:
+    times 0x1000 db 0
+
+global g_kernelMemoryMapSizeLow
+g_kernelMemoryMapSizeLow:
+    dd 0
+
+kernelBootStatus:
+.eax: dd 0
+.ebx: dd 0
 
 section .rodata_low
 align 8
