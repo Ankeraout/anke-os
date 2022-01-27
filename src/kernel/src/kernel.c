@@ -33,6 +33,6 @@ void kernelMain(uint32_t p_eax, uint32_t p_ebx) {
     mmuInit();
 
     while(true) {
-
+        
     }
 }
