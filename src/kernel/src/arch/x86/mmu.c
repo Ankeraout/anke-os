@@ -94,6 +94,8 @@ extern t_pageTableEntry g_kernelSelfMapPageTable[C_PAGETABLE_NB_ENTRIES];
 extern t_pageTable g_kernelPageTables[C_PAGEDIRECTORY_NB_ENTRIES];
 extern t_multiboot2MemoryMapEntry g_kernelMemoryMap[];
 extern uint32_t g_kernelMemoryMapSize;
+extern int g_kernelStart;
+extern int g_kernelEnd;
 
 // =============================================================================
 // Private functions declaration
@@ -139,9 +141,9 @@ static int mmuMarkPages(const void *p_page, int p_nbPages, bool p_available);
 /**
  * @brief Returns a boolean value that indicates whether the given page is
  *        mapped or not.
- * 
+ *
  * @param[in] p_page The page to check.
- * 
+ *
  * @returns A boolean value that indicates whether the page is mapped or not.
  * @retval true if the page is mapped.
  * @retval false if the page is not mapped.
@@ -151,9 +153,9 @@ static bool mmuIsPageMapped(const void *p_page);
 /**
  * @brief Returns a boolean value that indicates whether the given page is free
  *        or not.
- * 
+ *
  * @param[in] p_page The page to check.
- * 
+ *
  * @returns A boolean value that indicates whether the page is free or not.
  * @retval true if the page is free.
  * @retval false if the page is not free.
@@ -217,42 +219,62 @@ void mmuInit(void) {
             );
         }
     }
+
+    // Mark kernel pages
+    size_t l_kernelStartAddress = (size_t)&g_kernelStart;
+    size_t l_kernelEndAddress = (size_t)&g_kernelEnd;
+    size_t l_kernelSizeBytes = l_kernelEndAddress - l_kernelStartAddress;
+    size_t l_kernelSizePages = l_kernelSizeBytes >> 12;
+
+    mmuMarkPages(
+        &g_kernelStart,
+        l_kernelSizePages,
+        false
+    );
+
+    // Mark self-mapped pages
+    mmuMarkPages(
+        g_kernelPageTables,
+        C_PAGEDIRECTORY_NB_ENTRIES,
+        false
+    );
 }
 
 void *mmuAllocateFrames(int p_nbFrames) {
-    int l_searchStartIndex = 0;
+    int l_searchCurrentIndex = 0;
     bool l_found = false;
+    int l_firstFrame;
 
     while(
-        (l_searchStartIndex < C_NB_PAGES_TOTAL)
+        (l_searchCurrentIndex < C_NB_PAGES_TOTAL)
         && !l_found
     ) {
+        l_firstFrame = l_searchCurrentIndex;
         int l_nbConsecutiveFrames = 0;
-        int l_searchCurrentIndex = l_searchStartIndex;
         bool l_abort = false;
 
         while(
             (l_nbConsecutiveFrames < p_nbFrames)
-            && (l_searchCurrentIndex < p_nbFrames)
+            && (l_searchCurrentIndex < C_NB_PAGES_TOTAL)
             && !l_abort
         ) {
-            void *l_framePtr = (void *)(l_searchStartIndex << 12);
+            void *l_framePtr = (void *)(l_searchCurrentIndex << 12);
 
             if(mmuIsFrameAvailable(l_framePtr)) {
-                l_searchCurrentIndex++;
+                l_nbConsecutiveFrames++;
             } else {
-                l_searchStartIndex = l_searchCurrentIndex + 1;
                 l_abort = true;
             }
+
+            l_searchCurrentIndex++;
         }
 
         l_found = (l_nbConsecutiveFrames < p_nbFrames)
-            && (l_searchCurrentIndex < p_nbFrames)
-            && !l_abort;
+            && (l_searchCurrentIndex < C_NB_PAGES_TOTAL);
     }
 
     if(l_found) {
-        void *l_framePtr = (void *)(l_searchStartIndex << 12);
+        void *l_framePtr = (void *)(l_firstFrame << 12);
         mmuMarkFrames(l_framePtr, p_nbFrames, E_FMAP_NOT_AVAILABLE);
         return l_framePtr;
     } else {
@@ -271,6 +293,9 @@ void mmuFreeFramesAt(const void *p_frame, int p_nbFrames) {
 void *mmuAllocatePages(int p_nbPages, bool p_kernel) {
     int l_searchStartIndex;
     int l_searchSpaceSize;
+    int l_searchEndIndex;
+    int l_searchCurrentIndex;
+    int l_firstPage;
     bool l_found = false;
 
     if(p_kernel) {
@@ -281,36 +306,39 @@ void *mmuAllocatePages(int p_nbPages, bool p_kernel) {
         l_searchSpaceSize = C_NB_PAGES_TOTAL * 3 / 4;
     }
 
+    l_searchEndIndex = l_searchStartIndex + l_searchSpaceSize;
+    l_searchCurrentIndex = l_searchStartIndex;
+
     while(
-        (l_searchStartIndex < l_searchSpaceSize)
+        (l_searchCurrentIndex < l_searchEndIndex)
         && !l_found
     ) {
+        l_firstPage = l_searchCurrentIndex;
         int l_nbConsecutivePages = 0;
-        int l_searchCurrentIndex = l_searchStartIndex;
         bool l_abort = false;
 
         while(
             (l_nbConsecutivePages < p_nbPages)
-            && (l_searchCurrentIndex < p_nbPages)
+            && (l_searchCurrentIndex < l_searchEndIndex)
             && !l_abort
         ) {
-            void *l_pagePtr = (void *)(l_searchStartIndex << 12);
+            void *l_pagePtr = (void *)(l_searchCurrentIndex << 12);
 
             if(mmuIsPageAvailable(l_pagePtr)) {
-                l_searchCurrentIndex++;
+                l_nbConsecutivePages++;
             } else {
-                l_searchStartIndex = l_searchCurrentIndex + 1;
                 l_abort = true;
             }
+
+            l_searchCurrentIndex++;
         }
 
-        l_found = (l_nbConsecutivePages < p_nbPages)
-            && (l_searchCurrentIndex < p_nbPages)
-            && !l_abort;
+        l_found = (l_nbConsecutivePages == p_nbPages)
+            && (l_searchCurrentIndex < l_searchEndIndex);
     }
 
     if(l_found) {
-        void *l_pagePtr = (void *)(l_searchStartIndex << 12);
+        void *l_pagePtr = (void *)(l_firstPage << 12);
         mmuMarkPages(l_pagePtr, p_nbPages, E_FMAP_NOT_AVAILABLE);
         return l_pagePtr;
     } else {
@@ -410,10 +438,12 @@ int mmuMapFramesAt(const void *p_frame, const void *p_page, int p_nbFrames) {
         }
 
         g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].present = 1;
+        g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].available = 0;
         g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].frameIndex =
             l_currentFrameIndex;
 
         l_currentFrameIndex++;
+        l_remainingFrames--;
     }
 
     if(l_error) {
@@ -545,7 +575,7 @@ static bool mmuIsPageMapped(const void *p_page) {
 
     // Otherwise we return the status of the page table entry.
     return (
-        g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].present == 0
+        g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].present == 1
     );
 }
 
@@ -555,18 +585,18 @@ static bool mmuIsPageFree(const void *p_page) {
 
     // If the page directory entry is not present, the page is free.
     if(g_kernelPageDirectory[l_pageDirectoryIndex].present == 0) {
-        return false;
+        return true;
     }
 
     // Otherwise we return the status of the page table entry.
     return (
         g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].available
-            == 0
+            == 1
     );
 }
 
 static bool mmuIsPageAvailable(const void *p_page) {
-    return ((mmuIsPageFree(p_page)) && (!mmuIsPageMapped(p_page)));
+    return mmuIsPageFree(p_page);
 }
 
 static int mmuCreatePageTable(uint32_t p_pageDirectoryIndex) {
@@ -610,6 +640,29 @@ static int mmuCreatePageTable(uint32_t p_pageDirectoryIndex) {
     };
 
     g_kernelSelfMapPageTable[p_pageDirectoryIndex] = l_pageTableEntry;
+
+    // Initialize the page table entries
+    t_pageTableEntry l_newPageTableEntry = {
+        .accessed = 0,
+        .attributeTable = 0,
+        .available = 1,
+        .cacheDisable = 0,
+        .dirty = 0,
+        .frameIndex = ((uint32_t)l_frame) >> 12,
+        .global = 0,
+        .present = 0,
+        .readWrite = 1,
+        .user = (p_pageDirectoryIndex < 768) ? 1 : 0,
+        .writeThrough = 1
+    };
+
+    for(
+        int l_entryIndex = 0;
+        l_entryIndex < C_PAGETABLE_NB_ENTRIES;
+        l_entryIndex++
+    ) {
+        g_kernelPageTables[p_pageDirectoryIndex][l_entryIndex] = l_newPageTableEntry;
+    }
 
     // Success, return 0.
     return 0;
