@@ -131,4 +131,34 @@ void *kmemset(void *p_buffer, int p_value, size_t p_size);
  */
 int kputchar(int p_character);
 
+/**
+ * @brief Concatenates the two given strings.
+ *
+ * @param[in,out] p_destination The destination buffer and also the left part of
+ *                              the final string.
+ * @param[in] p_source The right part of the final string.
+ *
+ * @returns A pointer to the final string (p_destination).
+ */
+char *kstrcat(char *p_destination, const char *p_source);
+
+/**
+ * @brief Returns the length of the given string.
+ *
+ * @param[in] p_string The string to get the length of.
+ *
+ * @returns The length of the string.
+ */
+size_t kstrlen(const char *p_string);
+
+/**
+ * @brief Copies the source string to the destination buffer.
+ *
+ * @param[out] p_destination The destination buffer.
+ * @param[in] p_source The source string.
+ *
+ * @returns A pointer to the destination buffer (p_destination).
+ */
+char *kstrcpy(char *p_destination, const char *p_source);
+
 #endif

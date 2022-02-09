@@ -137,6 +137,30 @@ static bool mmuIsFrameAvailable(const void *p_frame);
 static int mmuMarkPages(const void *p_page, int p_nbPages, bool p_available);
 
 /**
+ * @brief Returns a boolean value that indicates whether the given page is
+ *        mapped or not.
+ * 
+ * @param[in] p_page The page to check.
+ * 
+ * @returns A boolean value that indicates whether the page is mapped or not.
+ * @retval true if the page is mapped.
+ * @retval false if the page is not mapped.
+ */
+static bool mmuIsPageMapped(const void *p_page);
+
+/**
+ * @brief Returns a boolean value that indicates whether the given page is free
+ *        or not.
+ * 
+ * @param[in] p_page The page to check.
+ * 
+ * @returns A boolean value that indicates whether the page is free or not.
+ * @retval true if the page is free.
+ * @retval false if the page is not free.
+ */
+static bool mmuIsPageFree(const void *p_page);
+
+/**
  * @brief Returns the status of the given page.
  *
  * @param[in] p_page The page to check.

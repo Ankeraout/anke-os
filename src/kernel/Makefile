@@ -38,7 +38,7 @@ obj/%.asm.o: src/%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)
-	$(LD) $(LDFLAGS) $^ -o $@
+	$(LD) $(LDFLAGS) $^ -o $@ -lgcc
 
 clean:
 	$(RM) bin obj
