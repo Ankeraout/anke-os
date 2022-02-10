@@ -443,6 +443,13 @@ int mmuMapFramesAt(const void *p_frame, const void *p_page, int p_nbFrames) {
             l_currentFrameIndex;
 
         l_currentFrameIndex++;
+        l_pageTableIndex++;
+
+        if(l_pageTableIndex >= C_PAGETABLE_NB_ENTRIES) {
+            l_pageDirectoryIndex++;
+            l_pageTableIndex = 0;
+        }
+
         l_remainingFrames--;
     }
 
