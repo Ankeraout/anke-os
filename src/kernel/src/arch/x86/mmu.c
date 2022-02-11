@@ -148,7 +148,7 @@ static int mmuMarkPages(const void *p_page, int p_nbPages, bool p_available);
  * @retval true if the page is mapped.
  * @retval false if the page is not mapped.
  */
-static bool mmuIsPageMapped(const void *p_page);
+//static bool mmuIsPageMapped(const void *p_page);
 
 /**
  * @brief Returns a boolean value that indicates whether the given page is free
@@ -571,6 +571,7 @@ static int mmuMarkPages(const void *p_page, int p_nbPages, bool p_available) {
     return 0;
 }
 
+/*
 static bool mmuIsPageMapped(const void *p_page) {
     uint32_t l_pageDirectoryIndex = ((uint32_t)p_page) >> 22;
     uint32_t l_pageTableIndex = (((uint32_t)p_page) >> 12) & 0x000003ff;
@@ -585,6 +586,7 @@ static bool mmuIsPageMapped(const void *p_page) {
         g_kernelPageTables[l_pageDirectoryIndex][l_pageTableIndex].present == 1
     );
 }
+*/
 
 static bool mmuIsPageFree(const void *p_page) {
     uint32_t l_pageDirectoryIndex = ((uint32_t)p_page) >> 22;
