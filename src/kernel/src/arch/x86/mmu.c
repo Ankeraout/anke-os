@@ -88,7 +88,6 @@ typedef t_pageTableEntry t_pageTable[C_PAGETABLE_NB_ENTRIES];
 // Private variables declaration
 // =============================================================================
 static uint8_t s_frameMap[C_NB_PAGES_TOTAL / C_NB_BITS_PER_BYTE];
-
 extern t_pageDirectoryEntry g_kernelPageDirectory[C_PAGEDIRECTORY_NB_ENTRIES];
 extern t_pageTableEntry g_kernelSelfMapPageTable[C_PAGETABLE_NB_ENTRIES];
 extern t_pageTable g_kernelPageTables[C_PAGEDIRECTORY_NB_ENTRIES];
@@ -220,11 +219,25 @@ void mmuInit(void) {
         }
     }
 
+    // Mark low memory
+    mmuMarkFrames(
+        (const void *)0x00000000,
+        256,
+        E_FMAP_NOT_AVAILABLE
+    );
+
+    // Unmark all kernel pages
+    mmuMarkPages(
+        (const void *)0xc0000000,
+        1024,
+        true
+    );
+
     // Mark kernel pages
     size_t l_kernelStartAddress = (size_t)&g_kernelStart;
     size_t l_kernelEndAddress = (size_t)&g_kernelEnd;
     size_t l_kernelSizeBytes = l_kernelEndAddress - l_kernelStartAddress;
-    size_t l_kernelSizePages = l_kernelSizeBytes >> 12;
+    size_t l_kernelSizePages = (l_kernelSizeBytes + 0xfff) >> 12;
 
     mmuMarkPages(
         &g_kernelStart,

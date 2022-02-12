@@ -117,7 +117,11 @@ static int mapMultibootInfoStructure(const void *p_multibootInfo) {
     int l_nbPagesToFree = l_nbPagesToMap;
 
     l_nbPagesToMap =
-        (s_multibootInformationStructureSizeBytes + 0x00000fff) >> 12;
+        (
+            s_multibootInformationStructureSizeBytes
+            + l_structurePageOffset
+            + 0x00000fff
+        ) >> 12;
 
     // Unmap the partial multiboot info structure
     mmuFreePagesAt(l_multibootInfoStructure, l_nbPagesToFree);
