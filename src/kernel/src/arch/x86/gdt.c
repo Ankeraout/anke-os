@@ -33,20 +33,20 @@ enum {
 // =============================================================================
 // Private types declaration
 // =============================================================================
-typedef struct {
+struct ts_gdtEntry {
     uint64_t limit0_15 : 16;
     uint64_t base0_23 : 24;
     uint64_t access : 8;
     uint64_t limit16_19 : 4;
     uint64_t flags : 4;
     uint64_t base24_31 : 8;
-} __attribute__((packed)) t_gdtEntry;
+} __attribute__((packed));
 
 // =============================================================================
 // Private functions declaration
 // =============================================================================
 static void gdtInitEntry(
-    t_gdtEntry *p_entry,
+    struct ts_gdtEntry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
     uint8_t p_access,
@@ -56,7 +56,7 @@ static void gdtInitEntry(
 // =============================================================================
 // Private variables declaration
 // =============================================================================
-t_gdtEntry s_gdt[3];
+static struct ts_gdtEntry s_gdt[3];
 
 // =============================================================================
 // Public functions definition
@@ -121,7 +121,7 @@ void gdtInit(void) {
 // Private functions definition
 // =============================================================================
 static void gdtInitEntry(
-    t_gdtEntry *p_entry,
+    struct ts_gdtEntry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
     uint8_t p_access,
