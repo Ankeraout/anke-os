@@ -2,8 +2,8 @@ MAKEFLAGS += --no-builtin-rules
 
 MKDIR := mkdir -p
 RM := rm -rf
-CC := i686-elf-gcc -c
-LD := i686-elf-gcc
+CC := x86_64-elf-gcc -c
+LD := x86_64-elf-gcc
 ASM := nasm
 ASMFLAGS := -f elf -g
 
@@ -12,10 +12,15 @@ CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
 CFLAGS += -g3 -O0
 CFLAGS += -ffreestanding -nostdlib
-CFLAGS += -Isrc
-LDFLAGS += -T src/kernel.ld
-LDFLAGS += -g3 -O0
-LDFLAGS += -ffreestanding -nostdlib
+CFLAGS += -Isrc -I../../limine-bootloader
+CFLAGS += -mno-red-zone
+CFLAGS += -mabi=sysv
+CFLAGS += -mno-80387 -mno-mmx -mno-3dnow -mno-sse -mno-sse2
+CFLAGS += -mcmodel=kernel
+LDFLAGS += -nostdlib
+LDFLAGS += -mno-red-zone
+LDFLAGS += -Wl,-z,max-page-size=0x1000
+LDFLAGS += -Wl,-T,src/kernel.ld
 
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
