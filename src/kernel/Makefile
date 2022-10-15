@@ -3,7 +3,7 @@ MAKEFLAGS += --no-builtin-rules
 MKDIR := mkdir -p
 RM := rm -rf
 CC := x86_64-elf-gcc -c
-LD := x86_64-elf-gcc
+LD := x86_64-elf-ld
 ASM := nasm
 ASMFLAGS := -f elf -g
 
@@ -11,16 +11,11 @@ CFLAGS += -MMD -MP
 CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
 CFLAGS += -g3 -O0
-CFLAGS += -ffreestanding -nostdlib
-CFLAGS += -Isrc -I../../limine-bootloader
-CFLAGS += -mno-red-zone
-CFLAGS += -mabi=sysv
-CFLAGS += -mno-80387 -mno-mmx -mno-3dnow -mno-sse -mno-sse2
-CFLAGS += -mcmodel=kernel
-LDFLAGS += -nostdlib
-LDFLAGS += -mno-red-zone
-LDFLAGS += -Wl,-z,max-page-size=0x1000
-LDFLAGS += -Wl,-T,src/kernel.ld
+CFLAGS += -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64
+CFLAGS += -Iinclude -I../../limine-bootloader
+LDFLAGS += -nostdlib -static -m elf_x86_64 -Lgcc
+LDFLAGS += -z max-page-size=0x1000
+LDFLAGS += -T src/kernel.ld
 
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
@@ -43,7 +38,7 @@ obj/%.asm.o: src/%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)
-	$(LD) $(LDFLAGS) $^ -o $@ -lgcc
+	$(LD) $(LDFLAGS) $^ -o $@
 
 clean:
 	$(RM) bin obj
