@@ -17,17 +17,19 @@ SECTIONS {
         *(.text)
     } : text
 
-    . += CONSTANT(MAXPAGESIZE);
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
     .rodata : {
         *(.rodata)
     } : rodata
 
-    . += CONSTANT(MAXPAGESIZE);
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
     .data : {
         *(.data)
     } : data
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
     .bss : {
         *(COMMON)

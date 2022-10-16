@@ -5,8 +5,9 @@ RM := rm -rf
 CC := x86_64-elf-gcc -c
 LD := x86_64-elf-ld
 ASM := nasm
-ASMFLAGS := -f elf -g
 
+ASMFLAGS := -f elf -g
+CFLAGS += -D__BOOT_LIMINE
 CFLAGS += -MMD -MP
 CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
