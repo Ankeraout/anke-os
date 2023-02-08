@@ -36,7 +36,9 @@ SECTIONS {
         *(.bss)
     } : data
 
+    /*
     /DISCARD/ : {
         *(*)
     }
+    */
 }

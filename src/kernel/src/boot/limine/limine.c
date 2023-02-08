@@ -1,6 +1,8 @@
 #include <stdbool.h>
 
 #include "boot/boot.h"
+#include "common.h"
+#include "debug.h"
 #include "limine.h"
 
 #ifdef __BOOT_LIMINE
@@ -17,7 +19,7 @@ static volatile struct limine_memmap_request s_memmapRequest = {
 
 static void printHex(uint64_t p_value) {
     uint64_t l_value = p_value;
-    
+
     char l_buffer[16];
 
     for(int l_i = 0; l_i < 16; l_i++) {
@@ -50,9 +52,15 @@ static void printMemoryMap(void) {
     s_terminalRequest.response->write(s_terminalRequest.response->terminals[0], "\n", 1);
 }
 
+static void terminalWriteFunc(void *p_arg, uint8_t p_value) {
+    M_UNUSED_PARAMETER(p_arg);
+
+    s_terminalRequest.response->write(s_terminalRequest.response->terminals[0], (const char *)&p_value, 1);
+}
+
 void _start(void) {
     printMemoryMap();
-    
+
     // TODO: allocate this in the heap?
     uint8_t l_memoryMapBuffer[
         sizeof(struct limine_memmap_entry)
@@ -69,7 +77,7 @@ void _start(void) {
     ) {
         l_memoryMap[l_entryIndex].base = s_memmapRequest.response->entries[l_entryIndex]->base;
         l_memoryMap[l_entryIndex].size = s_memmapRequest.response->entries[l_entryIndex]->length;
-        
+
         uint64_t l_entryType = s_memmapRequest.response->entries[l_entryIndex]->type;
 
         if(l_entryType == LIMINE_MEMMAP_USABLE) {
@@ -87,6 +95,8 @@ void _start(void) {
         .memoryMap = l_memoryMap,
         .memoryMapLength = s_memmapRequest.response->entry_count
     };
+
+    debugInit(terminalWriteFunc, NULL);
 
     main(&l_boot);
 }

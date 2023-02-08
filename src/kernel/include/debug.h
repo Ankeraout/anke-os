@@ -1,7 +1,8 @@
 #ifndef __INCLUDE_DEBUG_H__
 #define __INCLUDE_DEBUG_H__
 
-#include "dev/debugcon.h"
+#include <stddef.h>
+#include <stdint.h>
 
 typedef void (*t_debugWriteFunc)(void *p_parameter, uint8_t p_value);
 
