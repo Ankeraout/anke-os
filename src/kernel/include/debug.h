@@ -3,32 +3,11 @@
 
 #include "dev/debugcon.h"
 
-static inline void debugPrint(const char *p_string) {
-    debugconPuts(p_string);
-}
+typedef void (*t_debugWriteFunc)(void *p_parameter, uint8_t p_value);
 
-static inline void debugWrite(const void *p_buffer, size_t p_size) {
-    debugconWrite(p_buffer, p_size);
-}
-
-static inline void debugPrintPointer(const void *p_ptr) {
-    static const char l_hexChars[16] = "0123456789abcdef";
-    uintptr_t l_ptr = (uintptr_t)p_ptr;
-
-#ifdef __x86_64__
-    const int l_digitCount = 16;
-    const int l_shift = 60;
-#else
-    const int l_digitCount = 8;
-    const int l_shift = 28;
-#endif
-
-    debugconPuts("0x");
-
-    for(int l_digit = 0; l_digit < l_digitCount; l_digit++) {
-        debugconPutc(l_hexChars[l_ptr >> l_shift]);
-        l_ptr <<= 4;
-    }
-}
+void debugInit(t_debugWriteFunc p_writeFunc, void *p_parameter);
+void debugPrint(const char *p_string);
+void debugWrite(const void *p_buffer, size_t p_size);
+void debugPrintPointer(const void *p_ptr);
 
 #endif

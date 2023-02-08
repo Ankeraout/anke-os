@@ -4,8 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void debugconPutc(int p_character);
-void debugconPuts(const char *p_string);
-void debugconWrite(const void *p_buffer, size_t p_size);
+struct ts_devDebugcon {
+    uint16_t a_basePort;
+};
+
+void debugconPutc(struct ts_devDebugcon *p_dev, uint8_t p_character);
 
 #endif
