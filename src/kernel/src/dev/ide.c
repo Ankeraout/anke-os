@@ -215,6 +215,7 @@ static void ideDetectDrive(struct ts_devIde *p_dev, enum te_devIdeDrive p_drive)
     ideWait(p_dev);
 
     if(inb(p_dev->a_ioPortBase + E_IDE_IOOFFSET_STATUS) == 0x00) {
+        p_dev->a_drives[p_drive].a_type = E_DEV_IDE_DRIVETYPE_NONE;
         debugPrint("ide: No drive detected.\n");
         return;
     }
