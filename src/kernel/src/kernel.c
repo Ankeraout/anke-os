@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "arch/x86/gdt.h"
+#include "arch/x86/idt.h"
 #include "arch/x86/inline.h"
 #include "boot/boot.h"
 #include "dev/acpi.h"
@@ -21,6 +22,7 @@ void main(const struct ts_boot *p_boot) {
     debugInit((t_debugWriteFunc)debugconPutc, &s_kernelDebugcon);
 
     gdtInit();
+    idtInit();
     acpiInit();
     pciInit();
 

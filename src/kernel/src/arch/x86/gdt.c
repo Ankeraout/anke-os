@@ -21,7 +21,7 @@ static void gdtInitEntry(
     uint8_t p_flags
 );
 
-static struct ts_gdtEntry s_gdt[6];
+static __attribute__((aligned(sizeof(struct ts_gdtEntry)))) struct ts_gdtEntry s_gdt[6];
 
 void gdtInit(void) {
     gdtInitEntry(&s_gdt[0], 0, 0, 0, 0); // Null entry
