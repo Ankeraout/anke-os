@@ -69,4 +69,8 @@ static inline void sti(void) {
     asm("sti");
 }
 
+static inline void hlt(void) {
+    asm("hlt");
+}
+
 #endif

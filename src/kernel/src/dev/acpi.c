@@ -4,7 +4,7 @@
 
 #include "arch/x86/inline.h"
 #include "dev/acpi.h"
-#include "libk/string.h"
+#include "klibc/string.h"
 #include "debug.h"
 
 struct ts_acpiRsdp {

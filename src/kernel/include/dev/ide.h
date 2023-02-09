@@ -33,7 +33,7 @@ struct ts_devIdeDrive {
 struct ts_devIde {
     uint16_t a_ioPortBase;
     uint16_t a_ioPortControl;
-    int a_selectedDrive;
+    enum te_devIdeDrive a_selectedDrive;
     uint8_t a_registerCacheDriveHead;
     uint8_t a_registerCacheStatus;
     struct ts_devIdeDrive a_drives[2];

@@ -1,5 +1,7 @@
 #include <stdbool.h>
 
+#include "arch/x86/gdt.h"
+#include "arch/x86/inline.h"
 #include "boot/boot.h"
 #include "dev/acpi.h"
 #include "dev/debugcon.h"
@@ -9,9 +11,16 @@
 #include "dev/serial.h"
 #include "debug.h"
 
+static struct ts_devDebugcon s_kernelDebugcon = {
+    .a_basePort = 0xe9
+};
+
 void main(const struct ts_boot *p_boot) {
     debugPrint("kernel: Starting AnkeKernel...\n");
 
+    debugInit((t_debugWriteFunc)debugconPutc, &s_kernelDebugcon);
+
+    gdtInit();
     acpiInit();
     pciInit();
 
@@ -31,6 +40,6 @@ void main(const struct ts_boot *p_boot) {
     debugPrint("kernel: Initialization complete.\n");
 
     while(true) {
-        asm("hlt");
+        hlt();
     }
 }
