@@ -3,6 +3,8 @@
 #include "arch/x86/gdt.h"
 #include "arch/x86/idt.h"
 #include "arch/x86/inline.h"
+#include "arch/x86/pic.h"
+#include "arch/x86/pit.h"
 #include "boot/boot.h"
 #include "dev/acpi.h"
 #include "dev/debugcon.h"
@@ -23,6 +25,8 @@ void main(const struct ts_boot *p_boot) {
 
     gdtInit();
     idtInit();
+    picInit();
+    pitInit();
     acpiInit();
     pciInit();
 
