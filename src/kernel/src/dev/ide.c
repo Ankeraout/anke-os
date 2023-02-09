@@ -253,6 +253,7 @@ static void ideDetectDrive(struct ts_devIde *p_dev, enum te_devIdeDrive p_drive)
 
     // Check for errors
     if((p_dev->a_registerCacheStatus & C_IDE_STATUS_MASK_ERR) != 0) {
+        p_dev->a_drives[p_drive].a_type = E_DEV_IDE_DRIVETYPE_NONE;
         debugPrint("ide: Error while identifying the drive.\n");
         return;
     }
