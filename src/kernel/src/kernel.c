@@ -5,6 +5,7 @@
 #include "arch/x86/inline.h"
 #include "arch/x86/pic.h"
 #include "arch/x86/pit.h"
+#include "arch/x86/ps2.h"
 #include "boot/boot.h"
 #include "dev/acpi.h"
 #include "dev/debugcon.h"
@@ -26,8 +27,20 @@ void main(const struct ts_boot *p_boot) {
     gdtInit();
     idtInit();
     picInit();
+
+    // Enable interrupts
+    sti();
+    debugPrint("kernel: Interrupts enabled.\n");
+
     pitInit();
     acpiInit();
+
+    if(acpiIsPs2ControllerPresent()) {
+        ps2Init();
+    } else {
+        debugPrint("kernel: PS/2 port is not present according to ACPI.\n");
+    }
+
     pciInit();
 
     struct ts_devIde l_ide1 = {
