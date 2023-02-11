@@ -6,7 +6,7 @@
 #include "arch/x86/pic.h"
 #include "debug.h"
 
-static tf_isrHandler s_isrHandlers[48] = {
+static tf_isrHandler *s_isrHandlers[48] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -17,7 +17,7 @@ static tf_isrHandler s_isrHandlers[48] = {
 
 static void panic(const struct ts_isrRegisters *p_registers);
 
-void isrSetHandler(int p_interruptNumber, tf_isrHandler p_handler) {
+void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler) {
     if((p_interruptNumber < 0) || (p_interruptNumber >= 48)) {
         return;
     }
@@ -27,7 +27,7 @@ void isrSetHandler(int p_interruptNumber, tf_isrHandler p_handler) {
 
 void isrHandler(struct ts_isrRegisters *p_registers) {
     if(p_registers->a_interruptNumber < 48) {
-        tf_isrHandler l_handler = s_isrHandlers[p_registers->a_interruptNumber];
+        tf_isrHandler *l_handler = s_isrHandlers[p_registers->a_interruptNumber];
 
         if(p_registers->a_interruptNumber < 32) {
             if(l_handler == NULL) {

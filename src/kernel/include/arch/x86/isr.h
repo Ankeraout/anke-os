@@ -12,9 +12,9 @@ struct ts_isrRegisters {
     uint64_t a_rip, a_cs, a_rflags, a_rsp, a_ss;
 } __attribute__((packed));
 
-typedef void (*tf_isrHandler)(struct ts_isrRegisters *p_registers);
+typedef void tf_isrHandler(struct ts_isrRegisters *p_registers);
 
-void isrSetHandler(int p_interruptNumber, tf_isrHandler p_handler);
+void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler);
 void isrHandler(struct ts_isrRegisters *p_registers);
 void isrException0(void);
 void isrException1(void);
