@@ -9,17 +9,20 @@
 #include "boot/boot.h"
 #include "dev/acpi.h"
 #include "dev/debugcon.h"
+#include "dev/framebuffer.h"
 #include "dev/ide.h"
 #include "dev/parallel.h"
 #include "dev/pci.h"
 #include "dev/serial.h"
+#include "dev/terminal.h"
+#include "fonts/fonts.h"
 #include "debug.h"
 
 static struct ts_devDebugcon s_kernelDebugcon = {
     .a_basePort = 0xe9
 };
 
-void main(const struct ts_boot *p_boot) {
+void main(struct ts_boot *p_boot) {
     debugPrint("kernel: Starting AnkeKernel...\n");
 
     debugInit((t_debugWriteFunc)debugconPutc, &s_kernelDebugcon);
@@ -57,6 +60,19 @@ void main(const struct ts_boot *p_boot) {
     ideInit(&l_ide2);
 
     debugPrint("kernel: Initialization complete.\n");
+
+    struct ts_devTerminal l_terminal = {
+        .a_x = 0,
+        .a_y = 0,
+        .a_width = p_boot->a_framebuffer.a_width / 8,
+        .a_height = p_boot->a_framebuffer.a_height / g_font8.a_height,
+        .a_font = &g_font8,
+        .a_framebuffer = &p_boot->a_framebuffer,
+        .a_foregroundColor = 0xffffffff,
+        .a_backgroundColor = 0x00000000
+    };
+
+    terminalWrite(&l_terminal, "Hello world\n\tTest", 17);
 
     while(true) {
         hlt();

@@ -17,6 +17,11 @@ static volatile struct limine_memmap_request s_memmapRequest = {
     .revision = 0
 };
 
+static volatile struct limine_framebuffer_request s_framebufferRequest = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0
+};
+
 static void printHex(uint64_t p_value) {
     uint64_t l_value = p_value;
 
@@ -75,25 +80,31 @@ void _start(void) {
         l_entryIndex < s_memmapRequest.response->entry_count;
         l_entryIndex++
     ) {
-        l_memoryMap[l_entryIndex].base = s_memmapRequest.response->entries[l_entryIndex]->base;
-        l_memoryMap[l_entryIndex].size = s_memmapRequest.response->entries[l_entryIndex]->length;
+        l_memoryMap[l_entryIndex].a_base = s_memmapRequest.response->entries[l_entryIndex]->base;
+        l_memoryMap[l_entryIndex].a_size = s_memmapRequest.response->entries[l_entryIndex]->length;
 
         uint64_t l_entryType = s_memmapRequest.response->entries[l_entryIndex]->type;
 
         if(l_entryType == LIMINE_MEMMAP_USABLE) {
-            l_memoryMap[l_entryIndex].type = E_MMAP_TYPE_FREE;
+            l_memoryMap[l_entryIndex].a_type = E_MMAP_TYPE_FREE;
         } else if(l_entryType == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
-            l_memoryMap[l_entryIndex].type = E_MMAP_TYPE_RECLAIMABLE;
+            l_memoryMap[l_entryIndex].a_type = E_MMAP_TYPE_RECLAIMABLE;
         } else if(l_entryType == LIMINE_MEMMAP_KERNEL_AND_MODULES) {
-            l_memoryMap[l_entryIndex].type = E_MMAP_TYPE_KERNEL;
+            l_memoryMap[l_entryIndex].a_type = E_MMAP_TYPE_KERNEL;
         } else {
-            l_memoryMap[l_entryIndex].type = E_MMAP_TYPE_RESERVED;
+            l_memoryMap[l_entryIndex].a_type = E_MMAP_TYPE_RESERVED;
         }
     }
 
     struct ts_boot l_boot = {
-        .memoryMap = l_memoryMap,
-        .memoryMapLength = s_memmapRequest.response->entry_count
+        .a_memoryMap = l_memoryMap,
+        .a_memoryMapLength = s_memmapRequest.response->entry_count,
+        .a_framebuffer = {
+            .a_buffer = s_framebufferRequest.response->framebuffers[0]->address,
+            .a_width = s_framebufferRequest.response->framebuffers[0]->width,
+            .a_height = s_framebufferRequest.response->framebuffers[0]->height,
+            .a_pitch = s_framebufferRequest.response->framebuffers[0]->pitch
+        }
     };
 
     debugInit(terminalWriteFunc, NULL);
