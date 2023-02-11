@@ -14,6 +14,14 @@ struct ts_devTerminal {
     t_devFramebufferColor a_backgroundColor;
 };
 
+void terminalPutc(
+    struct ts_devTerminal *p_terminal,
+    char p_character
+);
+void terminalPuts(
+    struct ts_devTerminal *p_terminal,
+    const void *p_buffer
+);
 void terminalWrite(
     struct ts_devTerminal *p_terminal,
     const void *p_buffer,

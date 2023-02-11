@@ -3,10 +3,10 @@
 
 #include "debug.h"
 
-static t_debugWriteFunc s_debugWriteFunc = NULL;
+static tf_debugWriteFunc *s_debugWriteFunc = NULL;
 static void *s_debugWriteFuncParameter = NULL;
 
-void debugInit(t_debugWriteFunc p_writeFunc, void *p_parameter) {
+void debugInit(tf_debugWriteFunc *p_writeFunc, void *p_parameter) {
     s_debugWriteFunc = p_writeFunc;
     s_debugWriteFuncParameter = p_parameter;
 }

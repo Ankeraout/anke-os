@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef void (*t_debugWriteFunc)(void *p_parameter, uint8_t p_value);
+typedef void tf_debugWriteFunc(void *p_parameter, uint8_t p_value);
 
-void debugInit(t_debugWriteFunc p_writeFunc, void *p_parameter);
+void debugInit(tf_debugWriteFunc *p_writeFunc, void *p_parameter);
 void debugPrint(const char *p_string);
 void debugPrintHex8(uint8_t p_value);
 void debugPrintHex16(uint16_t p_value);
