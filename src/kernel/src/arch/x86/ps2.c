@@ -135,7 +135,7 @@ void ps2Init(void) {
 
     // Detect second port
     if(s_ps2Ports[1].a_working) {
-        debugPrint("ps2: Detecting second port...\n");
+        debugPrint("ps2: Detecting second port.\n");
         outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_2_ENABLE);
         iowait();
 
@@ -149,11 +149,11 @@ void ps2Init(void) {
         if((l_configurationByte & (1 << 5)) != 0) {
             debugPrint("ps2: Second port is not present.\n");
             s_ps2Ports[1].a_working = false;
+        } else {
+            // Disable the second PS/2 port again
+            outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_2_DISABLE);
+            iowait();
         }
-
-        // Disable the second PS/2 port again
-        outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_2_DISABLE);
-        iowait();
     }
 
     // Test the first PS/2 port
@@ -170,7 +170,7 @@ void ps2Init(void) {
 
     // Test the second PS/2 port
     if(s_ps2Ports[1].a_working) {
-        debugPrint("ps2: Testing second port...\n");
+        debugPrint("ps2: Testing second port.\n");
         outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_2_TEST);
         iowait();
         ps2WaitRead();
@@ -190,11 +190,10 @@ void ps2Init(void) {
         s_ps2Ports[0].a_receiveBufferReadIndex = 0;
         s_ps2Ports[0].a_receiveBufferWriteIndex = 0;
 
-        outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_1_ENABLE);
-        iowait();
-        l_configurationByte |= 1 << 0;
-
         isrSetHandler(33, ps2InterruptHandler);
+        
+        l_configurationByte |= 1 << 0;
+        l_configurationByte &= ~(1 << 4);
     }
 
     if(s_ps2Ports[1].a_working) {
@@ -204,11 +203,10 @@ void ps2Init(void) {
         s_ps2Ports[1].a_receiveBufferReadIndex = 0;
         s_ps2Ports[1].a_receiveBufferWriteIndex = 0;
 
-        outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_PORT_2_ENABLE);
-        iowait();
-        l_configurationByte |= 1 << 1;
-
         isrSetHandler(44, ps2InterruptHandler);
+
+        l_configurationByte |= 1 << 1;
+        l_configurationByte &= ~(1 << 5);
     }
 
     outb(C_IOPORT_PS2_COMMAND, C_PS2_CMD_WRITE_RAM);
@@ -307,8 +305,6 @@ static void ps2InitDevice(int p_port) {
     s_ps2Ports[p_port].a_flagEcho = false;
     s_ps2Ports[p_port].a_flagAck = false;
 
-    // TODO: read time-out
-
     // Send reset command
     ps2Write(p_port, 0xff);
     ps2WaitSelfTest(p_port);
@@ -399,8 +395,6 @@ static void ps2WaitWrite(void) {
 }
 
 static void ps2InterruptHandler(struct ts_isrRegisters *p_registers) {
-    debugPrint("ps2: Interrupt\n");
-
     int l_port;
 
     if(p_registers->a_interruptNumber == 33) { // IRQ1
