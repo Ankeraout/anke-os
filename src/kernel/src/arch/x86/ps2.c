@@ -31,7 +31,8 @@
 #define C_PS2_CMD_PULSE 0xf0
 #define C_PS2_RECEIVE_BUFFER_SIZE 16
 
-#define C_PS2_TIMEOUT 100
+#define C_PS2_TIMEOUT_ACK 100
+#define C_PS2_TIMEOUT_RESET 1000
 
 enum te_ps2DeviceType {
     E_PS2_DEVICETYPE_UNKNOWN,
@@ -270,7 +271,7 @@ void ps2Write(int p_port, uint8_t p_value) {
 
 static void ps2WaitAck(int p_port) {
     uint64_t l_startTime = pitGetTimeMilliseconds();
-    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT;
+    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT_ACK;
 
     while((!s_ps2Ports[p_port].a_flagAck) && (pitGetTimeMilliseconds() < l_endTime)) {
         hlt();
@@ -284,7 +285,7 @@ static void ps2WaitAck(int p_port) {
 
 static void ps2WaitSelfTest(int p_port) {
     uint64_t l_startTime = pitGetTimeMilliseconds();
-    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT;
+    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT_RESET;
 
     while((s_ps2Ports[p_port].a_pendingSelfTest) && (pitGetTimeMilliseconds() < l_endTime)) {
         hlt();
@@ -301,7 +302,7 @@ static void ps2InitDevice(int p_port) {
     debugPrint(p_port == 0 ? "first" : "second");
     debugPrint(" port.\n");
 
-    s_ps2Ports[p_port].a_pendingSelfTest = false;
+    s_ps2Ports[p_port].a_pendingSelfTest = true;
     s_ps2Ports[p_port].a_flagEcho = false;
     s_ps2Ports[p_port].a_flagAck = false;
 
@@ -334,7 +335,7 @@ static void ps2InitDevice(int p_port) {
     int l_bufferLength = 0;
 
     while(l_bufferLength < 2) {
-        pitSleep(C_PS2_TIMEOUT);
+        pitSleep(C_PS2_TIMEOUT_ACK);
 
         if(!ps2CanRead(p_port)) {
             break;
