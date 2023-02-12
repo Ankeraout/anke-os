@@ -44,8 +44,8 @@ void framebufferFillRectangle(
     if(
         (l_rectangle.a_height < 0)
         || (l_rectangle.a_width < 0)
-        || (l_rectangle.a_x >= p_framebuffer->a_width)
-        || (l_rectangle.a_y >= p_framebuffer->a_height)
+        || ((size_t)l_rectangle.a_x >= p_framebuffer->a_width)
+        || ((size_t)l_rectangle.a_y >= p_framebuffer->a_height)
     ) {
         return;
     }
@@ -120,8 +120,8 @@ void framebufferDrawPixel(
     if(
         (p_x < 0)
         || (p_y < 0)
-        || (p_x >= p_framebuffer->a_width)
-        || (p_y >= p_framebuffer->a_height)
+        || ((size_t)p_x >= p_framebuffer->a_width)
+        || ((size_t)p_y >= p_framebuffer->a_height)
     ) {
         return;
     }
@@ -154,7 +154,7 @@ void framebufferScrollUp(
         return;
     }
 
-    if(p_n > p_framebuffer->a_height) {
+    if((size_t)p_n > p_framebuffer->a_height) {
         p_n = p_framebuffer->a_height;
     }
 
@@ -172,7 +172,7 @@ void framebufferScrollUp(
         l_destinationIndex += l_nextLine;
     }
 
-    for(size_t l_row = 0; l_row < p_n; l_row++) {
+    for(size_t l_row = 0; l_row < (size_t)p_n; l_row++) {
         for(size_t l_col = 0; l_col < p_framebuffer->a_width; l_col++) {
             ((uint32_t *)p_framebuffer->a_buffer)[l_destinationIndex++] = p_color;
         }

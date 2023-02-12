@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef void tf_debugWriteFunc(void *p_parameter, uint8_t p_value);
+typedef void tf_debugWriteFunc(void *p_parameter, char p_value);
 
 void debugInit(tf_debugWriteFunc *p_writeFunc, void *p_parameter);
 void debugPrint(const char *p_string);
