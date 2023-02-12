@@ -8,7 +8,16 @@ void framebufferFillRectangle(
     const struct ts_devFramebufferRectangle *p_rectangle,
     t_devFramebufferColor p_color
 ) {
-    struct ts_devFramebufferRectangle l_rectangle = *p_rectangle;
+    struct ts_devFramebufferRectangle l_rectangle;
+
+    if(p_rectangle == NULL) {
+        l_rectangle.a_x = 0;
+        l_rectangle.a_y = 0;
+        l_rectangle.a_width = p_framebuffer->a_width;
+        l_rectangle.a_height = p_framebuffer->a_height;
+    } else {
+        l_rectangle = *p_rectangle;
+    }
 
     if(l_rectangle.a_x < 0) {
         l_rectangle.a_width += l_rectangle.a_x;
@@ -41,16 +50,17 @@ void framebufferFillRectangle(
         return;
     }
 
-    size_t l_nextLine = (p_framebuffer->a_pitch >> 2) - l_rectangle.a_width;
-    size_t l_currentIndex = (p_framebuffer->a_pitch >> 2) * l_rectangle.a_y + l_rectangle.a_x;
-    uint32_t *l_buffer = (uint32_t *)p_framebuffer->a_buffer;
+    int l_y = l_rectangle.a_y;
 
     for(int l_row = 0; l_row < l_rectangle.a_height; l_row++) {
+        int l_x = l_rectangle.a_x;
+
         for(int l_col = 0; l_col < l_rectangle.a_width; l_col++) {
-            l_buffer[l_currentIndex++] = p_color;
+            framebufferDrawPixel(p_framebuffer, l_x, l_y, p_color);
+            l_x++;
         }
 
-        l_currentIndex += l_nextLine;
+        l_y++;
     }
 }
 
@@ -118,8 +128,21 @@ void framebufferDrawPixel(
 
     const size_t l_index = (p_framebuffer->a_pitch >> 2) * p_y + p_x;
     uint32_t *l_buffer = (uint32_t *)p_framebuffer->a_buffer;
+    uint32_t l_oldPixel = l_buffer[l_index];
+    uint8_t l_oldRed = l_oldPixel >> 16;
+    uint8_t l_oldGreen = l_oldPixel >> 8;
+    uint8_t l_oldBlue = l_oldPixel;
+    uint8_t l_alpha = p_color >> 24;
+    uint8_t l_oldAlpha = 255 - l_alpha;
+    uint8_t l_newRed = p_color >> 16;
+    uint8_t l_newGreen = p_color >> 8;
+    uint8_t l_newBlue = p_color;
+    uint8_t l_red = (l_oldAlpha * l_oldRed + l_alpha * l_newRed) / 255;
+    uint8_t l_green = (l_oldAlpha * l_oldGreen + l_alpha * l_newGreen) / 255;
+    uint8_t l_blue = (l_oldAlpha * l_oldBlue + l_alpha * l_newBlue) / 255;
+    uint32_t l_color = (l_red << 16) | (l_green << 8) | l_blue;
 
-    l_buffer[l_index] = p_color;
+    l_buffer[l_index] = l_color;
 }
 
 void framebufferScrollUp(
