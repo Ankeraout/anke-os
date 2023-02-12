@@ -14,8 +14,8 @@ enum te_bootMemoryMapEntryType {
 };
 
 struct ts_bootMemoryMapEntry {
-    size_t a_base;
-    size_t a_size;
+    uint64_t a_base;
+    uint64_t a_size;
     enum te_bootMemoryMapEntryType a_type;
 };
 

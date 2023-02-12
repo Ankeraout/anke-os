@@ -22,21 +22,22 @@ static struct ts_devDebugcon s_kernelDebugcon = {
     .a_basePort = 0xe9
 };
 
+static struct ts_devTerminal s_terminal;
+static struct ts_devFramebufferFont *s_font = &g_font8;
+
 void main(struct ts_boot *p_boot) {
-    struct ts_devFramebufferFont *l_font = &g_font16;
+    s_terminal.a_x = 0;
+    s_terminal.a_y = 0;
+    s_terminal.a_width = p_boot->a_framebuffer.a_width / 8;
+    s_terminal.a_height = p_boot->a_framebuffer.a_height / s_font->a_height;
+    s_terminal.a_font = s_font;
+    s_terminal.a_framebuffer = &p_boot->a_framebuffer;
+    s_terminal.a_foregroundColor = 0xffaaaaaa;
+    s_terminal.a_backgroundColor = 0xff000000;
 
-    struct ts_devTerminal l_terminal = {
-        .a_x = 0,
-        .a_y = 0,
-        .a_width = p_boot->a_framebuffer.a_width / 8,
-        .a_height = p_boot->a_framebuffer.a_height / l_font->a_height,
-        .a_font = l_font,
-        .a_framebuffer = &p_boot->a_framebuffer,
-        .a_foregroundColor = 0xffffffff,
-        .a_backgroundColor = 0x00000000
-    };
+    debugInit((tf_debugWriteFunc *)terminalPutc, &s_terminal);
 
-    debugInit((tf_debugWriteFunc *)terminalPutc, &l_terminal);
+    framebufferFillRectangle(&p_boot->a_framebuffer, NULL, s_terminal.a_backgroundColor);
 
     debugPrint("kernel: Starting AnkeKernel...\n");
 
