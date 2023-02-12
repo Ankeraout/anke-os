@@ -271,17 +271,5 @@ static void acpiExploreTable(const struct ts_acpiSdtHeader *p_sdt) {
 
     if(memcmp(p_sdt->a_signature, "FACP", 4) == 0) {
         s_acpiFadt = (const struct ts_acpiFadt *)p_sdt;
-
-        uintptr_t l_a1 = (uintptr_t)s_acpiFadt;
-        uintptr_t l_a2 = (uintptr_t)&s_acpiFadt->a_bootArchitectureFlags;
-        uintptr_t l_a3 = l_a2 - l_a1;
-
-        debugPrint("acpi: FADT boot arch flags offset: 0x");
-        debugPrintHex64(l_a3);
-        debugPrint("\n");
-
-        debugPrint("acpi: FADT boot arch flags: 0x");
-        debugPrintHex16(s_acpiFadt->a_bootArchitectureFlags);
-        debugPrint("\n");
     }
 }
