@@ -3,7 +3,7 @@
 
 #include "arch/x86/inline.h"
 #include "arch/x86/isr.h"
-#include "arch/x86/pic.h"
+#include "dev/pic.h"
 #include "debug.h"
 
 static tf_isrHandler *s_isrHandlers[48] = {

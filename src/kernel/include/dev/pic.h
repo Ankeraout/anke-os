@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_ARCH_X86_PIC_H__
-#define __INCLUDE_ARCH_X86_PIC_H__
+#ifndef __INCLUDE_DEV_PIC_H__
+#define __INCLUDE_DEV_PIC_H__
 
 #include <stdbool.h>
 
