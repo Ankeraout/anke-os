@@ -3,6 +3,6 @@
 
 #include "dev/device.h"
 
-extern const struct ts_deviceDriver g_devDriverI8042;
+extern const struct ts_deviceDriver g_deviceDriverI8042;
 
 #endif

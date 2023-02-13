@@ -5,6 +5,6 @@
 
 #include "dev/interruptcontroller.h"
 
-extern const struct ts_deviceDriverInterruptController g_devDriverI8259;
+extern const struct ts_deviceDriverInterruptController g_deviceDriverI8259;
 
 #endif

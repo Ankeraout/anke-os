@@ -3,6 +3,6 @@
 
 #include "dev/timer.h"
 
-extern const struct ts_deviceDriverTimer g_devDriverI8254;
+extern const struct ts_deviceDriverTimer g_deviceDriverI8254;
 
 #endif

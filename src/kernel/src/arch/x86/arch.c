@@ -10,7 +10,7 @@
 #include "debug.h"
 
 static struct ts_device s_acpiDevice = {
-    .a_driver = &g_devDriverAcpi,
+    .a_driver = &g_deviceDriverAcpi,
     .a_parent = NULL,
     .a_driverData = NULL
 };

@@ -29,7 +29,7 @@ static void i8254InterruptHandler(
     struct ts_device *p_device
 );
 
-const struct ts_deviceDriverTimer g_devDriverI8254 = {
+const struct ts_deviceDriverTimer g_deviceDriverI8254 = {
     .a_driver = {
         .a_name = "Intel 8253/8254 programmable interrupt timer",
         .a_init = (tf_deviceDriverFuncInit *)i8254Init

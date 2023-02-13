@@ -142,7 +142,7 @@ static bool acpiIs8042Present(
 
 static const char s_rsdpSignature[8] = "RSD PTR ";
 static const size_t s_rsdpSignatureLength = 8;
-const struct ts_deviceDriver g_devDriverAcpi = {
+const struct ts_deviceDriver g_deviceDriverAcpi = {
     .a_name = "ACPI root bus",
     .a_init = acpiInit
 };
@@ -193,7 +193,7 @@ static int acpiInit(struct ts_device *p_device) {
     }
 
     // Initialize PIC
-    s_acpiDeviceInterruptController.a_driver = (const struct ts_deviceDriver *)&g_devDriverI8259;
+    s_acpiDeviceInterruptController.a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
     s_acpiDeviceInterruptController.a_parent = p_device;
     s_acpiDeviceInterruptController.a_driver->a_init(&s_acpiDeviceInterruptController);
     isrInit(&s_acpiDeviceInterruptController);
@@ -202,7 +202,7 @@ static int acpiInit(struct ts_device *p_device) {
     archInterruptsEnable();
 
     // Initialize PIT
-    s_acpiDeviceTimer8254.a_driver = (const struct ts_deviceDriver *)&g_devDriverI8254;
+    s_acpiDeviceTimer8254.a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8254;
     s_acpiDeviceTimer8254.a_driver->a_init(&s_acpiDeviceTimer8254);
 
     timerSetDevice(&s_acpiDeviceTimer8254);
@@ -210,7 +210,7 @@ static int acpiInit(struct ts_device *p_device) {
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
         struct ts_device l_ps2Controller = {
-            .a_driver = &g_devDriverI8042,
+            .a_driver = &g_deviceDriverI8042,
             .a_driverData = NULL,
             .a_parent = p_device
         };

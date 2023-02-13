@@ -83,7 +83,7 @@ static void i8042InterruptHandler(
 );
 static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port);
 
-const struct ts_deviceDriverPs2 g_devDriverI8042 = {
+const struct ts_deviceDriverPs2 g_deviceDriverI8042 = {
     .a_driver = {
         .a_name = "8042 PS/2 controller",
         .a_init = i8042Init
