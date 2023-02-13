@@ -205,6 +205,8 @@ static int acpiInit(struct ts_device *p_device) {
     s_acpiDeviceTimer8254.a_driver = (const struct ts_deviceDriver *)&g_devDriverI8254;
     s_acpiDeviceTimer8254.a_driver->a_init(&s_acpiDeviceTimer8254);
 
+    timerSetDevice(&s_acpiDeviceTimer8254);
+
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
         struct ts_device l_ps2Controller = {

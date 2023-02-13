@@ -12,13 +12,18 @@ typedef void tf_deviceDriverTimerFuncSetFrequency(
     uint64_t p_frequency
 );
 
+typedef uint64_t tf_deviceDriverTimerFuncGetTime(
+    struct ts_device *p_device
+);
+
 struct ts_deviceDriverTimer {
     struct ts_deviceDriver a_driver;
     tf_deviceDriverTimerFuncSetFrequency *a_setFrequency;
+    tf_deviceDriverTimerFuncGetTime *a_getTime;
 };
 
-struct ts_deviceDriverTimerData {
-    uint64_t a_milliseconds;
-};
+void timerSetDevice(struct ts_device *p_device);
+uint64_t timerGetTime(void);
+void timerSleep(uint64_t p_milliseconds);
 
 #endif

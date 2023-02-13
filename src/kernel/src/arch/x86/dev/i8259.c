@@ -71,6 +71,6 @@ static void i8259EndOfInterrupt(struct ts_device *p_device, int p_interruptNumbe
         iowait();
     }
 
-    outb(C_IOPORT_I8259_MASTER_DATA, C_I8259_CMD_EOI);
+    outb(C_IOPORT_I8259_MASTER_COMMAND, C_I8259_CMD_EOI);
     iowait();
 }

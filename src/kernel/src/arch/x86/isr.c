@@ -6,16 +6,11 @@
 #include "arch/x86/dev/i8259.h"
 #include "dev/device.h"
 #include "dev/interruptcontroller.h"
+#include "klibc/string.h"
 #include "debug.h"
 
-static tf_isrHandler *s_isrHandlers[48] = {
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-};
+static tf_isrHandler *s_isrHandlers[48];
+static void *s_isrHandlerArgs[48];
 
 static void panic(const struct ts_isrRegisters *p_registers);
 
@@ -23,19 +18,23 @@ static struct ts_device *s_isrDeviceInterruptController;
 
 void isrInit(struct ts_device *p_device) {
     s_isrDeviceInterruptController = p_device;
+    memset(s_isrHandlers, 0, sizeof(s_isrHandlers));
+    memset(s_isrHandlerArgs, 0, sizeof(s_isrHandlerArgs));
 }
 
-void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler) {
+void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler, void *p_arg) {
     if((p_interruptNumber < 0) || (p_interruptNumber >= 48)) {
         return;
     }
 
     s_isrHandlers[p_interruptNumber] = p_handler;
+    s_isrHandlerArgs[p_interruptNumber] = p_arg;
 }
 
 void isrHandler(struct ts_isrRegisters *p_registers) {
     if(p_registers->a_interruptNumber < 48) {
         tf_isrHandler *l_handler = s_isrHandlers[p_registers->a_interruptNumber];
+        void *l_handlerArg = s_isrHandlerArgs[p_registers->a_interruptNumber];
 
         if(p_registers->a_interruptNumber < 32) {
             if(l_handler == NULL) {
@@ -47,11 +46,11 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
 
                 panic(p_registers);
             } else {
-                l_handler(p_registers);
+                l_handler(p_registers, l_handlerArg);
             }
         } else if(p_registers->a_interruptNumber < 48) {
             if(l_handler != NULL) {
-                l_handler(p_registers);
+                l_handler(p_registers, l_handlerArg);
             }
 
             ((const struct ts_deviceDriverInterruptController *)s_isrDeviceInterruptController->a_driver)->a_endOfInterrupt(s_isrDeviceInterruptController, p_registers->a_interruptNumber - 32);

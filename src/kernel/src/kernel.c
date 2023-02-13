@@ -4,6 +4,7 @@
 #include "boot/boot.h"
 #include "dev/framebuffer.h"
 #include "dev/terminal.h"
+#include "dev/timer.h"
 #include "fonts/fonts.h"
 #include "debug.h"
 

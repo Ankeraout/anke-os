@@ -1,5 +1,6 @@
 #include "arch/x86/inline.h"
 #include "dev/device.h"
+#include "common.h"
 #include "debug.h"
 
 #define C_IOPORT_PS2_DATA 0x60
@@ -38,6 +39,8 @@ const struct ts_deviceDriver g_devDriverI8042 = {
 };
 
 static int i8042Init(struct ts_device *p_device) {
+    M_UNUSED_PARAMETER(p_device);
+
     debugPrint("i8042: init()\n");
 
     return 0;
