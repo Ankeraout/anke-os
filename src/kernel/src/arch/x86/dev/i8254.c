@@ -50,7 +50,7 @@ static int i8254Init(struct ts_device *p_device) {
 
     outb(C_8254_IOPORT_CMD, 0x36);
 
-    debugPrint("i8254: Initialized.\n");
+    debugPrint("i8254: PIT Initialized.\n");
 
     return 0;
 }
