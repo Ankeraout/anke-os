@@ -32,7 +32,7 @@
 
 static int i8042Init(struct ts_device *p_device);
 
-struct ts_deviceDriver g_devDriverI8042 = {
+const struct ts_deviceDriver g_devDriverI8042 = {
     .a_name = "8042 PS/2 controller",
     .a_init = i8042Init
 };

@@ -3,7 +3,8 @@
 
 #include <stdbool.h>
 
-void i8259Init(void);
-void i8259EndOfInterrupt(bool l_slaveInterrupt);
+#include "dev/interruptcontroller.h"
+
+extern const struct ts_deviceDriverInterruptController g_devDriverI8259;
 
 #endif

@@ -2,6 +2,9 @@
 #define __INCLUDE_ARCH_X86_ISR_H__
 
 #include <stddef.h>
+#include <stdint.h>
+
+#include "dev/device.h"
 
 struct ts_isrRegisters {
     uint64_t a_gs, a_fs, a_es, a_ds;
@@ -14,6 +17,7 @@ struct ts_isrRegisters {
 
 typedef void tf_isrHandler(struct ts_isrRegisters *p_registers);
 
+void isrInit(struct ts_device *p_device);
 void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler);
 void isrHandler(struct ts_isrRegisters *p_registers);
 void isrException0(void);

@@ -18,8 +18,6 @@ static struct ts_device s_acpiDevice = {
 void archInit(void) {
     gdtInit();
     idtInit();
-    sti();
-    debugPrint("kernel: Interrupts enabled.\n");
 
     if(s_acpiDevice.a_driver->a_init(&s_acpiDevice)) {
         debugPrint("kernel: ACPI driver initialization failed.\n");

@@ -4,6 +4,8 @@
 #include "arch/x86/inline.h"
 #include "arch/x86/isr.h"
 #include "arch/x86/dev/i8259.h"
+#include "dev/device.h"
+#include "dev/interruptcontroller.h"
 #include "debug.h"
 
 static tf_isrHandler *s_isrHandlers[48] = {
@@ -16,6 +18,12 @@ static tf_isrHandler *s_isrHandlers[48] = {
 };
 
 static void panic(const struct ts_isrRegisters *p_registers);
+
+static struct ts_device *s_isrDeviceInterruptController;
+
+void isrInit(struct ts_device *p_device) {
+    s_isrDeviceInterruptController = p_device;
+}
 
 void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler) {
     if((p_interruptNumber < 0) || (p_interruptNumber >= 48)) {
@@ -46,7 +54,7 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
                 l_handler(p_registers);
             }
 
-            i8259EndOfInterrupt(p_registers->a_interruptNumber >= 40);
+            ((const struct ts_deviceDriverInterruptController *)s_isrDeviceInterruptController->a_driver)->a_endOfInterrupt(s_isrDeviceInterruptController, p_registers->a_interruptNumber - 32);
         } else {
             debugPrint("panic: Unhandled interrupt 0x");
             debugPrintHex8(p_registers->a_interruptNumber);
@@ -55,7 +63,11 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
             panic(p_registers);
         }
     } else {
+        debugPrint("panic: Unhandled interrupt 0x");
+        debugPrintHex8(p_registers->a_interruptNumber);
+        debugPrint(".\n");
 
+        panic(p_registers);
     }
 }
 

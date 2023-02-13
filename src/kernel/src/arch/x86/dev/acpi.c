@@ -2,10 +2,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "arch/arch.h"
 #include "arch/x86/inline.h"
+#include "arch/x86/isr.h"
 #include "arch/x86/dev/acpi.h"
-#include "dev/device.h"
 #include "arch/x86/dev/i8042.h"
+#include "arch/x86/dev/i8254.h"
+#include "arch/x86/dev/i8259.h"
+#include "dev/device.h"
+#include "dev/timer.h"
 #include "klibc/string.h"
 #include "debug.h"
 
@@ -131,7 +136,7 @@ static void acpiExploreTable(
     struct ts_device *p_device,
     const struct ts_acpiSdtHeader *p_sdt
 );
-static bool acpiSupportsPs2(
+static bool acpiIs8042Present(
     struct ts_device *p_device
 );
 
@@ -148,7 +153,13 @@ struct ts_acpiDeviceDriverData {
     const struct ts_acpiFadt *a_acpiFadt;
 };
 
+static struct ts_acpiDeviceDriverData s_acpiDeviceDriverData;
+static struct ts_device s_acpiDeviceTimer8254;
+static struct ts_device s_acpiDeviceInterruptController;
+
 static int acpiInit(struct ts_device *p_device) {
+    p_device->a_driverData = &s_acpiDeviceDriverData;
+
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
@@ -181,7 +192,21 @@ static int acpiInit(struct ts_device *p_device) {
         return 1;
     }
 
-    if(acpiSupportsPs2(p_device)) {
+    // Initialize PIC
+    s_acpiDeviceInterruptController.a_driver = (const struct ts_deviceDriver *)&g_devDriverI8259;
+    s_acpiDeviceInterruptController.a_parent = p_device;
+    s_acpiDeviceInterruptController.a_driver->a_init(&s_acpiDeviceInterruptController);
+    isrInit(&s_acpiDeviceInterruptController);
+
+    // Enable interrupts
+    archInterruptsEnable();
+
+    // Initialize PIT
+    s_acpiDeviceTimer8254.a_driver = (const struct ts_deviceDriver *)&g_devDriverI8254;
+    s_acpiDeviceTimer8254.a_driver->a_init(&s_acpiDeviceTimer8254);
+
+    // Initialize PS/2 controller
+    if(acpiIs8042Present(p_device)) {
         struct ts_device l_ps2Controller = {
             .a_driver = &g_devDriverI8042,
             .a_driverData = NULL,
@@ -326,7 +351,7 @@ static void acpiExploreTable(
     }
 }
 
-static bool acpiSupportsPs2(
+static bool acpiIs8042Present(
     struct ts_device *p_device
 ) {
     struct ts_acpiDeviceDriverData *l_data =
