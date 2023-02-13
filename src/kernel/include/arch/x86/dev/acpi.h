@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_DEV_ACPI_H__
-#define __INCLUDE_DEV_ACPI_H__
+#ifndef __INCLUDE_ARCH_X86_DEV_ACPI_H__
+#define __INCLUDE_ARCH_X86_DEV_ACPI_H__
 
 #include "dev/device.h"
 
