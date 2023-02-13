@@ -3,6 +3,6 @@
 
 #include "dev/device.h"
 
-extern const struct ts_deviceDriver g_acpiDriver;
+extern const struct ts_deviceDriver g_devDriverAcpi;
 
 #endif

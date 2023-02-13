@@ -3,8 +3,9 @@
 #include <stdint.h>
 
 #include "arch/x86/inline.h"
-#include "dev/acpi.h"
+#include "arch/x86/dev/acpi.h"
 #include "dev/device.h"
+#include "arch/x86/dev/i8042.h"
 #include "klibc/string.h"
 #include "debug.h"
 
@@ -130,10 +131,14 @@ static void acpiExploreTable(
     struct ts_device *p_device,
     const struct ts_acpiSdtHeader *p_sdt
 );
+static bool acpiSupportsPs2(
+    struct ts_device *p_device
+);
 
 static const char s_rsdpSignature[8] = "RSD PTR ";
 static const size_t s_rsdpSignatureLength = 8;
-const struct ts_deviceDriver g_acpiDriver = {
+const struct ts_deviceDriver g_devDriverAcpi = {
+    .a_name = "ACPI root bus",
     .a_init = acpiInit
 };
 
@@ -174,6 +179,16 @@ static int acpiInit(struct ts_device *p_device) {
     } else {
         debugPrint("acpi: Unknown ACPI RSDP version found.\n");
         return 1;
+    }
+
+    if(acpiSupportsPs2(p_device)) {
+        struct ts_device l_ps2Controller = {
+            .a_driver = &g_devDriverI8042,
+            .a_driverData = NULL,
+            .a_parent = p_device
+        };
+
+        l_ps2Controller.a_driver->a_init(&l_ps2Controller);
     }
 
     return 0;
@@ -309,4 +324,28 @@ static void acpiExploreTable(
     if(memcmp(p_sdt->a_signature, "FACP", 4) == 0) {
         l_data->a_acpiFadt = (const struct ts_acpiFadt *)p_sdt;
     }
+}
+
+static bool acpiSupportsPs2(
+    struct ts_device *p_device
+) {
+    struct ts_acpiDeviceDriverData *l_data =
+        (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
+
+    if(l_data->a_acpiRsdp == NULL) {
+        // ACPI is not supported => 8042 controller is present
+        return true;
+    }
+
+    if(l_data->a_acpiFadt == NULL) {
+        // FADT not found => 8042 controller is present
+        return true;
+    }
+
+    if(l_data->a_acpiRsdp->rsdp1.a_revision == 0) {
+        // ACPI 1.0 => boot architecture flags field is invalid.
+        return true;
+    }
+
+    return (l_data->a_acpiFadt->a_bootArchitectureFlags & (1 << 1)) != 0;
 }

@@ -8,6 +8,7 @@ struct ts_device;
 typedef int tf_deviceDriverFuncInit(struct ts_device *p_device);
 
 struct ts_deviceDriver {
+    const char *a_name;
     tf_deviceDriverFuncInit *a_init;
 };
 
