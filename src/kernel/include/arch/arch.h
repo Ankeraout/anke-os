@@ -1,7 +1,9 @@
 #ifndef __INCLUDE_ARCH_ARCH_H__
 #define __INCLUDE_ARCH_ARCH_H__
 
-void archInit(void);
+#include "boot/boot.h"
+
+void archInit(struct ts_boot *p_boot);
 void archInterruptsEnable(void);
 void archInterruptsDisable(void);
 void archHalt(void);

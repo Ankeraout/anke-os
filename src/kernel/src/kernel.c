@@ -27,7 +27,7 @@ void main(struct ts_boot *p_boot) {
 
     debugPrint("kernel: Starting AnkeKernel...\n");
 
-    archInit();
+    archInit(p_boot);
 
     debugPrint("kernel: Done.\n");
 
