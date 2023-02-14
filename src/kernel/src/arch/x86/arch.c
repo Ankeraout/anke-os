@@ -7,15 +7,10 @@
 #include "arch/x86/inline.h"
 #include "arch/x86/dev/acpi.h"
 #include "dev/device.h"
+#include "klibc/stdlib.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
 #include "debug.h"
-
-static struct ts_device s_acpiDevice = {
-    .a_driver = &g_deviceDriverAcpi,
-    .a_parent = NULL,
-    .a_driverData = NULL
-};
 
 void archInit(struct ts_boot *p_boot) {
     gdtInit();
@@ -27,17 +22,18 @@ void archInit(struct ts_boot *p_boot) {
         archHaltAndCatchFire();
     }
 
-    debugPrint("kernel: Allocating 32 pages...\n");
-    void *l_ptr = pmmAlloc(32 * 4096);
-    debugPrint("kernel: 32 pages at 0x");
-    debugPrintPointer(l_ptr);
-    debugPrint("\n");
+    struct ts_device *l_device = kmalloc(sizeof(struct ts_device));
 
-    debugPrint("kernel: Freeing 32 pages...\n");
-    pmmFree(l_ptr, 32 * 4096);
-    debugPrint("kernel: Done!\n");
+    if(l_device == NULL) {
+        debugPrint("kernel: Failed to allocate memory for root bus device.\n");
+        debugPrint("kernel: System halted.\n");
+        archHaltAndCatchFire();
+    }
 
-    if(s_acpiDevice.a_driver->a_init(&s_acpiDevice)) {
+    l_device->a_driver = &g_deviceDriverAcpi;
+    l_device->a_parent = NULL;
+
+    if(l_device->a_driver->a_init(l_device)) {
         debugPrint("kernel: ACPI driver initialization failed.\n");
         debugPrint("kernel: System halted.\n");
         archHaltAndCatchFire();

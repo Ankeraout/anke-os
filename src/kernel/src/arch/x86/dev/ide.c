@@ -1,6 +1,8 @@
 #include "arch/x86/dev/ide.h"
 #include "arch/x86/inline.h"
 #include "dev/device.h"
+#include "klibc/stdlib.h"
+#include "klibc/string.h"
 
 #include "debug.h"
 
@@ -66,15 +68,30 @@ const struct ts_deviceDriver g_deviceDriverIde = {
 };
 
 static int ideInit(struct ts_device *p_device) {
-    const struct ts_deviceDriverDataIde *l_deviceDriverData =
+    const struct ts_deviceDriverDataIde *l_driverParameters =
         (const struct ts_deviceDriverDataIde *)p_device->a_driverData;
 
+    p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDriverDataIde2));
+
+    if(p_device->a_driverData == NULL) {
+        debugPrint("ide: Failed to allocate memory for driver data.\n");
+        return 1;
+    }
+
+    memcpy(
+        p_device->a_driverData,
+        l_driverParameters,
+        sizeof(struct ts_deviceDriverDataIde)
+    );
+
     debugPrint("ide: Initializing IDE channel (0x");
-    debugPrintHex16(l_deviceDriverData->a_ioBase);
+    debugPrintHex16(l_driverParameters->a_ioBase);
     debugPrint(", 0x");
-    debugPrintHex16(l_deviceDriverData->a_ioControl);
+    debugPrintHex16(l_driverParameters->a_ioControl);
     debugPrint(", 0x");
-    debugPrintHex16(l_deviceDriverData->a_ioBusMaster);
+    debugPrintHex16(l_driverParameters->a_ioBusMaster);
+    debugPrint(", 0x");
+    debugPrintHex8(l_driverParameters->a_irq);
     debugPrint(")...\n");
 
     ideDetectDrive(p_device, E_DEV_IDE_DRIVE_MASTER);
@@ -132,13 +149,13 @@ static int ideDetectDrive(
     uint16_t l_driveType = (l_lbaHigh << 8) | l_lbaMid;
 
     if(l_driveType == 0) {
-        // PATA
+        debugPrint("ide: Detected PATA drive.\n");
     } else if(l_driveType == 0xeb14) {
-        // PATAPI
+        debugPrint("ide: Detected PATAPI drive.\n");
     } else if(l_driveType == 0x9669) {
-        // SATAPI
+        debugPrint("ide: Detected SATAPI drive.\n");
     } else if(l_driveType == 0xc33c) {
-        // SATA
+        debugPrint("ide: Detected SATA drive.\n");
     } else {
         debugPrint("ide: Unknown drive type.\n");
         return 1;
@@ -203,7 +220,7 @@ static void ideWaitBusy(struct ts_device *p_device) {
 static void ideWaitDataRequestOrError(struct ts_device *p_device) {
     struct ts_deviceDriverDataIde2 *l_deviceDriverData =
         (struct ts_deviceDriverDataIde2 *)p_device->a_driverData;
-    
+
     const uint8_t l_mask = C_IDE_STATUS_MASK_DRQ | C_IDE_STATUS_MASK_ERR;
 
     do {

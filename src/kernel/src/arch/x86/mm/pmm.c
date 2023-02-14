@@ -152,7 +152,7 @@ static void pmmPrintMemoryMap(
         debugPrintHex64(p_memoryMap[l_index].a_base);
         debugPrint("-0x");
         debugPrintHex64(p_memoryMap[l_index].a_base + p_memoryMap[l_index].a_size - 1);
-        debugPrint("] : 0x");
+        debugPrint("]: 0x");
         debugPrintHex8(p_memoryMap[l_index].a_type);
         debugPrint("\n");
     }

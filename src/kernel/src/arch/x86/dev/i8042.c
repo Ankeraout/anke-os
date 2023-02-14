@@ -5,6 +5,7 @@
 #include "arch/x86/isr.h"
 #include "dev/ps2.h"
 #include "dev/timer.h"
+#include "klibc/stdlib.h"
 #include "common.h"
 #include "debug.h"
 
@@ -61,7 +62,7 @@ struct ts_deviceDataPs2Port {
     bool a_receivedAck;
     uint8_t a_lastSentByte;
     int a_resendCount;
-    struct ts_device a_children[2];
+    struct ts_device a_device;
 };
 
 struct ts_deviceDataPs2 {
@@ -97,11 +98,15 @@ static struct ts_deviceDataPs2 s_deviceDataI8042;
 
 static int i8042Init(struct ts_device *p_device) {
     p_device->a_driverData = &s_deviceDataI8042;
+    p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDataPs2));
+
+    if(p_device->a_driverData == NULL) {
+        debugPrint("i8042: Failed to allocate memory for driver data.\n");
+        return 1;
+    }
 
     volatile struct ts_deviceDataPs2 *l_deviceData =
         (struct ts_deviceDataPs2 *)p_device->a_driverData;
-
-    debugPrint("i8042: init()\n");
 
     // By default, we assume that the controller has two ports, and that both
     // of them are working (a device is plugged and works correctly). We will

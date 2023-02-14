@@ -12,6 +12,7 @@
 #include "arch/x86/dev/pci.h"
 #include "dev/device.h"
 #include "dev/timer.h"
+#include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "debug.h"
 
@@ -155,10 +156,6 @@ struct ts_acpiDeviceDriverData {
 };
 
 static struct ts_acpiDeviceDriverData s_acpiDeviceDriverData;
-static struct ts_device s_acpiDeviceTimer8254;
-static struct ts_device s_acpiDeviceInterruptController;
-static struct ts_device s_acpiDevicePs2Controller;
-static struct ts_device s_acpiDevicePciController;
 
 static int acpiInit(struct ts_device *p_device) {
     p_device->a_driverData = &s_acpiDeviceDriverData;
@@ -196,30 +193,59 @@ static int acpiInit(struct ts_device *p_device) {
     }
 
     // Initialize PIC
-    s_acpiDeviceInterruptController.a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
-    s_acpiDeviceInterruptController.a_parent = p_device;
-    s_acpiDeviceInterruptController.a_driver->a_init(&s_acpiDeviceInterruptController);
-    isrInit(&s_acpiDeviceInterruptController);
+    struct ts_device *l_pic = kmalloc(sizeof(struct ts_device));
+
+    if(l_pic == NULL) {
+        debugPrint("acpi: Failed to allocate memory for PIC device.\n");
+        return 1;
+    }
+
+    l_pic->a_parent = p_device;
+    l_pic->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
+    l_pic->a_driver->a_init(l_pic);
+    isrInit(l_pic);
 
     // Enable interrupts
     archInterruptsEnable();
 
     // Initialize PIT
-    s_acpiDeviceTimer8254.a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8254;
-    s_acpiDeviceTimer8254.a_driver->a_init(&s_acpiDeviceTimer8254);
+    struct ts_device *l_pit = kmalloc(sizeof(struct ts_device));
 
-    timerSetDevice(&s_acpiDeviceTimer8254);
+    if(l_pit == NULL) {
+        debugPrint("acpi: Failed to allocate memory for PIT device.\n");
+        return 1;
+    }
+
+    l_pit->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8254;
+    l_pit->a_parent = p_device;
+    l_pit->a_driver->a_init(l_pit);
+
+    timerSetDevice(l_pit);
 
     // Initialize PCI controller
-    s_acpiDevicePciController.a_driver = &g_deviceDriverPci;
-    s_acpiDevicePciController.a_parent = p_device;
-    s_acpiDevicePciController.a_driver->a_init(&s_acpiDevicePciController);
+    struct ts_device *l_pciController = kmalloc(sizeof(struct ts_device));
+
+    if(l_pciController == NULL) {
+        debugPrint("acpi: Failed to allocate memory for PCI controller device.\n");
+        return 1;
+    }
+
+    l_pciController->a_driver = &g_deviceDriverPci;
+    l_pciController->a_parent = p_device;
+    l_pciController->a_driver->a_init(l_pciController);
 
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
-        s_acpiDevicePs2Controller.a_driver = &g_deviceDriverI8042;
-        s_acpiDevicePs2Controller.a_parent = p_device;
-        s_acpiDevicePs2Controller.a_driver->a_init(&s_acpiDevicePs2Controller);
+        struct ts_device *l_ps2Controller = kmalloc(sizeof(struct ts_device));
+
+        if(l_ps2Controller == NULL) {
+            debugPrint("acpi: Failed to allocate memory for PS/2 controller device.\n");
+            return 1;
+        }
+
+        l_ps2Controller->a_driver = &g_deviceDriverI8042;
+        l_ps2Controller->a_parent = p_device;
+        l_ps2Controller->a_driver->a_init(l_ps2Controller);
     }
 
     return 0;

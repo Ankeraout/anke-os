@@ -4,6 +4,7 @@
 #include "arch/x86/isr.h"
 #include "dev/device.h"
 #include "dev/timer.h"
+#include "klibc/stdlib.h"
 #include "common.h"
 #include "debug.h"
 
@@ -39,8 +40,14 @@ const struct ts_deviceDriverTimer g_deviceDriverI8254 = {
 };
 
 static int i8254Init(struct ts_device *p_device) {
-    p_device->a_driverData = &s_i8254Data;
-    s_i8254Data.a_time = 0;
+    p_device->a_driverData = kmalloc(sizeof(struct ts_i8254Data));
+
+    if(p_device->a_driverData == NULL) {
+        debugPrint("i8254: Failed to allocate memory for driver data.\n");
+        return 1;
+    }
+
+    ((struct ts_i8254Data *)p_device->a_driverData)->a_time = 0;
 
     isrSetHandler(
         C_8254_INTERRUPT_NUMBER,

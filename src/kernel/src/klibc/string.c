@@ -18,6 +18,17 @@ int memcmp(const void *p_ptr1, const void *p_ptr2, size_t p_size) {
     return 0;
 }
 
+void *memcpy(void *p_dst, const void *p_src, size_t p_size) {
+    const uint8_t *l_arraySource = (const uint8_t *)p_src;
+    uint8_t *l_arrayDestination = (uint8_t *)p_dst;
+
+    for(size_t l_index = 0; l_index < p_size; l_index++) {
+        l_arrayDestination[l_index] = l_arraySource[l_index];
+    }
+
+    return p_dst;
+}
+
 void *memset(void *p_ptr, int p_value, size_t p_count) {
     uint8_t *l_array = (uint8_t *)p_ptr;
 
