@@ -7,6 +7,7 @@ struct ts_deviceDriverDataIde {
     uint16_t a_ioBase;
     uint16_t a_ioControl;
     uint16_t a_ioBusMaster;
+    int a_irq;
 };
 
 extern const struct ts_deviceDriver g_deviceDriverIde;
