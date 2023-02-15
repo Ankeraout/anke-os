@@ -34,17 +34,27 @@ void main(struct ts_boot *p_boot) {
         archHaltAndCatchFire();
     }
 
+    // Here, memory management is available.
+
     if(deviceInit() != 0) {
         debugPrint("kernel: Failed to initialize device driver list.\n");
         debugPrint("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
 
+    // Here, driver list is empty but available for use.
+
     if(archInit() != 0) {
         debugPrint("kernel: Architecture-specific initialization failed.\n");
         debugPrint("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
+
+    // Here, basic device drivers are loaded, but a lot of devices should still
+    // have an "unknown" driver.
+
+    /* TODO: load device drivers and try to find a driver for each unknown
+    device. */
 
     debugPrint("kernel: Done.\n");
 

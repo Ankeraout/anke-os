@@ -446,6 +446,35 @@ static void i8042InitPort(struct ts_device *p_device, int p_port) {
     }
 
     debugPrint("\n");
+
+    l_deviceData->a_ports[p_port].a_device.a_address.a_common.a_bus =
+        E_DEVICEBUS_PS2;
+    *((enum te_deviceAddressPs2 *)&l_deviceData->a_ports[p_port].a_device.a_address.a_address) =
+        E_DEVICEADDRESS_PS2_0;
+    l_deviceData->a_ports[p_port].a_device.a_parent = p_device;
+
+    struct ts_deviceIdentifierPs2 l_identifier = {
+        .a_base = {
+            .a_bus = E_DEVICEBUS_PS2
+        },
+        .l_identifier = {
+            l_identificationLength,
+            l_identification[0],
+            l_identification[1]
+        }
+    };
+
+    l_deviceData->a_ports[p_port].a_device.a_driver =
+        deviceGetDriver((struct ts_deviceIdentifier *)&l_identifier);
+
+    if(
+        l_deviceData->a_ports[p_port].a_device.a_driver->a_api.a_init(
+            (struct ts_device *)&l_deviceData->a_ports[p_port].a_device
+        ) != 0
+    ) {
+        debugPrint("ps2: Failed to initialize device driver.\n");
+        l_deviceData->a_ports[p_port].a_working = false;
+    }
 }
 
 static void i8042InterruptHandler(
@@ -519,17 +548,36 @@ static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port) {
 }
 
 static size_t i8042DriverApiGetChildCount(struct ts_device *p_device) {
-    M_UNUSED_PARAMETER(p_device);
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
 
-    return 0;
+    size_t l_childCount = 0;
+
+    for(size_t l_index = 0; l_index < 2; l_index++) {
+        if(l_deviceData->a_ports[l_index].a_working) {
+            l_childCount++;
+        }
+    }
+
+    return l_childCount;
 }
 
 static struct ts_device *i8042DriverApiGetChild(
     struct ts_device *p_device,
     size_t p_index
 ) {
-    M_UNUSED_PARAMETER(p_device);
-    M_UNUSED_PARAMETER(p_index);
+    size_t l_workingDeviceCount = i8042DriverApiGetChildCount(p_device);
 
-    return NULL;
+    if(p_index >= l_workingDeviceCount) {
+        return NULL;
+    }
+
+    struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
+
+    if(!l_deviceData->a_ports[0].a_working) {
+        p_index--;
+    }
+
+    return &l_deviceData->a_ports[p_index].a_device;
 }
