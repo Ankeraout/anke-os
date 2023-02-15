@@ -3,7 +3,8 @@
 
 #include "boot/boot.h"
 
-void archInit(struct ts_boot *p_boot);
+int archPreinit(struct ts_boot *p_boot);
+int archInit(void);
 void archInterruptsEnable(void);
 void archInterruptsDisable(void);
 void archHalt(void);

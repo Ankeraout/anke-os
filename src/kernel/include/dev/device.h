@@ -63,6 +63,7 @@ struct ts_device {
     void *a_driverData;
 };
 
+int deviceInit(void);
 const struct ts_deviceDriver *deviceGetDriver(
     const struct ts_deviceIdentifier *p_deviceIdentifier
 );

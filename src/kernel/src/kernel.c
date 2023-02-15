@@ -2,6 +2,7 @@
 
 #include "arch/arch.h"
 #include "boot/boot.h"
+#include "dev/device.h"
 #include "dev/framebuffer.h"
 #include "dev/terminal.h"
 #include "dev/timer.h"
@@ -27,7 +28,23 @@ void main(struct ts_boot *p_boot) {
 
     debugPrint("kernel: Starting AnkeKernel...\n");
 
-    archInit(p_boot);
+    if(archPreinit(p_boot) != 0) {
+        debugPrint("kernel: Architecture-specific initialization failed.\n");
+        debugPrint("kernel: System halted.\n");
+        archHaltAndCatchFire();
+    }
+
+    if(deviceInit() != 0) {
+        debugPrint("kernel: Failed to initialize device driver list.\n");
+        debugPrint("kernel: System halted.\n");
+        archHaltAndCatchFire();
+    }
+
+    if(archInit() != 0) {
+        debugPrint("kernel: Architecture-specific initialization failed.\n");
+        debugPrint("kernel: System halted.\n");
+        archHaltAndCatchFire();
+    }
 
     debugPrint("kernel: Done.\n");
 

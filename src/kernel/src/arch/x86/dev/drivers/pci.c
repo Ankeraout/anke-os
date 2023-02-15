@@ -1,9 +1,8 @@
 #include <stdint.h>
 
 #include "arch/x86/inline.h"
-#include "arch/x86/dev/drivers/pciide.h"
+#include "dev/device.h"
 #include "dev/pci.h"
-#include "dev/drivers/unknown.h"
 #include "klibc/list.h"
 #include "klibc/stdlib.h"
 #include "debug.h"
@@ -130,6 +129,8 @@ static void pciInitDevice(
     uint16_t l_vendorId = pciConfigRead16(p_deviceAddress, 2);
     uint8_t l_deviceClass = pciConfigRead8(p_deviceAddress, 8);
     uint8_t l_deviceSubclass = pciConfigRead8(p_deviceAddress, 9);
+    uint8_t l_deviceProgrammingInterface = pciConfigRead8(p_deviceAddress, 10);
+    uint8_t l_deviceRevision = pciConfigRead8(p_deviceAddress, 11);
 
     struct ts_device *l_device = kmalloc(sizeof(struct ts_device));
 
@@ -139,14 +140,23 @@ static void pciInitDevice(
     }
 
     l_device->a_address = *(const struct ts_deviceAddress *)p_deviceAddress;
-    l_device->a_driver = NULL;
     l_device->a_parent = p_device;
 
-    if((l_deviceClass == 0x01) && (l_deviceSubclass == 0x01)) {
-        l_device->a_driver = &g_deviceDriverPciIde;
-    } else {
-        l_device->a_driver = &g_deviceDriverUnknown;
-    }
+    struct ts_deviceIdentifierPci l_identifier = {
+        .a_base = {
+            .a_bus = E_DEVICEBUS_PCI
+        },
+        .a_vendor = l_vendorId,
+        .a_device = l_deviceId,
+        .a_class = l_deviceClass,
+        .a_subclass = l_deviceSubclass,
+        .a_programmingInterface = l_deviceProgrammingInterface,
+        .a_revision = l_deviceRevision
+    };
+
+    l_device->a_driver = deviceGetDriver(
+        (struct ts_deviceIdentifier *)&l_identifier
+    );
 
     debugPrint("pci: ");
     debugPrintHex8(p_deviceAddress->a_bus);

@@ -6,6 +6,7 @@
 #include "arch/x86/idt.h"
 #include "arch/x86/inline.h"
 #include "arch/x86/dev/drivers/acpi.h"
+#include "arch/x86/dev/drivers/pciide.h"
 #include "dev/device.h"
 #include "klibc/stdlib.h"
 #include "mm/pmm.h"
@@ -14,22 +15,27 @@
 
 static void archShowDeviceTree(struct ts_device *p_device, size_t p_level);
 
-void archInit(struct ts_boot *p_boot) {
+int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
     idtInit();
 
     if(pmmInit(p_boot->a_memoryMap, p_boot->a_memoryMapLength) != 0) {
         debugPrint("kernel: Physical memory manager initialization failed.\n");
-        debugPrint("kernel: System halted.\n");
-        archHaltAndCatchFire();
+        return 1;
     }
+
+    return 0;
+}
+
+int archInit(void) {
+    // Register PCI drivers
+    deviceRegisterDriver(&g_deviceDriverPciIde);
 
     struct ts_device *l_device = kmalloc(sizeof(struct ts_device));
 
     if(l_device == NULL) {
         debugPrint("kernel: Failed to allocate memory for root bus device.\n");
-        debugPrint("kernel: System halted.\n");
-        archHaltAndCatchFire();
+        return 1;
     }
 
     l_device->a_driver = &g_deviceDriverAcpi;
@@ -37,12 +43,13 @@ void archInit(struct ts_boot *p_boot) {
 
     if(l_device->a_driver->a_api.a_init(l_device)) {
         debugPrint("kernel: ACPI driver initialization failed.\n");
-        debugPrint("kernel: System halted.\n");
-        archHaltAndCatchFire();
+        return 1;
     }
 
     debugPrint("kernel: Device tree:\n");
     archShowDeviceTree(l_device, 0);
+
+    return 0;
 }
 
 void archInterruptsEnable(void) {
