@@ -53,7 +53,7 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
                 l_handler(p_registers, l_handlerArg);
             }
 
-            ((const struct ts_deviceDriverInterruptController *)s_isrDeviceInterruptController->a_driver)->a_endOfInterrupt(s_isrDeviceInterruptController, p_registers->a_interruptNumber - 32);
+            ((const struct ts_deviceDriverInterruptController *)s_isrDeviceInterruptController->a_driver)->a_api.a_endOfInterrupt(s_isrDeviceInterruptController, p_registers->a_interruptNumber - 32);
         } else {
             debugPrint("panic: Unhandled interrupt 0x");
             debugPrintHex8(p_registers->a_interruptNumber);

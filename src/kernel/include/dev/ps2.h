@@ -15,10 +15,22 @@ typedef void tf_ps2Send(
 );
 
 struct ts_deviceDriverPs2 {
-    struct ts_deviceDriver a_driver;
-    tf_ps2CanReceive *a_canReceive;
-    tf_ps2Receive *a_receive;
-    tf_ps2Send *a_send;
+    struct ts_deviceDriver a_base;
+    struct {
+        tf_ps2CanReceive *a_canReceive;
+        tf_ps2Receive *a_receive;
+        tf_ps2Send *a_send;
+    } a_api;
+};
+
+enum te_deviceAddressPs2 {
+    E_DEVICEADDRESS_PS2_0,
+    E_DEVICEADDRESS_PS2_1
+};
+
+struct ts_deviceIdentifierPs2 {
+    int l_identifierLength;
+    uint8_t l_identifier[2];
 };
 
 #endif

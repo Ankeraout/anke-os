@@ -11,70 +11,75 @@
 static int pciInit(struct ts_device *p_device);
 static void pciInitDevice(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 );
 static void pciCheckDevice(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 );
 static void pciCheckDeviceFunction(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 );
 static uint32_t pciConfigGetAddress(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 );
 static uint8_t pciConfigRead8(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 );
 static uint16_t pciConfigRead16(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 );
 static uint32_t pciConfigRead32(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 );
 static void pciConfigWrite8(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint8_t p_value
 );
 static void pciConfigWrite16(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint16_t p_value
 );
 static void pciConfigWrite32(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint32_t p_value
 );
 
 const struct ts_deviceDriverPci g_deviceDriverPci = {
-    .a_driver = {
+    .a_base = {
         .a_name = "PCI bus controller",
-        .a_init = pciInit
+        .a_api = {
+            .a_init = pciInit
+        }
     },
-    .a_configRead8 = pciConfigRead8,
-    .a_configRead16 = pciConfigRead16,
-    .a_configRead32 = pciConfigRead32,
-    .a_configWrite8 = pciConfigWrite8,
-    .a_configWrite16 = pciConfigWrite16,
-    .a_configWrite32 = pciConfigWrite32
+    .a_api = {
+        .a_configRead8 = pciConfigRead8,
+        .a_configRead16 = pciConfigRead16,
+        .a_configRead32 = pciConfigRead32,
+        .a_configWrite8 = pciConfigWrite8,
+        .a_configWrite16 = pciConfigWrite16,
+        .a_configWrite32 = pciConfigWrite32
+    }
 };
 
 static int pciInit(struct ts_device *p_device) {
     for(int l_bus = 0; l_bus < 256; l_bus++) {
         for(int l_slot = 0; l_slot < 32; l_slot++) {
-            union tu_deviceAddress l_deviceAddress = {
-                .a_pci = {
-                    .a_bus = l_bus,
-                    .a_slot = l_slot,
-                    .a_func = 0
-                }
+            struct ts_deviceAddressPci l_deviceAddress = {
+                .a_common = {
+                    .a_bus = E_DEVICEBUS_PCI
+                },
+                .a_bus = l_bus,
+                .a_slot = l_slot,
+                .a_func = 0
             };
 
             pciCheckDevice(p_device, &l_deviceAddress);
@@ -88,7 +93,7 @@ static int pciInit(struct ts_device *p_device) {
 
 static void pciInitDevice(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 ) {
     uint16_t l_deviceId = pciConfigRead16(p_deviceAddress, 0);
     uint16_t l_vendorId = pciConfigRead16(p_deviceAddress, 2);
@@ -96,7 +101,7 @@ static void pciInitDevice(
     uint8_t l_deviceSubclass = pciConfigRead8(p_deviceAddress, 9);
 
     struct ts_device l_device = {
-        .a_address = *p_deviceAddress,
+        .a_address = *(const struct ts_deviceAddress *)p_deviceAddress,
         .a_driver = NULL,
         .a_parent = p_device
     };
@@ -106,11 +111,11 @@ static void pciInitDevice(
     }
 
     debugPrint("pci: ");
-    debugPrintHex8(p_deviceAddress->a_pci.a_bus);
+    debugPrintHex8(p_deviceAddress->a_bus);
     debugPrint(":");
-    debugPrintHex8(p_deviceAddress->a_pci.a_slot);
+    debugPrintHex8(p_deviceAddress->a_slot);
     debugPrint(".");
-    debugWrite(&"01234567"[p_deviceAddress->a_pci.a_func], 1);
+    debugWrite(&"01234567"[p_deviceAddress->a_func], 1);
     debugPrint(": ");
     debugPrintHex16(l_vendorId);
     debugPrint(":");
@@ -125,13 +130,13 @@ static void pciInitDevice(
     debugPrint("\n");
 
     if(l_device.a_driver != NULL) {
-        l_device.a_driver->a_init(&l_device);
+        l_device.a_driver->a_api.a_init(&l_device);
     }
 }
 
 static void pciCheckDevice(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 ) {
     uint16_t l_deviceId = pciConfigRead16(p_deviceAddress, 0);
     uint16_t l_vendorId = pciConfigRead16(p_deviceAddress, 2);
@@ -145,9 +150,9 @@ static void pciCheckDevice(
 
     if((l_headerType & 0x80) != 0) {
         for(int l_func = 0; l_func < 8; l_func++) {
-            union tu_deviceAddress l_deviceAddress = *p_deviceAddress;
+            struct ts_deviceAddressPci l_deviceAddress = *p_deviceAddress;
 
-            l_deviceAddress.a_pci.a_func = l_func;
+            l_deviceAddress.a_func = l_func;
 
             pciCheckDeviceFunction(p_device, &l_deviceAddress);
         }
@@ -158,7 +163,7 @@ static void pciCheckDevice(
 
 static void pciCheckDeviceFunction(
     struct ts_device *p_device,
-    const union tu_deviceAddress *p_deviceAddress
+    const struct ts_deviceAddressPci *p_deviceAddress
 ) {
     uint16_t l_deviceId = pciConfigRead16(p_deviceAddress, 0);
     uint16_t l_vendorId = pciConfigRead16(p_deviceAddress, 2);
@@ -172,18 +177,18 @@ static void pciCheckDeviceFunction(
 }
 
 static uint32_t pciConfigGetAddress(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 ) {
-    return (p_deviceAddress->a_pci.a_bus << 16)
-        | (p_deviceAddress->a_pci.a_slot << 11)
-        | (p_deviceAddress->a_pci.a_func << 8)
+    return (p_deviceAddress->a_bus << 16)
+        | (p_deviceAddress->a_slot << 11)
+        | (p_deviceAddress->a_func << 8)
         | (p_offset & 0xfc)
         | 0x80000000;
 }
 
 static uint8_t pciConfigRead8(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 ) {
     const uint32_t l_address = pciConfigGetAddress(p_deviceAddress, p_offset);
@@ -195,7 +200,7 @@ static uint8_t pciConfigRead8(
 }
 
 static uint16_t pciConfigRead16(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 ) {
     const uint32_t l_address = pciConfigGetAddress(p_deviceAddress, p_offset);
@@ -207,7 +212,7 @@ static uint16_t pciConfigRead16(
 }
 
 static uint32_t pciConfigRead32(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset
 ) {
     const uint32_t l_address = pciConfigGetAddress(p_deviceAddress, p_offset);
@@ -218,7 +223,7 @@ static uint32_t pciConfigRead32(
 }
 
 static void pciConfigWrite8(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint8_t p_value
 ) {
@@ -236,7 +241,7 @@ static void pciConfigWrite8(
 }
 
 static void pciConfigWrite16(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint16_t p_value
 ) {
@@ -254,7 +259,7 @@ static void pciConfigWrite16(
 }
 
 static void pciConfigWrite32(
-    const union tu_deviceAddress *p_deviceAddress,
+    const struct ts_deviceAddressPci *p_deviceAddress,
     uint8_t p_offset,
     uint32_t p_value
 ) {

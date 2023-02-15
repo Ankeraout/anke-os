@@ -146,7 +146,9 @@ static const char s_rsdpSignature[8] = "RSD PTR ";
 static const size_t s_rsdpSignatureLength = 8;
 const struct ts_deviceDriver g_deviceDriverAcpi = {
     .a_name = "ACPI root bus",
-    .a_init = acpiInit
+    .a_api = {
+        .a_init = acpiInit
+    }
 };
 
 struct ts_acpiDeviceDriverData {
@@ -202,7 +204,7 @@ static int acpiInit(struct ts_device *p_device) {
 
     l_pic->a_parent = p_device;
     l_pic->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
-    l_pic->a_driver->a_init(l_pic);
+    l_pic->a_driver->a_api.a_init(l_pic);
     isrInit(l_pic);
 
     // Enable interrupts
@@ -218,7 +220,7 @@ static int acpiInit(struct ts_device *p_device) {
 
     l_pit->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8254;
     l_pit->a_parent = p_device;
-    l_pit->a_driver->a_init(l_pit);
+    l_pit->a_driver->a_api.a_init(l_pit);
 
     timerSetDevice(l_pit);
 
@@ -232,7 +234,7 @@ static int acpiInit(struct ts_device *p_device) {
 
     l_pciController->a_driver = &g_deviceDriverPci;
     l_pciController->a_parent = p_device;
-    l_pciController->a_driver->a_init(l_pciController);
+    l_pciController->a_driver->a_api.a_init(l_pciController);
 
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
@@ -245,7 +247,7 @@ static int acpiInit(struct ts_device *p_device) {
 
         l_ps2Controller->a_driver = &g_deviceDriverI8042;
         l_ps2Controller->a_parent = p_device;
-        l_ps2Controller->a_driver->a_init(l_ps2Controller);
+        l_ps2Controller->a_driver->a_api.a_init(l_ps2Controller);
     }
 
     return 0;

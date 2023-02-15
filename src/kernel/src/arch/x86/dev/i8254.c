@@ -31,12 +31,16 @@ static void i8254InterruptHandler(
 );
 
 const struct ts_deviceDriverTimer g_deviceDriverI8254 = {
-    .a_driver = {
+    .a_base = {
         .a_name = "Intel 8253/8254 programmable interrupt timer",
-        .a_init = (tf_deviceDriverFuncInit *)i8254Init
+        .a_api = {
+            .a_init = (tf_deviceDriverApiInit *)i8254Init
+        }
     },
-    .a_setFrequency = i8254SetFrequency,
-    .a_getTime = i8254GetTime
+    .a_api = {
+        .a_setFrequency = i8254SetFrequency,
+        .a_getTime = i8254GetTime
+    }
 };
 
 static int i8254Init(struct ts_device *p_device) {

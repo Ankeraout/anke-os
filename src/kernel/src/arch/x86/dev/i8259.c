@@ -27,11 +27,15 @@ static int i8259Init(struct ts_device *p_device);
 static void i8259EndOfInterrupt(struct ts_device *p_device, int p_interruptNumber);
 
 const struct ts_deviceDriverInterruptController g_deviceDriverI8259 = {
-    .a_driver = {
+    .a_base = {
         .a_name = "Intel 8259 programmable interrupt controller",
-        .a_init = i8259Init
+        .a_api = {
+            .a_init = i8259Init
+        }
     },
-    .a_endOfInterrupt = i8259EndOfInterrupt
+    .a_api = {
+        .a_endOfInterrupt = i8259EndOfInterrupt
+    }
 };
 
 static int i8259Init(struct ts_device *p_device) {

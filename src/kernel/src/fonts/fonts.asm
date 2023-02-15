@@ -1,3 +1,5 @@
+section .rodata
+
 global g_font16
 g_font16:
     dq 16

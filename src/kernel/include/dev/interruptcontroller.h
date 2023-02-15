@@ -11,8 +11,10 @@ typedef void tf_deviceDriverInterruptControllerFuncEndOfInterrupt(
 );
 
 struct ts_deviceDriverInterruptController {
-    struct ts_deviceDriver a_driver;
-    tf_deviceDriverInterruptControllerFuncEndOfInterrupt *a_endOfInterrupt;
+    struct ts_deviceDriver a_base;
+    struct {
+        tf_deviceDriverInterruptControllerFuncEndOfInterrupt *a_endOfInterrupt;
+    } a_api;
 };
 
 #endif

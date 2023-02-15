@@ -25,6 +25,7 @@ bits 64
 
 extern isrHandler
 
+section .text
 M_DEFINE_EXCEPTION 0
 M_DEFINE_EXCEPTION 1
 M_DEFINE_EXCEPTION 2

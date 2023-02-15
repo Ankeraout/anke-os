@@ -33,7 +33,7 @@ void archInit(struct ts_boot *p_boot) {
     l_device->a_driver = &g_deviceDriverAcpi;
     l_device->a_parent = NULL;
 
-    if(l_device->a_driver->a_init(l_device)) {
+    if(l_device->a_driver->a_api.a_init(l_device)) {
         debugPrint("kernel: ACPI driver initialization failed.\n");
         debugPrint("kernel: System halted.\n");
         archHaltAndCatchFire();

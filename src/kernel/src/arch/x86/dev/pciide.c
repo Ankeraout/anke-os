@@ -8,7 +8,9 @@ int pciIdeInit(struct ts_device *p_device);
 
 const struct ts_deviceDriver g_deviceDriverPciIde = {
     .a_name = "PCI IDE controller",
-    .a_init = pciIdeInit
+    .a_api = {
+        .a_init = pciIdeInit
+    }
 };
 
 int pciIdeInit(struct ts_device *p_device) {
@@ -45,7 +47,7 @@ int pciIdeInit(struct ts_device *p_device) {
     l_deviceDriverData[1].a_irq = 15;
 
     for(int l_channel = 0; l_channel < 2; l_channel++) {
-        l_device[l_channel].a_driver->a_init(&l_device[l_channel]);
+        l_device[l_channel].a_driver->a_api.a_init(&l_device[l_channel]);
     }
 
     debugPrint("pciide: Initialization complete.\n");

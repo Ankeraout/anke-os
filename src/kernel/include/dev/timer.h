@@ -17,9 +17,11 @@ typedef uint64_t tf_deviceDriverTimerFuncGetTime(
 );
 
 struct ts_deviceDriverTimer {
-    struct ts_deviceDriver a_driver;
-    tf_deviceDriverTimerFuncSetFrequency *a_setFrequency;
-    tf_deviceDriverTimerFuncGetTime *a_getTime;
+    struct ts_deviceDriver a_base;
+    struct {
+        tf_deviceDriverTimerFuncSetFrequency *a_setFrequency;
+        tf_deviceDriverTimerFuncGetTime *a_getTime;
+    } a_api;
 };
 
 void timerSetDevice(struct ts_device *p_device);

@@ -64,7 +64,9 @@ static void ideWaitDataRequestOrError(struct ts_device *p_device);
 
 const struct ts_deviceDriver g_deviceDriverIde = {
     .a_name = "IDE channel controller",
-    .a_init = ideInit
+    .a_api = {
+        .a_init = ideInit
+    }
 };
 
 static int ideInit(struct ts_device *p_device) {
