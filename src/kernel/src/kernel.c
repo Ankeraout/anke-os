@@ -2,12 +2,16 @@
 
 #include "arch/arch.h"
 #include "boot/boot.h"
+#include "dev/drivers/ps2kbd.h"
+#include "dev/drivers/ps2mouse.h"
 #include "dev/device.h"
 #include "dev/framebuffer.h"
 #include "dev/terminal.h"
 #include "dev/timer.h"
 #include "fonts/fonts.h"
 #include "debug.h"
+
+static void registerDrivers(void);
 
 static struct ts_devTerminal s_terminal;
 static struct ts_devFramebufferFont *s_font = &g_font8;
@@ -43,6 +47,7 @@ void main(struct ts_boot *p_boot) {
     }
 
     // Here, driver list is empty but available for use.
+    registerDrivers();
 
     if(archInit() != 0) {
         debugPrint("kernel: Architecture-specific initialization failed.\n");
@@ -61,4 +66,10 @@ void main(struct ts_boot *p_boot) {
     while(true) {
         archHalt();
     }
+}
+
+static void registerDrivers(void) {
+    debugPrint("kernel: Registering drivers...\n");
+    deviceRegisterDriver((const struct ts_deviceDriver *)&g_deviceDriverPs2Kbd);
+    deviceRegisterDriver((const struct ts_deviceDriver *)&g_deviceDriverPs2Mouse);
 }

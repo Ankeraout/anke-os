@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_ARCH_X86_DEV_I8042_H__
-#define __INCLUDE_ARCH_X86_DEV_I8042_H__
+#ifndef __INCLUDE_ARCH_X86_DEV_DRIVERS_I8042_H__
+#define __INCLUDE_ARCH_X86_DEV_DRIVERS_I8042_H__
 
 #include "dev/device.h"
 

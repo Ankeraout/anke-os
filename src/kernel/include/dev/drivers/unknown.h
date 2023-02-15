@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_DEV_UNKNOWN_H__
-#define __INCLUDE_DEV_UNKNOWN_H__
+#ifndef __INCLUDE_DEV_DRIVERS_UNKNOWN_H__
+#define __INCLUDE_DEV_DRIVERS_UNKNOWN_H__
 
 #include "dev/device.h"
 

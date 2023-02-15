@@ -6,6 +6,7 @@
 #include "dev/ps2.h"
 #include "dev/timer.h"
 #include "klibc/stdlib.h"
+#include "klibc/string.h"
 #include "common.h"
 #include "debug.h"
 
@@ -116,6 +117,8 @@ static int i8042Init(struct ts_device *p_device) {
         debugPrint("i8042: Failed to allocate memory for driver data.\n");
         return 1;
     }
+
+    memset(p_device->a_driverData, 0, sizeof(struct ts_deviceDataPs2Controller));
 
     volatile struct ts_deviceDataPs2Controller *l_deviceData =
         (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
@@ -449,15 +452,15 @@ static void i8042InitPort(struct ts_device *p_device, int p_port) {
 
     l_deviceData->a_ports[p_port].a_device.a_address.a_common.a_bus =
         E_DEVICEBUS_PS2;
-    *((enum te_deviceAddressPs2 *)&l_deviceData->a_ports[p_port].a_device.a_address.a_address) =
-        E_DEVICEADDRESS_PS2_0;
+    *((enum te_deviceAddressPs2 *)l_deviceData->a_ports[p_port].a_device.a_address.a_address) =
+        p_port;
     l_deviceData->a_ports[p_port].a_device.a_parent = p_device;
 
     struct ts_deviceIdentifierPs2 l_identifier = {
         .a_base = {
             .a_bus = E_DEVICEBUS_PS2
         },
-        .l_identifier = {
+        .a_identifier = {
             l_identificationLength,
             l_identification[0],
             l_identification[1]
@@ -465,7 +468,7 @@ static void i8042InitPort(struct ts_device *p_device, int p_port) {
     };
 
     l_deviceData->a_ports[p_port].a_device.a_driver =
-        deviceGetDriver((struct ts_deviceIdentifier *)&l_identifier);
+        deviceGetDriver((const struct ts_deviceIdentifier *)&l_identifier);
 
     if(
         l_deviceData->a_ports[p_port].a_device.a_driver->a_api.a_init(
@@ -532,6 +535,13 @@ static void i8042InterruptHandler(
 
         if(l_port->a_receiveBufferWriteIndex == C_PS2_RECEIVE_BUFFER_SIZE) {
             l_port->a_receiveBufferWriteIndex = 0;
+        }
+
+        if(l_port->a_device.a_driver != NULL) {
+            if(l_port->a_device.a_driver->a_bus == E_DEVICEBUS_PS2) {
+                ((const struct ts_deviceDriverPs2Device *)l_port->a_device.a_driver)
+                    ->a_api.a_interrupt((struct ts_device *)&l_port->a_device);
+            }
         }
     }
 }
