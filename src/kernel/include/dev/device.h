@@ -2,10 +2,10 @@
 #define __INCLUDE_DEV_DEVICE_H__
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
-#define C_DEVICE_MAX_ADDRESS_SIZE 4
-#define C_DEVICE_MAX_IDENTIFIER_SIZE 8
+#define C_DEVICE_MAX_ADDRESS_SIZE 16
 
 enum te_deviceBus {
     E_DEVICEBUS_ROOT,
@@ -14,17 +14,25 @@ enum te_deviceBus {
     E_DEVICEBUS_PS2
 };
 
+struct ts_deviceIdentifierCommon {
+    enum te_deviceBus a_bus;
+};
+
+struct ts_deviceIdentifier {
+    struct ts_deviceIdentifierCommon a_base;
+    uint8_t a_identifier;
+};
+
 struct ts_device;
 
 typedef int tf_deviceDriverApiInit(struct ts_device *p_device);
-typedef struct ts_device tf_deviceDriverApiGetChild(
+typedef struct ts_device *tf_deviceDriverApiGetChild(
     struct ts_device *p_device,
-    int p_childIndex
+    size_t p_childIndex
 );
-typedef int tf_deviceDriverApiGetChildCount(struct ts_device *p_device);
+typedef size_t tf_deviceDriverApiGetChildCount(struct ts_device *p_device);
 typedef bool tf_deviceDriverApiIsSupported(
-    enum te_deviceBus p_deviceBus,
-    const void *p_deviceIdentifier
+    const struct ts_deviceIdentifier *p_deviceIdentifier
 );
 
 struct ts_deviceDriver {
@@ -54,6 +62,9 @@ struct ts_device {
     void *a_driverData;
 };
 
+const struct ts_deviceDriver *deviceGetDriver(
+    const struct ts_deviceIdentifier *p_deviceIdentifier
+);
 int deviceRegisterDriver(const struct ts_deviceDriver *p_driver);
 
 #endif

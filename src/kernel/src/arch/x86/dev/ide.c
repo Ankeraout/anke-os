@@ -3,7 +3,7 @@
 #include "dev/device.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
-
+#include "common.h"
 #include "debug.h"
 
 #define C_IDE_STATUS_MASK_ERR 0x01
@@ -61,11 +61,19 @@ static void ideSelectDrive(
 static void ideWait(struct ts_device *p_device);
 static void ideWaitBusy(struct ts_device *p_device);
 static void ideWaitDataRequestOrError(struct ts_device *p_device);
+static size_t ideDriverApiGetChildCount(struct ts_device *p_device);
+static struct ts_device *ideDriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+);
 
 const struct ts_deviceDriver g_deviceDriverIde = {
     .a_name = "IDE channel controller",
     .a_api = {
-        .a_init = ideInit
+        .a_init = ideInit,
+        .a_getChild = ideDriverApiGetChild,
+        .a_getChildCount = ideDriverApiGetChildCount,
+        .a_isSupported = NULL
     }
 };
 
@@ -230,4 +238,20 @@ static void ideWaitDataRequestOrError(struct ts_device *p_device) {
             l_deviceDriverData->a_data.a_ioBase + E_IOOFFSET_IDE_STATUS
         );
     } while((l_deviceDriverData->a_registerCacheStatus & l_mask) == 0);
+}
+
+static size_t ideDriverApiGetChildCount(struct ts_device *p_device) {
+    M_UNUSED_PARAMETER(p_device);
+
+    return 0;
+}
+
+static struct ts_device *ideDriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+) {
+    M_UNUSED_PARAMETER(p_device);
+    M_UNUSED_PARAMETER(p_index);
+
+    return NULL;
 }

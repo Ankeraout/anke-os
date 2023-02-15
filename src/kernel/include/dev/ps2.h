@@ -29,8 +29,8 @@ enum te_deviceAddressPs2 {
 };
 
 struct ts_deviceIdentifierPs2 {
-    int l_identifierLength;
-    uint8_t l_identifier[2];
+    struct ts_deviceIdentifierCommon a_base;
+    uint8_t l_identifier;
 };
 
 #endif

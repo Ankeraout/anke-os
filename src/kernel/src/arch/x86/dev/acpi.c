@@ -11,7 +11,9 @@
 #include "arch/x86/dev/i8259.h"
 #include "arch/x86/dev/pci.h"
 #include "dev/device.h"
+#include "dev/pci.h"
 #include "dev/timer.h"
+#include "klibc/list.h"
 #include "klibc/stdlib.h"
 #include "klibc/string.h"
 #include "debug.h"
@@ -141,13 +143,21 @@ static void acpiExploreTable(
 static bool acpiIs8042Present(
     struct ts_device *p_device
 );
+static struct ts_device *acpiDriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_childIndex
+);
+static size_t acpiDriverApiGetChildCount(struct ts_device *p_device);
 
 static const char s_rsdpSignature[8] = "RSD PTR ";
 static const size_t s_rsdpSignatureLength = 8;
 const struct ts_deviceDriver g_deviceDriverAcpi = {
     .a_name = "ACPI root bus",
     .a_api = {
-        .a_init = acpiInit
+        .a_init = acpiInit,
+        .a_getChildCount = acpiDriverApiGetChildCount,
+        .a_getChild = acpiDriverApiGetChild,
+        .a_isSupported = NULL
     }
 };
 
@@ -155,6 +165,7 @@ struct ts_acpiDeviceDriverData {
     const struct ts_acpiRsdp2 *a_acpiRsdp;
     int a_acpiRsdpVersion;
     const struct ts_acpiFadt *a_acpiFadt;
+    struct ts_list a_children;
 };
 
 static struct ts_acpiDeviceDriverData s_acpiDeviceDriverData;
@@ -164,6 +175,11 @@ static int acpiInit(struct ts_device *p_device) {
 
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
+
+    if(listInit(&l_data->a_children) == NULL) {
+        debugPrint("acpi: Failed to allocate memory for children list.\n");
+        return 1;
+    }
 
     acpiFindRsdp(p_device);
 
@@ -203,8 +219,11 @@ static int acpiInit(struct ts_device *p_device) {
     }
 
     l_pic->a_parent = p_device;
+    l_pic->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pic->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
     l_pic->a_driver->a_api.a_init(l_pic);
+    listAdd(&l_data->a_children, l_pic);
+
     isrInit(l_pic);
 
     // Enable interrupts
@@ -219,8 +238,10 @@ static int acpiInit(struct ts_device *p_device) {
     }
 
     l_pit->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8254;
+    l_pit->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pit->a_parent = p_device;
     l_pit->a_driver->a_api.a_init(l_pit);
+    listAdd(&l_data->a_children, l_pit);
 
     timerSetDevice(l_pit);
 
@@ -233,8 +254,10 @@ static int acpiInit(struct ts_device *p_device) {
     }
 
     l_pciController->a_driver = &g_deviceDriverPci;
+    l_pciController->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pciController->a_parent = p_device;
     l_pciController->a_driver->a_api.a_init(l_pciController);
+    listAdd(&l_data->a_children, l_pciController);
 
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
@@ -246,8 +269,10 @@ static int acpiInit(struct ts_device *p_device) {
         }
 
         l_ps2Controller->a_driver = &g_deviceDriverI8042;
+        l_ps2Controller->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
         l_ps2Controller->a_parent = p_device;
         l_ps2Controller->a_driver->a_api.a_init(l_ps2Controller);
+        listAdd(&l_data->a_children, l_ps2Controller);
     }
 
     return 0;
@@ -407,4 +432,21 @@ static bool acpiIs8042Present(
     }
 
     return (l_data->a_acpiFadt->a_bootArchitectureFlags & (1 << 1)) != 0;
+}
+
+static struct ts_device *acpiDriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_childIndex
+) {
+    struct ts_acpiDeviceDriverData *l_data =
+        (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
+
+    return (struct ts_device *)listGet(&l_data->a_children, p_childIndex);
+}
+
+static size_t acpiDriverApiGetChildCount(struct ts_device *p_device) {
+    struct ts_acpiDeviceDriverData *l_data =
+        (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
+
+    return listGetLength(&l_data->a_children);
 }

@@ -12,6 +12,8 @@
 #include "mm/vmm.h"
 #include "debug.h"
 
+static void archShowDeviceTree(struct ts_device *p_device, size_t p_level);
+
 void archInit(struct ts_boot *p_boot) {
     gdtInit();
     idtInit();
@@ -38,6 +40,9 @@ void archInit(struct ts_boot *p_boot) {
         debugPrint("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
+
+    debugPrint("kernel: Device tree:\n");
+    archShowDeviceTree(l_device, 0);
 }
 
 void archInterruptsEnable(void) {
@@ -56,5 +61,24 @@ void archHaltAndCatchFire(void) {
     while(true) {
         cli();
         hlt();
+    }
+}
+
+static void archShowDeviceTree(struct ts_device *p_device, size_t p_level) {
+    for(size_t l_level = 0; l_level < p_level; l_level++) {
+        debugPrint("    ");
+    }
+
+    debugPrint("- ");
+    debugPrint(p_device->a_driver->a_name);
+    debugPrint("\n");
+
+    size_t l_childCount = p_device->a_driver->a_api.a_getChildCount(p_device);
+
+    for(size_t l_index = 0; l_index < l_childCount; l_index++) {
+        archShowDeviceTree(
+            p_device->a_driver->a_api.a_getChild(p_device, l_index),
+            p_level + 1
+        );
     }
 }

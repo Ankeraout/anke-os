@@ -15,6 +15,7 @@ struct ts_deviceAddressPci {
 };
 
 struct ts_deviceIdentifierPci {
+    struct ts_deviceIdentifierCommon a_base;
     uint16_t a_vendor;
     uint16_t a_device;
     uint8_t a_class;

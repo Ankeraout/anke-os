@@ -29,12 +29,20 @@ static void i8254InterruptHandler(
     struct ts_isrRegisters *p_registers,
     struct ts_device *p_device
 );
+static size_t i8254DriverApiGetChildCount(struct ts_device *p_device);
+static struct ts_device *i8254DriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+);
 
 const struct ts_deviceDriverTimer g_deviceDriverI8254 = {
     .a_base = {
         .a_name = "Intel 8253/8254 programmable interrupt timer",
         .a_api = {
-            .a_init = (tf_deviceDriverApiInit *)i8254Init
+            .a_init = (tf_deviceDriverApiInit *)i8254Init,
+            .a_getChild = i8254DriverApiGetChild,
+            .a_getChildCount = i8254DriverApiGetChildCount,
+            .a_isSupported = NULL
         }
     },
     .a_api = {
@@ -93,4 +101,20 @@ static void i8254InterruptHandler(
     struct ts_i8254Data *l_data = (struct ts_i8254Data *)p_device->a_driverData;
 
     l_data->a_time += l_data->a_period;
+}
+
+static size_t i8254DriverApiGetChildCount(struct ts_device *p_device) {
+    M_UNUSED_PARAMETER(p_device);
+
+    return 0;
+}
+
+static struct ts_device *i8254DriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+) {
+    M_UNUSED_PARAMETER(p_device);
+    M_UNUSED_PARAMETER(p_index);
+
+    return NULL;
 }

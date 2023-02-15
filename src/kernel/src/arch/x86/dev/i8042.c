@@ -83,12 +83,20 @@ static void i8042InterruptHandler(
     struct ts_device *p_device
 );
 static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port);
+static size_t i8042DriverApiGetChildCount(struct ts_device *p_device);
+static struct ts_device *i8042DriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+);
 
 const struct ts_deviceDriverPs2 g_deviceDriverI8042 = {
     .a_base = {
-        .a_name = "8042 PS/2 controller",
+        .a_name = "Intel 8042 PS/2 controller",
         .a_api = {
-            .a_init = i8042Init
+            .a_init = i8042Init,
+            .a_getChild = i8042DriverApiGetChild,
+            .a_getChildCount = i8042DriverApiGetChildCount,
+            .a_isSupported = NULL,
         }
     },
     .a_api = {
@@ -508,4 +516,20 @@ static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port) {
     l_port->a_receiveBufferLength = 0;
     l_port->a_receiveBufferReadIndex = 0;
     l_port->a_receiveBufferWriteIndex = 0;
+}
+
+static size_t i8042DriverApiGetChildCount(struct ts_device *p_device) {
+    M_UNUSED_PARAMETER(p_device);
+
+    return 0;
+}
+
+static struct ts_device *i8042DriverApiGetChild(
+    struct ts_device *p_device,
+    size_t p_index
+) {
+    M_UNUSED_PARAMETER(p_device);
+    M_UNUSED_PARAMETER(p_index);
+
+    return NULL;
 }
