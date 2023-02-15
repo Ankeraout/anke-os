@@ -1,4 +1,4 @@
-#include "arch/x86/dev/ide.h"
+#include "arch/x86/dev/drivers/ide.h"
 #include "arch/x86/inline.h"
 #include "dev/device.h"
 #include "klibc/stdlib.h"

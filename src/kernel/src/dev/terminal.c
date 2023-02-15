@@ -65,7 +65,7 @@ void terminalWrite(
     size_t p_size
 ) {
     const uint8_t *l_buffer = (const uint8_t *)p_buffer;
-    
+
     for(size_t l_index = 0; l_index < p_size; l_index++) {
         terminalPutc(p_terminal, l_buffer[l_index]);
     }

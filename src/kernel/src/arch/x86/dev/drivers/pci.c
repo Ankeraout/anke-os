@@ -1,8 +1,9 @@
 #include <stdint.h>
 
 #include "arch/x86/inline.h"
-#include "arch/x86/dev/pciide.h"
+#include "arch/x86/dev/drivers/pciide.h"
 #include "dev/pci.h"
+#include "dev/drivers/unknown.h"
 #include "klibc/list.h"
 #include "klibc/stdlib.h"
 #include "debug.h"
@@ -143,6 +144,8 @@ static void pciInitDevice(
 
     if((l_deviceClass == 0x01) && (l_deviceSubclass == 0x01)) {
         l_device->a_driver = &g_deviceDriverPciIde;
+    } else {
+        l_device->a_driver = &g_deviceDriverUnknown;
     }
 
     debugPrint("pci: ");
@@ -155,19 +158,13 @@ static void pciInitDevice(
     debugPrintHex16(l_vendorId);
     debugPrint(":");
     debugPrintHex16(l_deviceId);
-
-    if(l_device->a_driver != NULL) {
-        debugPrint(" [");
-        debugPrint(l_device->a_driver->a_name);
-        debugPrint("]");
-    }
-
+    debugPrint(" [");
+    debugPrint(l_device->a_driver->a_name);
+    debugPrint("]");
     debugPrint("\n");
 
-    if(l_device->a_driver != NULL) {
-        if(l_device->a_driver->a_api.a_init(l_device) == 0) {
-            listAdd(&l_data->a_children, l_device);
-        }
+    if(l_device->a_driver->a_api.a_init(l_device) == 0) {
+        listAdd(&l_data->a_children, l_device);
     }
 }
 

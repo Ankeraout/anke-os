@@ -5,7 +5,7 @@
 #include "arch/x86/gdt.h"
 #include "arch/x86/idt.h"
 #include "arch/x86/inline.h"
-#include "arch/x86/dev/acpi.h"
+#include "arch/x86/dev/drivers/acpi.h"
 #include "dev/device.h"
 #include "klibc/stdlib.h"
 #include "mm/pmm.h"

@@ -8,6 +8,7 @@
 #define C_DEVICE_MAX_ADDRESS_SIZE 16
 
 enum te_deviceBus {
+    E_DEVICEBUS_ANY,
     E_DEVICEBUS_ROOT,
     E_DEVICEBUS_IDE,
     E_DEVICEBUS_PCI,

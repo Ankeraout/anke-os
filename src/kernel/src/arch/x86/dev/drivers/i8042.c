@@ -65,7 +65,7 @@ struct ts_deviceDataPs2Port {
     struct ts_device a_device;
 };
 
-struct ts_deviceDataPs2 {
+struct ts_deviceDataPs2Controller {
     struct ts_deviceDataPs2Port a_ports[2];
 };
 
@@ -89,7 +89,7 @@ static struct ts_device *i8042DriverApiGetChild(
     size_t p_index
 );
 
-const struct ts_deviceDriverPs2 g_deviceDriverI8042 = {
+const struct ts_deviceDriverPs2Controller g_deviceDriverI8042 = {
     .a_base = {
         .a_name = "Intel 8042 PS/2 controller",
         .a_api = {
@@ -106,19 +106,19 @@ const struct ts_deviceDriverPs2 g_deviceDriverI8042 = {
     }
 };
 
-static struct ts_deviceDataPs2 s_deviceDataI8042;
+static struct ts_deviceDataPs2Controller s_deviceDataI8042;
 
 static int i8042Init(struct ts_device *p_device) {
     p_device->a_driverData = &s_deviceDataI8042;
-    p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDataPs2));
+    p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDataPs2Controller));
 
     if(p_device->a_driverData == NULL) {
         debugPrint("i8042: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
 
     // By default, we assume that the controller has two ports, and that both
     // of them are working (a device is plugged and works correctly). We will
@@ -256,8 +256,8 @@ static int i8042Init(struct ts_device *p_device) {
 }
 
 static bool i8042CanReceive(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -265,8 +265,8 @@ static bool i8042CanReceive(struct ts_device *p_device, int p_port) {
 }
 
 static uint8_t i8042Receive(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -292,8 +292,8 @@ static uint8_t i8042Receive(struct ts_device *p_device, int p_port) {
 }
 
 static void i8042Send(struct ts_device *p_device, int p_port, uint8_t p_value) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -318,8 +318,8 @@ static void i8042Send(struct ts_device *p_device, int p_port, uint8_t p_value) {
 }
 
 static void i8042WaitAck(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -340,8 +340,8 @@ static void i8042WaitAck(struct ts_device *p_device, int p_port) {
 }
 
 static void i8042WaitSelfTest(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -378,8 +378,8 @@ static void i8042WaitWrite(void) {
 }
 
 static void i8042InitPort(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 
@@ -452,8 +452,8 @@ static void i8042InterruptHandler(
     struct ts_isrRegisters *p_registers,
     struct ts_device *p_device
 ) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
 
     int l_portNumber;
 
@@ -508,8 +508,8 @@ static void i8042InterruptHandler(
 }
 
 static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2 *l_deviceData =
-        (struct ts_deviceDataPs2 *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
     volatile struct ts_deviceDataPs2Port *l_port =
         (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
 

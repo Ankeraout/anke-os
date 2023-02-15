@@ -3,7 +3,7 @@
 
 #include "arch/x86/inline.h"
 #include "arch/x86/isr.h"
-#include "arch/x86/dev/i8259.h"
+#include "arch/x86/dev/drivers/i8259.h"
 #include "dev/device.h"
 #include "dev/interruptcontroller.h"
 #include "klibc/string.h"
