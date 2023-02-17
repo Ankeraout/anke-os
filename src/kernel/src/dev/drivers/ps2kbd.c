@@ -5,6 +5,13 @@
 #include "common.h"
 #include "debug.h"
 
+#define C_PS2_CMD_ECHO 0xee
+#define C_PS2_CMD_IDENTIFY 0xf2
+#define C_PS2_CMD_SCAN_ENABLE 0xf4
+#define C_PS2_CMD_SCAN_DISABLE 0xf5
+#define C_PS2_CMD_RESEND 0xfe
+#define C_PS2_CMD_RESET 0xff
+
 static int ps2KbdDeviceDriverApiInit(struct ts_device *p_device);
 static struct ts_device *ps2KbdDeviceDriverApiGetChild(
     struct ts_device *p_device,
@@ -14,7 +21,10 @@ static size_t ps2KbdDeviceDriverApiGetChildCount(struct ts_device *p_device);
 static bool ps2KbdDeviceDriverApiIsSupported(
     const struct ts_deviceIdentifier *p_identifier
 );
-static void ps2KbdDeviceDriverApiInterrupt(struct ts_device *p_device);
+static void ps2KbdDeviceDriverApiReceive(
+    struct ts_device *p_device,
+    uint8_t p_value
+);
 
 const struct ts_deviceDriverPs2Device g_deviceDriverPs2Kbd = {
     .a_base = {
@@ -28,21 +38,18 @@ const struct ts_deviceDriverPs2Device g_deviceDriverPs2Kbd = {
         }
     },
     .a_api = {
-        .a_interrupt = ps2KbdDeviceDriverApiInterrupt
+        .a_receive = ps2KbdDeviceDriverApiReceive
     }
 };
 
 static int ps2KbdDeviceDriverApiInit(struct ts_device *p_device) {
     M_UNUSED_PARAMETER(p_device);
 
-    const struct ts_deviceDriverPs2Controller *l_controllerDriver =
-        (const struct ts_deviceDriverPs2Controller *)p_device->a_parent->a_driver;
-    
-    l_controllerDriver->a_api.a_send(
-        p_device->a_parent,
-        *((enum te_deviceAddressPs2 *)p_device->a_address.a_address),
-        0xf4
-    );
+    struct ts_device *l_port = p_device->a_parent;
+    const struct ts_deviceDriverPs2Port *l_portDriver =
+        (const struct ts_deviceDriverPs2Port *)l_port->a_driver;
+
+    l_portDriver->a_api.a_send(l_port, C_PS2_CMD_SCAN_ENABLE);
 
     return 0;
 }
@@ -87,28 +94,10 @@ static bool ps2KbdDeviceDriverApiIsSupported(
     return false;
 }
 
-static void ps2KbdDeviceDriverApiInterrupt(struct ts_device *p_device) {
+static void ps2KbdDeviceDriverApiReceive(
+    struct ts_device *p_device,
+    uint8_t p_value
+) {
     M_UNUSED_PARAMETER(p_device);
-
-    const struct ts_deviceDriverPs2Controller *l_controllerDriver =
-        (const struct ts_deviceDriverPs2Controller *)p_device->a_parent->a_driver;
-
-    const enum te_deviceAddressPs2 l_deviceAddress =
-        *(const enum te_deviceAddressPs2 *)p_device->a_address.a_address;
-
-    while(
-        l_controllerDriver->a_api.a_canReceive(
-            p_device->a_parent,
-            l_deviceAddress
-        )
-    ) {
-        debugPrint("ps2kbd: 0x");
-        
-        uint8_t l_data = l_controllerDriver->a_api.a_receive(
-            p_device->a_parent, l_deviceAddress
-        );
-
-        debugPrintHex8(l_data);
-        debugPrint("\n");
-    }
+    M_UNUSED_PARAMETER(p_value);
 }

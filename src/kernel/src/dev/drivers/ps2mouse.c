@@ -14,7 +14,10 @@ static size_t ps2MouseDeviceDriverApiGetChildCount(struct ts_device *p_device);
 static bool ps2MouseDeviceDriverApiIsSupported(
     const struct ts_deviceIdentifier *p_identifier
 );
-static void ps2MouseDeviceDriverApiInterrupt(struct ts_device *p_device);
+static void ps2MouseDeviceDriverApiReceive(
+    struct ts_device *p_device,
+    uint8_t p_value
+);
 
 const struct ts_deviceDriverPs2Device g_deviceDriverPs2Mouse = {
     .a_base = {
@@ -28,7 +31,7 @@ const struct ts_deviceDriverPs2Device g_deviceDriverPs2Mouse = {
         }
     },
     .a_api = {
-        .a_interrupt = ps2MouseDeviceDriverApiInterrupt
+        .a_receive = ps2MouseDeviceDriverApiReceive
     }
 };
 
@@ -73,8 +76,10 @@ static bool ps2MouseDeviceDriverApiIsSupported(
     return false;
 }
 
-static void ps2MouseDeviceDriverApiInterrupt(struct ts_device *p_device) {
+static void ps2MouseDeviceDriverApiReceive(
+    struct ts_device *p_device,
+    uint8_t p_value
+) {
     M_UNUSED_PARAMETER(p_device);
-
-    debugPrint("ps2mouse: Interrupt\n");
+    M_UNUSED_PARAMETER(p_value);
 }

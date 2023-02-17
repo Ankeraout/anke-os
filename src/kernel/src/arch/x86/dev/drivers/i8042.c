@@ -3,6 +3,7 @@
 
 #include "arch/x86/inline.h"
 #include "arch/x86/isr.h"
+#include "dev/drivers/ps2port.h"
 #include "dev/ps2.h"
 #include "dev/timer.h"
 #include "klibc/stdlib.h"
@@ -33,49 +34,18 @@
 #define C_8042_CMD_PORT_2_FAKE_READ 0xd3
 #define C_8042_CMD_PORT_2_WRITE 0xd4
 #define C_8042_CMD_PULSE 0xf0
-#define C_PS2_RESPONSE_SELF_TEST_PASSED 0xaa
-#define C_PS2_RESPONSE_ECHO 0xee
-#define C_PS2_RESPONSE_ACK 0xfa
-#define C_PS2_RESPONSE_SELF_TEST_FAILED_1 0xfc
-#define C_PS2_RESPONSE_SELF_TEST_FAILED_2 0xfd
-#define C_PS2_RESPONSE_RESEND 0xfe
-#define C_PS2_CMD_ECHO 0xee
-#define C_PS2_CMD_IDENTIFY 0xf2
-#define C_PS2_CMD_SCAN_ENABLE 0xf4
-#define C_PS2_CMD_SCAN_DISABLE 0xf5
-#define C_PS2_CMD_RESEND 0xfe
-#define C_PS2_CMD_RESET 0xff
-#define C_PS2_RECEIVE_BUFFER_SIZE 16
+#define C_PS2_RESPONSE_SELF_TEST_FAILED 0xfc
 
-#define C_PS2_TIMEOUT_RESET 1000
-#define C_PS2_TIMEOUT_ACK 100
-#define C_PS2_TIMEOUT_IDENTIFY 100
-#define C_PS2_MAX_RESEND_COUNT 3
-
-struct ts_deviceDataPs2Port {
-    uint8_t a_receiveBuffer[C_PS2_RECEIVE_BUFFER_SIZE];
-    int a_receiveBufferReadIndex;
-    int a_receiveBufferWriteIndex;
-    int a_receiveBufferLength;
+struct ts_deviceDataPs2ControllerPort {
     bool a_working;
-    bool a_receivedSelfTest;
-    bool a_receivedEcho;
-    bool a_receivedAck;
-    uint8_t a_lastSentByte;
-    int a_resendCount;
     struct ts_device a_device;
 };
 
 struct ts_deviceDataPs2Controller {
-    struct ts_deviceDataPs2Port a_ports[2];
+    struct ts_deviceDataPs2ControllerPort a_ports[2];
 };
 
 static int i8042Init(struct ts_device *p_device);
-static bool i8042CanReceive(struct ts_device *p_device, int p_port);
-static uint8_t i8042Receive(struct ts_device *p_device, int p_port);
-static void i8042Send(struct ts_device *p_device, int p_port, uint8_t p_value);
-static void i8042WaitAck(struct ts_device *p_device, int p_port);
-static void i8042WaitSelfTest(struct ts_device *p_device, int p_port);
 static void i8042WaitRead(void);
 static void i8042WaitWrite(void);
 static void i8042InitPort(struct ts_device *p_device, int p_port);
@@ -83,11 +53,15 @@ static void i8042InterruptHandler(
     struct ts_isrRegisters *p_registers,
     struct ts_device *p_device
 );
-static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port);
 static size_t i8042DriverApiGetChildCount(struct ts_device *p_device);
 static struct ts_device *i8042DriverApiGetChild(
     struct ts_device *p_device,
     size_t p_index
+);
+static void i8042DriverApiSend(
+    struct ts_device *p_device,
+    enum te_deviceAddressPs2 p_port,
+    uint8_t p_value
 );
 
 const struct ts_deviceDriverPs2Controller g_deviceDriverI8042 = {
@@ -101,16 +75,11 @@ const struct ts_deviceDriverPs2Controller g_deviceDriverI8042 = {
         }
     },
     .a_api = {
-        .a_canReceive = i8042CanReceive,
-        .a_receive = i8042Receive,
-        .a_send = i8042Send
+        .a_send = i8042DriverApiSend
     }
 };
 
-static struct ts_deviceDataPs2Controller s_deviceDataI8042;
-
 static int i8042Init(struct ts_device *p_device) {
-    p_device->a_driverData = &s_deviceDataI8042;
     p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDataPs2Controller));
 
     if(p_device->a_driverData == NULL) {
@@ -165,7 +134,7 @@ static int i8042Init(struct ts_device *p_device) {
 
     uint8_t l_result = inb(C_IOPORT_8042_DATA);
 
-    if(l_result == C_PS2_RESPONSE_SELF_TEST_FAILED_1) {
+    if(l_result == C_PS2_RESPONSE_SELF_TEST_FAILED) {
         debugPrint("i8042: Controller self-test failed.\n");
         return 1;
     } else if(l_result != 0x55) {
@@ -223,7 +192,7 @@ static int i8042Init(struct ts_device *p_device) {
     if(l_deviceData->a_ports[0].a_working) {
         debugPrint("i8042: Enabling first port...\n");
 
-        i8042FlushReceiveBuffer(p_device, 0);
+        i8042InitPort(p_device, 0);
 
         isrSetHandler(33, (tf_isrHandler *)i8042InterruptHandler, p_device);
 
@@ -234,7 +203,7 @@ static int i8042Init(struct ts_device *p_device) {
     if(l_deviceData->a_ports[1].a_working) {
         debugPrint("i8042: Enabling second port...\n");
 
-        i8042FlushReceiveBuffer(p_device, 1);
+        i8042InitPort(p_device, 1);
 
         isrSetHandler(44, (tf_isrHandler *)i8042InterruptHandler, p_device);
 
@@ -246,122 +215,23 @@ static int i8042Init(struct ts_device *p_device) {
     i8042WaitWrite();
     outb(C_IOPORT_8042_DATA, l_configurationByte);
 
-    // Initialize devices
+    debugPrint("i8042: Initializing ports...\n");
+
+    // Detect devices
     for(int l_port = 0; l_port < 2; l_port++) {
         if(l_deviceData->a_ports[l_port].a_working) {
-            i8042InitPort(p_device, l_port);
+            const struct ts_deviceDriverPs2Port *l_portDriver =
+                (const struct ts_deviceDriverPs2Port *)l_deviceData->a_ports[l_port].a_device.a_driver;
+
+            l_portDriver->a_api.a_detect(
+                (struct ts_device *)&l_deviceData->a_ports[l_port].a_device
+            );
         }
     }
 
     debugPrint("i8042: PS/2 controller initialized.\n");
 
     return 0;
-}
-
-static bool i8042CanReceive(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    return l_port->a_receiveBufferLength != 0;
-}
-
-static uint8_t i8042Receive(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    while(!i8042CanReceive(p_device, p_port)) {
-        hlt();
-    }
-
-    cli();
-
-    uint8_t l_returnValue = l_port->a_receiveBuffer[
-        l_port->a_receiveBufferReadIndex++
-    ];
-
-    if(l_port->a_receiveBufferReadIndex == C_PS2_RECEIVE_BUFFER_SIZE) {
-        l_port->a_receiveBufferReadIndex = 0;
-    }
-
-    l_port->a_receiveBufferLength--;
-
-    sti();
-
-    return l_returnValue;
-}
-
-static void i8042Send(struct ts_device *p_device, int p_port, uint8_t p_value) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    l_port->a_receivedAck = false;
-
-    if(p_port == 1) {
-        outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_WRITE);
-    }
-
-    i8042WaitWrite();
-
-    if(p_value != C_PS2_CMD_RESEND) {
-        l_port->a_lastSentByte = p_value;
-        l_port->a_resendCount = 0;
-    }
-
-    outb(C_IOPORT_8042_DATA, p_value);
-
-    if(p_value != C_PS2_CMD_ECHO) {
-        i8042WaitAck(p_device, p_port);
-    }
-}
-
-static void i8042WaitAck(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    uint64_t l_startTime = timerGetTime();
-    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT_RESET;
-
-    while(
-        (!l_port->a_receivedAck)
-        && (timerGetTime() < l_endTime)
-    ) {
-        hlt();
-    }
-
-    if(!l_port->a_receivedAck) {
-        l_port->a_working = false;
-        debugPrint("i8042: Device ACK timed out.\n");
-    }
-}
-
-static void i8042WaitSelfTest(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    uint64_t l_startTime = timerGetTime();
-    uint64_t l_endTime = l_startTime + C_PS2_TIMEOUT_RESET;
-
-    while(
-        (!l_port->a_receivedSelfTest)
-            && (timerGetTime() < l_endTime)
-    ) {
-        hlt();
-    }
-
-    if(!l_port->a_receivedSelfTest) {
-        l_port->a_working = false;
-        debugPrint("i8042: Device self-test timed out.\n");
-    }
 }
 
 static void i8042WaitRead(void) {
@@ -383,100 +253,22 @@ static void i8042WaitWrite(void) {
 static void i8042InitPort(struct ts_device *p_device, int p_port) {
     volatile struct ts_deviceDataPs2Controller *l_deviceData =
         (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
+    volatile struct ts_deviceDataPs2ControllerPort *l_port =
+        (struct ts_deviceDataPs2ControllerPort *)&l_deviceData->a_ports[p_port];
 
-    debugPrint("i8042: Initializing device on ");
-    debugPrint(p_port == 0 ? "first" : "second");
-    debugPrint(" port.\n");
+    struct ts_device *l_portDevice =
+        (struct ts_device *)&l_deviceData->a_ports[p_port].a_device;
 
-    l_port->a_receivedSelfTest = false;
-    l_port->a_receivedEcho = false;
-    l_port->a_receivedAck = false;
+    *((enum te_deviceAddressPs2 *)l_portDevice->a_address.a_address) = p_port;
+    l_portDevice->a_driver =
+        (const struct ts_deviceDriver *)&g_deviceDriverPs2Port;
+    l_portDevice->a_parent = p_device;
 
-    // Send reset command
-    i8042Send(p_device, p_port, C_PS2_CMD_RESET);
-    i8042WaitSelfTest(p_device, p_port);
-
-    if(!l_port->a_working) {
-        return;
-    }
-
-    // Disable scanning
-    i8042Send(p_device, p_port, C_PS2_CMD_SCAN_DISABLE);
-
-    if(!l_port->a_working) {
-        return;
-    }
-
-    // Flush buffer
-    i8042FlushReceiveBuffer(p_device, p_port);
-
-    // Send identify command
-    i8042Send(p_device, p_port, C_PS2_CMD_IDENTIFY);
-
-    if(!l_port->a_working) {
-        return;
-    }
-
-    uint8_t l_identification[2];
-    int l_identificationLength = 0;
-    uint64_t l_timeout = timerGetTime() + C_PS2_TIMEOUT_IDENTIFY;
-
-    while(l_identificationLength < 2) {
-        while(
-            (timerGetTime() < l_timeout)
-                && (!i8042CanReceive(p_device, p_port))
-        ) {
-            hlt();
-        }
-
-        if(!i8042CanReceive(p_device, p_port)) {
-            break;
-        }
-
-        l_identification[l_identificationLength++] = i8042Receive(
-            p_device,
-            p_port
-        );
-    }
-
-    debugPrint("i8042: Identification data: ");
-
-    for(int l_index = 0; l_index < l_identificationLength; l_index++) {
-        debugPrintHex8(l_identification[l_index]);
-        debugPrint(" ");
-    }
-
-    debugPrint("\n");
-
-    l_deviceData->a_ports[p_port].a_device.a_address.a_common.a_bus =
-        E_DEVICEBUS_PS2;
-    *((enum te_deviceAddressPs2 *)l_deviceData->a_ports[p_port].a_device.a_address.a_address) =
-        p_port;
-    l_deviceData->a_ports[p_port].a_device.a_parent = p_device;
-
-    struct ts_deviceIdentifierPs2 l_identifier = {
-        .a_base = {
-            .a_bus = E_DEVICEBUS_PS2
-        },
-        .a_identifier = {
-            l_identificationLength,
-            l_identification[0],
-            l_identification[1]
-        }
-    };
-
-    l_deviceData->a_ports[p_port].a_device.a_driver =
-        deviceGetDriver((const struct ts_deviceIdentifier *)&l_identifier);
-
-    if(
-        l_deviceData->a_ports[p_port].a_device.a_driver->a_api.a_init(
-            (struct ts_device *)&l_deviceData->a_ports[p_port].a_device
-        ) != 0
-    ) {
-        debugPrint("ps2: Failed to initialize device driver.\n");
-        l_deviceData->a_ports[p_port].a_working = false;
+    if(g_deviceDriverPs2Port.a_base.a_api.a_init(l_portDevice) != 0) {
+        debugPrint("i8042: Failed to initialize port driver.\n");
+        kfree(l_portDevice);
+        l_portDevice = NULL;
+        l_port->a_working = false;
     }
 }
 
@@ -497,64 +289,18 @@ static void i8042InterruptHandler(
         return;
     }
 
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[l_portNumber];
+    volatile struct ts_deviceDataPs2ControllerPort *l_port =
+        (struct ts_deviceDataPs2ControllerPort *)&l_deviceData->a_ports[l_portNumber];
+    const struct ts_deviceDriverPs2Port *l_portDriver =
+        (const struct ts_deviceDriverPs2Port *)l_port->a_device.a_driver;
+    struct ts_device *l_portDevice = (struct ts_device *)&l_port->a_device;
 
-    uint8_t l_value = inb(C_IOPORT_8042_DATA);
+    i8042WaitRead();
+    uint8_t l_data = inb(C_IOPORT_8042_DATA);
 
-    if(l_value == C_PS2_RESPONSE_SELF_TEST_PASSED) {
-        l_port->a_receivedSelfTest = true;
-        l_port->a_working = true;
-    } else if(l_value == C_PS2_RESPONSE_ECHO) {
-        l_port->a_receivedEcho = true;
-    } else if(l_value == C_PS2_RESPONSE_ACK) {
-        l_port->a_receivedAck = true;
-    } else if(
-        (l_value == C_PS2_RESPONSE_SELF_TEST_FAILED_1)
-        || (l_value == C_PS2_RESPONSE_SELF_TEST_FAILED_2)
-    ) {
-        l_port->a_receivedSelfTest = true;
-        l_port->a_working = false;
-    } else if(l_value == C_PS2_RESPONSE_RESEND) {
-        l_port->a_resendCount++;
-
-        if(l_port->a_resendCount == C_PS2_MAX_RESEND_COUNT) {
-            debugPrint("i8042: Too many resend requests.\n");
-            l_port->a_working = false;
-            return;
-        }
-
-        i8042Send(p_device, l_portNumber, l_port->a_lastSentByte);
-    } else {
-        if(l_port->a_receiveBufferLength == C_PS2_RECEIVE_BUFFER_SIZE) {
-            return;
-        }
-
-        l_port->a_receiveBuffer[l_port->a_receiveBufferWriteIndex++] = l_value;
-        l_port->a_receiveBufferLength++;
-
-        if(l_port->a_receiveBufferWriteIndex == C_PS2_RECEIVE_BUFFER_SIZE) {
-            l_port->a_receiveBufferWriteIndex = 0;
-        }
-
-        if(l_port->a_device.a_driver != NULL) {
-            if(l_port->a_device.a_driver->a_bus == E_DEVICEBUS_PS2) {
-                ((const struct ts_deviceDriverPs2Device *)l_port->a_device.a_driver)
-                    ->a_api.a_interrupt((struct ts_device *)&l_port->a_device);
-            }
-        }
+    if(l_port->a_working) {
+        l_portDriver->a_api.a_receive(l_portDevice, l_data);
     }
-}
-
-static void i8042FlushReceiveBuffer(struct ts_device *p_device, int p_port) {
-    volatile struct ts_deviceDataPs2Controller *l_deviceData =
-        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
-    volatile struct ts_deviceDataPs2Port *l_port =
-        (struct ts_deviceDataPs2Port *)&l_deviceData->a_ports[p_port];
-
-    l_port->a_receiveBufferLength = 0;
-    l_port->a_receiveBufferReadIndex = 0;
-    l_port->a_receiveBufferWriteIndex = 0;
 }
 
 static size_t i8042DriverApiGetChildCount(struct ts_device *p_device) {
@@ -590,4 +336,29 @@ static struct ts_device *i8042DriverApiGetChild(
     }
 
     return &l_deviceData->a_ports[p_index].a_device;
+}
+
+static void i8042DriverApiSend(
+    struct ts_device *p_device,
+    enum te_deviceAddressPs2 p_port,
+    uint8_t p_value
+) {
+    volatile struct ts_deviceDataPs2Controller *l_deviceData =
+        (struct ts_deviceDataPs2Controller *)p_device->a_driverData;
+    volatile struct ts_deviceDataPs2ControllerPort *l_port =
+        (struct ts_deviceDataPs2ControllerPort *)&l_deviceData->a_ports[p_port];
+
+    if(!l_port->a_working) {
+        return;
+    }
+
+    const enum te_deviceAddressPs2 *l_deviceAddress =
+        (const enum te_deviceAddressPs2 *)l_port->a_device.a_address.a_address;
+
+    if(*l_deviceAddress == E_DEVICEADDRESS_PS2_1) {
+        outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_WRITE);
+    }
+
+    i8042WaitWrite();
+    outb(C_IOPORT_8042_DATA, p_value);
 }
