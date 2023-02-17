@@ -11,7 +11,7 @@ CFLAGS += -D__BOOT_LIMINE
 CFLAGS += -MMD -MP
 CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
-CFLAGS += -g3 -O0
+CFLAGS += -g3 -O2
 CFLAGS += -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64
 CFLAGS += -Iinclude -I../../limine-bootloader
 LDFLAGS += -nostdlib -static -m elf_x86_64 -Lgcc

@@ -80,10 +80,14 @@ int pmmInit(
 }
 
 void *pmmAlloc(size_t p_size) {
+    if(p_size == 0) {
+        return NULL;
+    }
+
     const size_t l_pageCount = (p_size + 4095) >> 12;
     uintptr_t l_currentAddress = 0x100000;
     size_t l_consecutiveFreePageCount = 0;
-    uintptr_t l_firstFreePage;
+    uintptr_t l_firstFreePage = (uintptr_t)NULL;
     size_t l_entryIndex = l_currentAddress >> 18;
     uint64_t l_entryMask = 1 << ((l_currentAddress >> 12) & 0x3f);
 
@@ -145,6 +149,13 @@ static void pmmPrintMemoryMap(
     const struct ts_bootMemoryMapEntry *p_memoryMap,
     size_t p_memoryMapLength
 ) {
+    static const char *l_entryTypes[] = {
+        "Free",
+        "Reclaimable",
+        "Kernel",
+        "Reserved"
+    };
+
     debugPrint("pmm: Memory map:\n");
 
     for(size_t l_index = 0; l_index < p_memoryMapLength; l_index++) {
@@ -152,8 +163,8 @@ static void pmmPrintMemoryMap(
         debugPrintHex64(p_memoryMap[l_index].a_base);
         debugPrint("-0x");
         debugPrintHex64(p_memoryMap[l_index].a_base + p_memoryMap[l_index].a_size - 1);
-        debugPrint("]: 0x");
-        debugPrintHex8(p_memoryMap[l_index].a_type);
+        debugPrint("]: ");
+        debugPrint(l_entryTypes[p_memoryMap[l_index].a_type]);
         debugPrint("\n");
     }
 }

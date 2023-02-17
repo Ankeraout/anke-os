@@ -348,7 +348,7 @@ static void acpiExploreRsdt(
         return;
     }
 
-    debugPrint("acpi: Exploring RSDT at ");
+    debugPrint("acpi: Exploring RSDT at 0x");
     debugPrintPointer(p_rsdt);
     debugPrint(".\n");
 
@@ -372,7 +372,7 @@ static void acpiExploreXsdt(
         return;
     }
 
-    debugPrint("acpi: Exploring XSDT at ");
+    debugPrint("acpi: Exploring XSDT at 0x");
     debugPrintPointer(p_xsdt);
     debugPrint(".\n");
 
@@ -396,7 +396,7 @@ static void acpiExploreTable(
 
     debugPrint("acpi: Found table: \"");
     debugWrite(p_sdt->a_signature, 4);
-    debugPrint("\" at ");
+    debugPrint("\" at 0x");
     debugPrintPointer(p_sdt);
     debugPrint(".\n");
 
