@@ -5,18 +5,20 @@ MKDIR := mkdir -p
 RM := rm -rf
 CP := cp
 
-all: iso
+KERNEL_EXECUTABLE=kernel/bin/kernel.elf
 
-src/kernel/bin/kernel: src/kernel/Makefile
-	$(MAKE) -C src/kernel
+all: cdrom
+
+$(KERNEL_EXECUTABLE): kernel/Makefile
+	$(MAKE) -C kernel
 
 obj/iso/%: limine-bootloader/%
 	cp $< $@
 
-obj/iso/limine.cfg: src/iso/limine.cfg
+obj/iso/%: iso/%
 	cp $< $@
 
-obj/iso/kernel.elf: src/kernel/bin/kernel
+obj/iso/%: kernel/bin/%
 	cp $< $@
 
 limine-bootloader/limine-deploy:
@@ -26,13 +28,14 @@ bin/anke-os.iso: obj/iso/limine-cd-efi.bin obj/iso/limine-cd.bin obj/iso/limine.
 	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label obj/iso -o $@
 	limine-bootloader/limine-deploy $@
 
-iso: dirs bin/anke-os.iso
+cdrom: dirs bin/anke-os.iso
 
 clean:
 	$(RM) bin obj
-	$(MAKE) -C src/kernel clean
+	$(MAKE) -C kernel clean
+	$(MAKE) -C limine-bootloader clean
 
 dirs:
 	$(MKDIR) bin obj/iso
 
-.PHONY: all clean dirs iso
+.PHONY: all clean dirs cdrom
