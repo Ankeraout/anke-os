@@ -1,0 +1,8 @@
+#ifndef __INCLUDE_DEV_DRIVERS_PS2MOUSE_H__
+#define __INCLUDE_DEV_DRIVERS_PS2MOUSE_H__
+
+#include <kernel/dev/ps2.h>
+
+extern const struct ts_deviceDriverPs2Port g_deviceDriverPs2Port;
+
+#endif
