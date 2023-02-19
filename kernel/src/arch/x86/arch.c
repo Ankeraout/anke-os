@@ -20,7 +20,7 @@ int archPreinit(struct ts_boot *p_boot) {
     idtInit();
 
     if(pmmInit(p_boot->a_memoryMap, p_boot->a_memoryMapLength) != 0) {
-        debugPrint("kernel: Physical memory manager initialization failed.\n");
+        debug("kernel: Physical memory manager initialization failed.\n");
         return 1;
     }
 
@@ -34,7 +34,7 @@ int archInit(void) {
     struct ts_device *l_device = kmalloc(sizeof(struct ts_device));
 
     if(l_device == NULL) {
-        debugPrint("kernel: Failed to allocate memory for root bus device.\n");
+        debug("kernel: Failed to allocate memory for root bus device.\n");
         return 1;
     }
 
@@ -42,11 +42,11 @@ int archInit(void) {
     l_device->a_parent = NULL;
 
     if(l_device->a_driver->a_api.a_init(l_device)) {
-        debugPrint("kernel: ACPI driver initialization failed.\n");
+        debug("kernel: ACPI driver initialization failed.\n");
         return 1;
     }
 
-    debugPrint("kernel: Device tree:\n");
+    debug("kernel: Device tree:\n");
     archShowDeviceTree(l_device, 0);
 
     return 0;
@@ -73,12 +73,10 @@ void archHaltAndCatchFire(void) {
 
 static void archShowDeviceTree(struct ts_device *p_device, size_t p_level) {
     for(size_t l_level = 0; l_level < p_level; l_level++) {
-        debugPrint("    ");
+        debug("    ");
     }
 
-    debugPrint("- ");
-    debugPrint(p_device->a_driver->a_name);
-    debugPrint("\n");
+    debug("- %s\n", p_device->a_driver->a_name);
 
     size_t l_childCount = p_device->a_driver->a_api.a_getChildCount(p_device);
 

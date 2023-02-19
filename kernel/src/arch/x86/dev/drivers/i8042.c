@@ -83,7 +83,7 @@ static int i8042Init(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDataPs2Controller));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("i8042: Failed to allocate memory for driver data.\n");
+        debug("i8042: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
@@ -99,7 +99,7 @@ static int i8042Init(struct ts_device *p_device) {
     l_deviceData->a_ports[1].a_working = true;
 
     // Disable both PS/2 ports
-    debugPrint("i8042: Disabling ports...\n");
+    debug("i8042: Disabling ports...\n");
     outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_1_DISABLE);
     outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_DISABLE);
 
@@ -107,7 +107,7 @@ static int i8042Init(struct ts_device *p_device) {
     inb(C_IOPORT_8042_DATA);
 
     // Configure controller
-    debugPrint("i8042: Configuring controller...\n");
+    debug("i8042: Configuring controller...\n");
     outb(C_IOPORT_8042_COMMAND, C_8042_CMD_READ_RAM);
     i8042WaitRead();
 
@@ -123,30 +123,30 @@ static int i8042Init(struct ts_device *p_device) {
     // that there is no second port (it should be set because of
     // C_8042_CMD_PORT_2_DISABLE).
     if((l_configurationByte & (1 << 5)) == 0) {
-        debugPrint("i8042: Second port is not present.\n");
+        debug("i8042: Second port is not present.\n");
         l_deviceData->a_ports[1].a_working = false;
     }
 
     // Perform controller self-test
-    debugPrint("i8042: Performing controller self-test...\n");
+    debug("i8042: Performing controller self-test...\n");
     outb(C_IOPORT_8042_COMMAND, C_8042_CMD_CONTROLLER_TEST);
     i8042WaitRead();
 
     uint8_t l_result = inb(C_IOPORT_8042_DATA);
 
     if(l_result == C_PS2_RESPONSE_SELF_TEST_FAILED) {
-        debugPrint("i8042: Controller self-test failed.\n");
+        debug("i8042: Controller self-test failed.\n");
         return 1;
     } else if(l_result != 0x55) {
-        debugPrint("i8042: Controller self-test failed (unknown answer).\n");
+        debug("i8042: Controller self-test failed (unknown answer).\n");
         return 1;
     }
 
-    debugPrint("i8042: Controller self-test passed.\n");
+    debug("i8042: Controller self-test passed.\n");
 
     // Detect second port
     if(l_deviceData->a_ports[1].a_working) {
-        debugPrint("i8042: Detecting second port...\n");
+        debug("i8042: Detecting second port...\n");
         outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_ENABLE);
         outb(C_IOPORT_8042_COMMAND, C_8042_CMD_READ_RAM);
         i8042WaitRead();
@@ -156,41 +156,41 @@ static int i8042Init(struct ts_device *p_device) {
         // that there is no second port (it should be clear because of
         // C_8042_CMD_PORT_2_ENABLE).
         if((l_configurationByte & (1 << 5)) != 0) {
-            debugPrint("i8042: Second port is not present.\n");
+            debug("i8042: Second port is not present.\n");
             l_deviceData->a_ports[1].a_working = false;
         } else {
-            debugPrint("i8042: Second port was found.\n");
+            debug("i8042: Second port was found.\n");
             outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_DISABLE);
         }
     }
 
     // Test the first PS/2 port
-    debugPrint("i8042: Testing first port...\n");
+    debug("i8042: Testing first port...\n");
     outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_1_TEST);
     i8042WaitRead();
     l_result = inb(C_IOPORT_8042_DATA);
 
     if(l_result != 0) {
-        debugPrint("i8042: First port is not working.\n");
+        debug("i8042: First port is not working.\n");
         l_deviceData->a_ports[0].a_working = false;
     }
 
     // Test the second PS/2 port
     if(l_deviceData->a_ports[1].a_working) {
-        debugPrint("i8042: Testing second port...\n");
+        debug("i8042: Testing second port...\n");
         outb(C_IOPORT_8042_COMMAND, C_8042_CMD_PORT_2_TEST);
         i8042WaitRead();
         l_result = inb(C_IOPORT_8042_DATA);
 
         if(l_result != 0) {
-            debugPrint("i8042: Second port is not working.\n");
+            debug("i8042: Second port is not working.\n");
             l_deviceData->a_ports[1].a_working = false;
         }
     }
 
     // Enable all working ports and their interrupts
     if(l_deviceData->a_ports[0].a_working) {
-        debugPrint("i8042: Enabling first port...\n");
+        debug("i8042: Enabling first port...\n");
 
         i8042InitPort(p_device, 0);
 
@@ -201,7 +201,7 @@ static int i8042Init(struct ts_device *p_device) {
     }
 
     if(l_deviceData->a_ports[1].a_working) {
-        debugPrint("i8042: Enabling second port...\n");
+        debug("i8042: Enabling second port...\n");
 
         i8042InitPort(p_device, 1);
 
@@ -215,7 +215,7 @@ static int i8042Init(struct ts_device *p_device) {
     i8042WaitWrite();
     outb(C_IOPORT_8042_DATA, l_configurationByte);
 
-    debugPrint("i8042: Initializing ports...\n");
+    debug("i8042: Initializing ports...\n");
 
     // Detect devices
     for(int l_port = 0; l_port < 2; l_port++) {
@@ -229,7 +229,7 @@ static int i8042Init(struct ts_device *p_device) {
         }
     }
 
-    debugPrint("i8042: PS/2 controller initialized.\n");
+    debug("i8042: PS/2 controller initialized.\n");
 
     return 0;
 }
@@ -265,7 +265,7 @@ static void i8042InitPort(struct ts_device *p_device, int p_port) {
     l_portDevice->a_parent = p_device;
 
     if(g_deviceDriverPs2Port.a_base.a_api.a_init(l_portDevice) != 0) {
-        debugPrint("i8042: Failed to initialize port driver.\n");
+        debug("i8042: Failed to initialize port driver.\n");
         kfree(l_portDevice);
         l_portDevice = NULL;
         l_port->a_working = false;

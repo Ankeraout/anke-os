@@ -177,7 +177,7 @@ static int acpiInit(struct ts_device *p_device) {
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
     if(listInit(&l_data->a_children) == NULL) {
-        debugPrint("acpi: Failed to allocate memory for children list.\n");
+        debug("acpi: Failed to allocate memory for children list.\n");
         return 1;
     }
 
@@ -185,28 +185,26 @@ static int acpiInit(struct ts_device *p_device) {
 
     if(l_data->a_acpiRsdp == NULL) {
         // No ACPI
-        debugPrint("acpi: RSDP was not found.\n");
+        debug("acpi: RSDP was not found.\n");
         return 1;
     }
 
-    debugPrint("acpi: ACPI RSDP was found at 0x");
-    debugPrintPointer(l_data->a_acpiRsdp);
-    debugPrint(".\n");
+    debug("acpi: RSDP was found at %p.\n", l_data->a_acpiRsdp);
 
     if(l_data->a_acpiRsdpVersion == 1) {
-        debugPrint("acpi: ACPI RSDP 1.0 structure found.\n");
+        debug("acpi: ACPI RSDP 1.0 structure found.\n");
         acpiExploreRsdt(
             p_device,
             (const struct ts_acpiRsdt *)(uintptr_t)l_data->a_acpiRsdp->rsdp1.a_rsdtAddress
         );
     } else if(l_data->a_acpiRsdpVersion == 2) {
-        debugPrint("acpi: ACPI RSDP 2.0 structure found.\n");
+        debug("acpi: ACPI RSDP 2.0 structure found.\n");
         acpiExploreXsdt(
             p_device,
             (const struct ts_acpiXsdt *)(uintptr_t)l_data->a_acpiRsdp->a_xsdtAddress
         );
     } else {
-        debugPrint("acpi: Unknown ACPI RSDP version found.\n");
+        debug("acpi: Unknown ACPI RSDP version found.\n");
         return 1;
     }
 
@@ -214,7 +212,7 @@ static int acpiInit(struct ts_device *p_device) {
     struct ts_device *l_pic = kmalloc(sizeof(struct ts_device));
 
     if(l_pic == NULL) {
-        debugPrint("acpi: Failed to allocate memory for PIC device.\n");
+        debug("acpi: Failed to allocate memory for PIC device.\n");
         return 1;
     }
 
@@ -233,7 +231,7 @@ static int acpiInit(struct ts_device *p_device) {
     struct ts_device *l_pit = kmalloc(sizeof(struct ts_device));
 
     if(l_pit == NULL) {
-        debugPrint("acpi: Failed to allocate memory for PIT device.\n");
+        debug("acpi: Failed to allocate memory for PIT device.\n");
         return 1;
     }
 
@@ -249,7 +247,7 @@ static int acpiInit(struct ts_device *p_device) {
     struct ts_device *l_pciController = kmalloc(sizeof(struct ts_device));
 
     if(l_pciController == NULL) {
-        debugPrint("acpi: Failed to allocate memory for PCI controller device.\n");
+        debug("acpi: Failed to allocate memory for PCI controller device.\n");
         return 1;
     }
 
@@ -264,7 +262,7 @@ static int acpiInit(struct ts_device *p_device) {
         struct ts_device *l_ps2Controller = kmalloc(sizeof(struct ts_device));
 
         if(l_ps2Controller == NULL) {
-            debugPrint("acpi: Failed to allocate memory for PS/2 controller device.\n");
+            debug("acpi: Failed to allocate memory for PS/2 controller device.\n");
             return 1;
         }
 
@@ -344,13 +342,11 @@ static void acpiExploreRsdt(
     const struct ts_acpiRsdt *p_rsdt
 ) {
     if(!acpiIsSdtUsable((const struct ts_acpiSdtHeader *)p_rsdt)) {
-        debugPrint("acpi: RSDT checksum error.\n");
+        debug("acpi: RSDT checksum error.\n");
         return;
     }
 
-    debugPrint("acpi: Exploring RSDT at 0x");
-    debugPrintPointer(p_rsdt);
-    debugPrint(".\n");
+    debug("acpi: Exploring RSDT at %p.\n", p_rsdt);
 
     const size_t l_rsdtHeaderLength = sizeof(struct ts_acpiRsdt);
     const int l_rsdtTableLength = (p_rsdt->a_header.a_length - l_rsdtHeaderLength) / 4;
@@ -368,13 +364,11 @@ static void acpiExploreXsdt(
     const struct ts_acpiXsdt *p_xsdt
 ) {
     if(!acpiIsSdtUsable((const struct ts_acpiSdtHeader *)p_xsdt)) {
-        debugPrint("acpi: XSDT checksum error.\n");
+        debug("acpi: XSDT checksum error.\n");
         return;
     }
 
-    debugPrint("acpi: Exploring XSDT at 0x");
-    debugPrintPointer(p_xsdt);
-    debugPrint(".\n");
+    debug("acpi: Exploring XSDT at %p.\n", p_xsdt);
 
     const size_t l_xsdtHeaderLength = sizeof(struct ts_acpiXsdt);
     const int l_xsdtTableLength = (p_xsdt->a_header.a_length - l_xsdtHeaderLength) / 8;
@@ -394,14 +388,15 @@ static void acpiExploreTable(
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
-    debugPrint("acpi: Found table: \"");
-    debugWrite(p_sdt->a_signature, 4);
-    debugPrint("\" at 0x");
-    debugPrintPointer(p_sdt);
-    debugPrint(".\n");
+    char l_buffer[5];
+
+    memcpy(l_buffer, p_sdt->a_signature, 4);
+    l_buffer[4] = '\0';
+
+    debug("acpi: Found table \"%.4s\" at %p.\n", p_sdt->a_signature, p_sdt);
 
     if(!acpiIsSdtUsable(p_sdt)) {
-        debugPrint("acpi: Table checksum error.\n");
+        debug("acpi: Table checksum error.\n");
         return;
     }
 

@@ -98,7 +98,7 @@ void idtInit(void) {
 
     lidt(s_idt, sizeof(s_idt) - 1);
 
-    debugPrint("idt: IDT loaded.\n");
+    debug("idt: IDT loaded.\n");
 }
 
 static void idtInitEntry(

@@ -132,7 +132,7 @@ static int ps2PortDeviceDriverApiInit(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDriverDataPs2Port));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("ps2port: Failed to allocate memory for driver data.\n");
+        debug("ps2port: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
@@ -207,12 +207,12 @@ static void ps2PortDeviceDriverApiDetect(struct ts_device *p_device) {
     ps2PortDeviceDriverApiSend(p_device, C_PS2_CMD_RESET);
 
     if(!ps2PortWaitSelfTest(p_device)) {
-        debugPrint("Device self-test timed out.\n");
+        debug("Device self-test timed out.\n");
         return;
     }
 
     if(!l_driverData->a_selfTestPassed) {
-        debugPrint("ps2port: Device self-test failed.\n");
+        debug("ps2port: Device self-test failed.\n");
         return;
     }
 
@@ -220,7 +220,7 @@ static void ps2PortDeviceDriverApiDetect(struct ts_device *p_device) {
     ps2PortDeviceDriverApiSend(p_device, C_PS2_CMD_SCAN_DISABLE);
 
     if(!ps2PortWaitAck(p_device)) {
-        debugPrint("ps2port: Device ACK timed out.\n");
+        debug("ps2port: Device ACK timed out.\n");
         return;
     }
 
@@ -233,7 +233,7 @@ static void ps2PortDeviceDriverApiDetect(struct ts_device *p_device) {
     ps2PortDeviceDriverApiSend(p_device, C_PS2_CMD_IDENTIFY);
 
     if(!ps2PortWaitAck(p_device)) {
-        debugPrint("ps2port: Device ACK timed out.\n");
+        debug("ps2port: Device ACK timed out.\n");
         return;
     }
 

@@ -55,7 +55,7 @@ static int i8254Init(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_i8254Data));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("i8254: Failed to allocate memory for driver data.\n");
+        debug("i8254: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
@@ -69,7 +69,7 @@ static int i8254Init(struct ts_device *p_device) {
 
     outb(C_8254_IOPORT_CMD, 0x36);
 
-    debugPrint("i8254: PIT initialized.\n");
+    debug("i8254: PIT initialized.\n");
 
     return 0;
 }

@@ -73,7 +73,7 @@ static int i8259Init(struct ts_device *p_device) {
     outb(C_IOPORT_I8259_SLAVE_DATA, 0x00); // Slave 8259: Unmask all interrupts
     iowait();
 
-    debugPrint("i8259: PIC initialized.\n");
+    debug("i8259: PIC initialized.\n");
 
     return 0;
 }

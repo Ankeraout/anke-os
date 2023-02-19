@@ -33,7 +33,6 @@ cdrom: dirs bin/anke-os.iso
 clean:
 	$(RM) bin obj
 	$(MAKE) -C kernel clean
-	$(MAKE) -C limine-bootloader clean
 
 dirs:
 	$(MKDIR) bin obj/iso

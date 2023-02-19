@@ -51,7 +51,7 @@ int pmmInit(
     pmmFindSpaceForMap(p_memoryMap, p_memoryMapLength, l_mapSizePages);
 
     if(s_pmmMap == NULL) {
-        debugPrint("pmm: Failed to find space for map.\n");
+        debug("pmm: Failed to find space for map.\n");
         return 1;
     }
 
@@ -74,7 +74,7 @@ int pmmInit(
     // PMM map is considered as used
     pmmMarkAsUsed(s_pmmMap, s_pmmMapSize);
 
-    debugPrint("pmm: Initialization complete.\n");
+    debug("pmm: Initialization complete.\n");
 
     return 0;
 }
@@ -156,16 +156,15 @@ static void pmmPrintMemoryMap(
         "Reserved"
     };
 
-    debugPrint("pmm: Memory map:\n");
+    debug("pmm: Memory map:\n");
 
     for(size_t l_index = 0; l_index < p_memoryMapLength; l_index++) {
-        debugPrint("pmm: [0x");
-        debugPrintHex64(p_memoryMap[l_index].a_base);
-        debugPrint("-0x");
-        debugPrintHex64(p_memoryMap[l_index].a_base + p_memoryMap[l_index].a_size - 1);
-        debugPrint("]: ");
-        debugPrint(l_entryTypes[p_memoryMap[l_index].a_type]);
-        debugPrint("\n");
+        debug(
+            "pmm: [0x%016x-0x%016x]: %s\n",
+            p_memoryMap[l_index].a_base,
+            p_memoryMap[l_index].a_base + p_memoryMap[l_index].a_size - 1,
+            l_entryTypes[p_memoryMap[l_index].a_type]
+        );
     }
 }
 

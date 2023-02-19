@@ -30,19 +30,19 @@ void main(struct ts_boot *p_boot) {
 
     framebufferFillRectangle(&p_boot->a_framebuffer, NULL, s_terminal.a_backgroundColor);
 
-    debugPrint("kernel: Starting AnkeKernel...\n");
+    debug("kernel: Starting AnkeKernel...\n");
 
     if(archPreinit(p_boot) != 0) {
-        debugPrint("kernel: Architecture-specific initialization failed.\n");
-        debugPrint("kernel: System halted.\n");
+        debug("kernel: Architecture-specific initialization failed.\n");
+        debug("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
 
     // Here, memory management is available.
 
     if(deviceInit() != 0) {
-        debugPrint("kernel: Failed to initialize device driver list.\n");
-        debugPrint("kernel: System halted.\n");
+        debug("kernel: Failed to initialize device driver list.\n");
+        debug("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
 
@@ -50,8 +50,8 @@ void main(struct ts_boot *p_boot) {
     registerDrivers();
 
     if(archInit() != 0) {
-        debugPrint("kernel: Architecture-specific initialization failed.\n");
-        debugPrint("kernel: System halted.\n");
+        debug("kernel: Architecture-specific initialization failed.\n");
+        debug("kernel: System halted.\n");
         archHaltAndCatchFire();
     }
 
@@ -61,7 +61,7 @@ void main(struct ts_boot *p_boot) {
     /* TODO: load device drivers and try to find a driver for each unknown
     device. */
 
-    debugPrint("kernel: Done.\n");
+    debug("kernel: Done.\n");
 
     while(true) {
         archHalt();
@@ -69,7 +69,7 @@ void main(struct ts_boot *p_boot) {
 }
 
 static void registerDrivers(void) {
-    debugPrint("kernel: Registering drivers...\n");
+    debug("kernel: Registering drivers...\n");
     deviceRegisterDriver((const struct ts_deviceDriver *)&g_deviceDriverPs2Kbd);
     deviceRegisterDriver((const struct ts_deviceDriver *)&g_deviceDriverPs2Mouse);
 }

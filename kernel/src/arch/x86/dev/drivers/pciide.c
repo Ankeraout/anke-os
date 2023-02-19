@@ -36,7 +36,7 @@ static int pciIdeInit(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_pciIdeDriverData));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("pciide: Failed to allocate memory for driver data.\n");
+        debug("pciide: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
@@ -63,7 +63,7 @@ static int pciIdeInit(struct ts_device *p_device) {
     l_deviceDriverData.a_irq = 15;
     l_data->a_channels[0].a_driver->a_api.a_init(&l_data->a_channels[1]);
 
-    debugPrint("pciide: Initialization complete.\n");
+    debug("pciide: Initialization complete.\n");
 
     return 0;
 }

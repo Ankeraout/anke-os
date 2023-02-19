@@ -46,7 +46,7 @@ void gdtInit(void) {
         "gdtReloadCs: \n"
     );
 
-    debugPrint("gdt: GDT loaded.\n");
+    debug("gdt: GDT loaded.\n");
 }
 
 static void gdtInitEntry(

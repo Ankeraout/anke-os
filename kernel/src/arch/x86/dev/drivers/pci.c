@@ -88,14 +88,14 @@ static int pciInit(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_pciData));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("pci: Failed to allocate memory for driver data.\n");
+        debug("pci: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
     struct ts_pciData *l_data = (struct ts_pciData *)p_device->a_driverData;
 
     if(listInit(&l_data->a_children) == NULL) {
-        debugPrint("acpi: Failed to allocate memory for children list.\n");
+        debug("acpi: Failed to allocate memory for children list.\n");
         return 1;
     }
 
@@ -114,7 +114,7 @@ static int pciInit(struct ts_device *p_device) {
         }
     }
 
-    debugPrint("pci: PCI bus initialized.\n");
+    debug("pci: PCI bus initialized.\n");
 
     return 0;
 }
@@ -135,7 +135,7 @@ static void pciInitDevice(
     struct ts_device *l_device = kmalloc(sizeof(struct ts_device));
 
     if(l_device == NULL) {
-        debugPrint("pci: Failed to allocate memory for device.\n");
+        debug("pci: Failed to allocate memory for device.\n");
         return;
     }
 
@@ -158,20 +158,15 @@ static void pciInitDevice(
         (struct ts_deviceIdentifier *)&l_identifier
     );
 
-    debugPrint("pci: ");
-    debugPrintHex8(p_deviceAddress->a_bus);
-    debugPrint(":");
-    debugPrintHex8(p_deviceAddress->a_slot);
-    debugPrint(".");
-    debugWrite(&"01234567"[p_deviceAddress->a_func], 1);
-    debugPrint(": ");
-    debugPrintHex16(l_vendorId);
-    debugPrint(":");
-    debugPrintHex16(l_deviceId);
-    debugPrint(" [");
-    debugPrint(l_device->a_driver->a_name);
-    debugPrint("]");
-    debugPrint("\n");
+    debug(
+        "pci: %02x:%02x.%x: %04x:%04x [%s]\n",
+        p_deviceAddress->a_bus,
+        p_deviceAddress->a_slot,
+        p_deviceAddress->a_func,
+        l_vendorId,
+        l_deviceId,
+        l_device->a_driver->a_name
+    );
 
     if(l_device->a_driver->a_api.a_init(l_device) == 0) {
         listAdd(&l_data->a_children, l_device);

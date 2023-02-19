@@ -84,7 +84,7 @@ static int ideInit(struct ts_device *p_device) {
     p_device->a_driverData = kmalloc(sizeof(struct ts_deviceDriverDataIde2));
 
     if(p_device->a_driverData == NULL) {
-        debugPrint("ide: Failed to allocate memory for driver data.\n");
+        debug("ide: Failed to allocate memory for driver data.\n");
         return 1;
     }
 
@@ -94,15 +94,13 @@ static int ideInit(struct ts_device *p_device) {
         sizeof(struct ts_deviceDriverDataIde)
     );
 
-    debugPrint("ide: Initializing IDE channel (0x");
-    debugPrintHex16(l_driverParameters->a_ioBase);
-    debugPrint(", 0x");
-    debugPrintHex16(l_driverParameters->a_ioControl);
-    debugPrint(", 0x");
-    debugPrintHex16(l_driverParameters->a_ioBusMaster);
-    debugPrint(", 0x");
-    debugPrintHex8(l_driverParameters->a_irq);
-    debugPrint(")...\n");
+    debug(
+        "ide: Initializing IDE channel (0x%04x, 0x%04x, 0x%04x, %d)...\n",
+        l_driverParameters->a_ioBase,
+        l_driverParameters->a_ioControl,
+        l_driverParameters->a_ioBusMaster,
+        l_driverParameters->a_irq
+    );
 
     ideDetectDrive(p_device, E_DEV_IDE_DRIVE_MASTER);
     ideDetectDrive(p_device, E_DEV_IDE_DRIVE_SLAVE);
@@ -119,9 +117,9 @@ static int ideDetectDrive(
 
     ideSelectDrive(p_device, p_drive);
 
-    debugPrint("ide: Checking for ");
-    debugPrint(p_drive == E_DEV_IDE_DRIVE_MASTER ? "master" : "slave");
-    debugPrint(" drive...\n");
+    debug("ide: Checking for ");
+    debug(p_drive == E_DEV_IDE_DRIVE_MASTER ? "master" : "slave");
+    debug(" drive...\n");
 
     outb(
         l_deviceDriverData->a_data.a_ioBase + E_IOOFFSET_IDE_SECTOR_COUNT,
@@ -147,7 +145,7 @@ static int ideDetectDrive(
     ideWait(p_device);
 
     if(inb(l_deviceDriverData->a_data.a_ioBase + E_IOOFFSET_IDE_STATUS) == 0x00) {
-        debugPrint("ide: No drive detected.\n");
+        debug("ide: No drive detected.\n");
         return 1;
     }
 
@@ -159,15 +157,15 @@ static int ideDetectDrive(
     uint16_t l_driveType = (l_lbaHigh << 8) | l_lbaMid;
 
     if(l_driveType == 0) {
-        debugPrint("ide: Detected PATA drive.\n");
+        debug("ide: Detected PATA drive.\n");
     } else if(l_driveType == 0xeb14) {
-        debugPrint("ide: Detected PATAPI drive.\n");
+        debug("ide: Detected PATAPI drive.\n");
     } else if(l_driveType == 0x9669) {
-        debugPrint("ide: Detected SATAPI drive.\n");
+        debug("ide: Detected SATAPI drive.\n");
     } else if(l_driveType == 0xc33c) {
-        debugPrint("ide: Detected SATA drive.\n");
+        debug("ide: Detected SATA drive.\n");
     } else {
-        debugPrint("ide: Unknown drive type.\n");
+        debug("ide: Unknown drive type.\n");
         return 1;
     }
 
