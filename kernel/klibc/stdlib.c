@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <kernel/common.h>
 #include <kernel/klibc/stdlib.h>
 #include <kernel/mm/pmm.h>
 
@@ -25,4 +26,12 @@ void kfree(void *p_ptr) {
 
 void *kmalloc(size_t p_size) {
     return pmmAlloc(p_size);
+}
+
+void *krealloc(void *p_ptr, size_t p_size) {
+    M_UNUSED_PARAMETER(p_size);
+
+    /*TODO*/
+
+    return p_ptr;
 }

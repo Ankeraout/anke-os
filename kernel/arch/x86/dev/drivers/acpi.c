@@ -15,7 +15,7 @@
 #include <kernel/dev/pci.h>
 #include <kernel/dev/timer.h>
 #include <kernel/klibc/stdlib.h>
-#include <kernel/klibc/list.h>
+#include <kernel/misc/list.h>
 #include <kernel/debug.h>
 
 struct ts_acpiRsdp {
@@ -165,7 +165,7 @@ struct ts_acpiDeviceDriverData {
     const struct ts_acpiRsdp2 *a_acpiRsdp;
     int a_acpiRsdpVersion;
     const struct ts_acpiFadt *a_acpiFadt;
-    struct ts_list a_children;
+    struct ts_arrayList a_children;
 };
 
 static struct ts_acpiDeviceDriverData s_acpiDeviceDriverData;
@@ -176,7 +176,7 @@ static int acpiInit(struct ts_device *p_device) {
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
-    if(listInit(&l_data->a_children) == NULL) {
+    if(arrayListInit(&l_data->a_children) != 0) {
         debug("acpi: Failed to allocate memory for children list.\n");
         return 1;
     }
@@ -220,7 +220,7 @@ static int acpiInit(struct ts_device *p_device) {
     l_pic->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pic->a_driver = (const struct ts_deviceDriver *)&g_deviceDriverI8259;
     l_pic->a_driver->a_api.a_init(l_pic);
-    listAdd(&l_data->a_children, l_pic);
+    arrayListAdd(&l_data->a_children, l_pic);
 
     isrInit(l_pic);
 
@@ -239,7 +239,7 @@ static int acpiInit(struct ts_device *p_device) {
     l_pit->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pit->a_parent = p_device;
     l_pit->a_driver->a_api.a_init(l_pit);
-    listAdd(&l_data->a_children, l_pit);
+    arrayListAdd(&l_data->a_children, l_pit);
 
     timerSetDevice(l_pit);
 
@@ -255,7 +255,7 @@ static int acpiInit(struct ts_device *p_device) {
     l_pciController->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
     l_pciController->a_parent = p_device;
     l_pciController->a_driver->a_api.a_init(l_pciController);
-    listAdd(&l_data->a_children, l_pciController);
+    arrayListAdd(&l_data->a_children, l_pciController);
 
     // Initialize PS/2 controller
     if(acpiIs8042Present(p_device)) {
@@ -270,7 +270,7 @@ static int acpiInit(struct ts_device *p_device) {
         l_ps2Controller->a_address.a_common.a_bus = E_DEVICEBUS_ROOT;
         l_ps2Controller->a_parent = p_device;
         l_ps2Controller->a_driver->a_api.a_init(l_ps2Controller);
-        listAdd(&l_data->a_children, l_ps2Controller);
+        arrayListAdd(&l_data->a_children, l_ps2Controller);
     }
 
     return 0;
@@ -436,12 +436,12 @@ static struct ts_device *acpiDriverApiGetChild(
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
-    return (struct ts_device *)listGet(&l_data->a_children, p_childIndex);
+    return (struct ts_device *)arrayListGet(&l_data->a_children, p_childIndex);
 }
 
 static size_t acpiDriverApiGetChildCount(struct ts_device *p_device) {
     struct ts_acpiDeviceDriverData *l_data =
         (struct ts_acpiDeviceDriverData *)&p_device->a_driverData;
 
-    return listGetLength(&l_data->a_children);
+    return arrayListGetLength(&l_data->a_children);
 }

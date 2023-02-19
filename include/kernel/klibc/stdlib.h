@@ -6,5 +6,6 @@
 void *kcalloc(size_t p_size);
 void kfree(void *p_ptr);
 void *kmalloc(size_t p_size);
+void *krealloc(void *p_ptr, size_t p_size);
 
 #endif

@@ -3,8 +3,8 @@
 #include <kernel/arch/x86/inline.h>
 #include <kernel/dev/device.h>
 #include <kernel/dev/pci.h>
-#include <kernel/klibc/list.h>
 #include <kernel/klibc/stdlib.h>
+#include <kernel/misc/list.h>
 #include <kernel/debug.h>
 
 #define C_IOPORT_PCI_CONFIG_ADDRESS 0xcf8
@@ -61,7 +61,7 @@ static struct ts_device *pciDriverApiGetChild(
 );
 
 struct ts_pciData {
-    struct ts_list a_children;
+    struct ts_arrayList a_children;
 };
 
 const struct ts_deviceDriverPci g_deviceDriverPci = {
@@ -94,7 +94,7 @@ static int pciInit(struct ts_device *p_device) {
 
     struct ts_pciData *l_data = (struct ts_pciData *)p_device->a_driverData;
 
-    if(listInit(&l_data->a_children) == NULL) {
+    if(arrayListInit(&l_data->a_children) != 0) {
         debug("acpi: Failed to allocate memory for children list.\n");
         return 1;
     }
@@ -169,7 +169,7 @@ static void pciInitDevice(
     );
 
     if(l_device->a_driver->a_api.a_init(l_device) == 0) {
-        listAdd(&l_data->a_children, l_device);
+        arrayListAdd(&l_data->a_children, l_device);
     }
 }
 
@@ -311,7 +311,7 @@ static void pciConfigWrite32(
 static size_t pciDriverApiGetChildCount(struct ts_device *p_device) {
     struct ts_pciData *l_data = (struct ts_pciData *)p_device->a_driverData;
 
-    return listGetLength(&l_data->a_children);
+    return arrayListGetLength(&l_data->a_children);
 }
 
 static struct ts_device *pciDriverApiGetChild(
@@ -320,5 +320,5 @@ static struct ts_device *pciDriverApiGetChild(
 ) {
     struct ts_pciData *l_data = (struct ts_pciData *)p_device->a_driverData;
 
-    return listGet(&l_data->a_children, p_index);
+    return arrayListGet(&l_data->a_children, p_index);
 }
