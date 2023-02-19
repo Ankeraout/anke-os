@@ -1,12 +1,12 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <kernel/arch/x86/inline.h>
 #include <kernel/arch/x86/isr.h>
 #include <kernel/arch/x86/dev/drivers/i8259.h>
 #include <kernel/dev/device.h>
 #include <kernel/dev/interruptcontroller.h>
-#include <kernel/klibc/string.h>
 #include <kernel/debug.h>
 
 static tf_isrHandler *s_isrHandlers[48];

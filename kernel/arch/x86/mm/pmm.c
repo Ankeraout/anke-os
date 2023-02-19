@@ -1,10 +1,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <kernel/arch/arch.h>
 #include <kernel/boot/boot.h>
-#include <kernel/klibc/string.h>
 #include <kernel/mm/pmm.h>
 #include <kernel/debug.h>
 

@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <kernel/arch/arch.h>
 #include <kernel/arch/x86/inline.h>
@@ -13,9 +14,8 @@
 #include <kernel/dev/device.h>
 #include <kernel/dev/pci.h>
 #include <kernel/dev/timer.h>
-#include <kernel/klibc/list.h>
 #include <kernel/klibc/stdlib.h>
-#include <kernel/klibc/string.h>
+#include <kernel/klibc/list.h>
 #include <kernel/debug.h>
 
 struct ts_acpiRsdp {

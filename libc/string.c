@@ -1,5 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 int memcmp(const void *p_ptr1, const void *p_ptr2, size_t p_size) {
     for(size_t l_index = 0; l_index < p_size; l_index++) {
@@ -37,4 +39,101 @@ void *memset(void *p_ptr, int p_value, size_t p_count) {
     }
 
     return p_ptr;
+}
+
+int strcmp(const char *p_str1, const char *p_str2) {
+    size_t l_index = 0;
+
+    while((p_str1[l_index] == p_str2[l_index]) && (p_str1[l_index] != '\0')) {
+        l_index++;
+    }
+
+    if(p_str1[l_index] == p_str2[l_index]) {
+        return 0;
+    } else if(p_str1[l_index] < p_str2[l_index]) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+char *strcpy(char *p_dst, const char *p_src) {
+    size_t l_index = 0;
+
+    do {
+        p_dst[l_index] = p_src[l_index];
+        l_index++;
+    } while(p_src[l_index] != '\0');
+
+    return p_dst;
+}
+
+char *strdup(const char *p_src) {
+    size_t l_length = strlen(p_src) + 1;
+    char *l_copy = malloc(l_length);
+
+    memcpy(l_copy, p_src, l_length);
+    
+    return l_copy;
+}
+
+size_t strlen(const char *p_str) {
+    size_t l_length = 0;
+
+    while(p_str[l_length] != '\0') {
+        l_length++;
+    }
+
+    return l_length;
+}
+
+
+int strncmp(const char *p_str1, const char *p_str2, size_t p_length) {
+    size_t l_index = 0;
+
+    while(
+        (p_str1[l_index] == p_str2[l_index])
+        && (p_str1[l_index] != '\0')
+        && (l_index < p_length)
+    ) {
+        l_index++;
+    }
+
+    if(p_str1[l_index] == p_str2[l_index]) {
+        return 0;
+    } else if(p_str1[l_index] < p_str2[l_index]) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+char *strncpy(char *p_dst, const char *p_src, size_t p_length) {
+    size_t l_index = 0;
+
+    do {
+        p_dst[l_index] = p_src[l_index];
+        l_index++;
+    } while(
+        (p_src[l_index] != '\0')
+        && (l_index < p_length)
+    );
+
+    return p_dst;
+}
+
+char *strndup(const char *p_src, size_t p_length) {
+    size_t l_length = strlen(p_src);
+
+    if(l_length > p_length) {
+        l_length = p_length;
+    }
+
+    char *l_copy = malloc(l_length + 1);
+
+    memcpy(l_copy, p_src, l_length);
+
+    l_copy[l_length] = '\0';
+    
+    return l_copy;
 }

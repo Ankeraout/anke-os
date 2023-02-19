@@ -1,8 +1,9 @@
+#include <string.h>
+
 #include <kernel/arch/x86/dev/drivers/ide.h>
 #include <kernel/arch/x86/inline.h>
 #include <kernel/dev/device.h>
 #include <kernel/klibc/stdlib.h>
-#include <kernel/klibc/string.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
 

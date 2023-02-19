@@ -3,7 +3,7 @@
 #include <kernel/boot/boot.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
-#include "limine.h"
+#include <limine.h>
 
 #ifdef __BOOT_LIMINE
 

@@ -1,15 +1,31 @@
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include <kernel/common.h>
 #include <kernel/klibc/stdlib.h>
 #include <kernel/mm/pmm.h>
 
-/* TODO: Keep track of the number of pages allocated at a time for kfree(). */
-/* TODO: Map/unmap allocated pages in kernel space. */
+void *calloc(size_t p_size) {
+    void *l_buffer = malloc(p_size);
 
-void *kmalloc(size_t p_size) {
-    return pmmAlloc(p_size);
+    if(l_buffer == NULL) {
+        return NULL;
+    }
+
+    memset(l_buffer, 0, p_size);
+
+    return l_buffer;
 }
 
-void kfree(void *p_ptr) {
-    pmmFree(p_ptr, 1);
+void free(void *p_ptr) {
+    M_UNUSED_PARAMETER(p_ptr);
+
+    // Do nothing
+}
+
+void *malloc(size_t p_size) {
+    M_UNUSED_PARAMETER(p_size);
+
+    return NULL;
 }

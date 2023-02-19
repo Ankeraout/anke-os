@@ -1,12 +1,12 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <kernel/arch/arch.h>
 #include <kernel/dev/ps2.h>
 #include <kernel/dev/timer.h>
 #include <kernel/dev/drivers/unknown.h>
 #include <kernel/klibc/stdlib.h>
-#include <kernel/klibc/string.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
 

@@ -1,8 +1,8 @@
 #include <stddef.h>
+#include <string.h>
 
 #include <kernel/klibc/list.h>
 #include <kernel/klibc/stdlib.h>
-#include <kernel/klibc/string.h>
 #include <kernel/mm/pmm.h>
 
 static struct ts_list *listResize(

@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 
-void *kmalloc(size_t p_size);
+void *kcalloc(size_t p_size);
 void kfree(void *p_ptr);
+void *kmalloc(size_t p_size);
 
 #endif
