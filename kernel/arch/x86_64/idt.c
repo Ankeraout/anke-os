@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <kernel/arch/x86/inline.h>
-#include <kernel/arch/x86/isr.h>
+#include <kernel/arch/x86_64/inline.h>
+#include <kernel/arch/x86_64/isr.h>
 #include <kernel/debug.h>
 
 #define C_IDT_ENTRY_COUNT 256

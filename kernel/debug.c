@@ -31,10 +31,10 @@ static void checkAction(
     va_list p_argList
 );
 
-static tf_debugWriteFunc *s_debugWriteFunc = NULL;
+static void (*s_debugWriteFunc)(void *p_parameter, char p_value) = NULL;
 static void *s_debugWriteFuncParameter = NULL;
 
-void debugInit(tf_debugWriteFunc *p_writeFunc, void *p_parameter) {
+void debugInit(void (*p_writeFunc)(void *p_parameter, char p_value), void *p_parameter) {
     s_debugWriteFunc = p_writeFunc;
     s_debugWriteFuncParameter = p_parameter;
 }

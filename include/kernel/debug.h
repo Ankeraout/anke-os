@@ -5,9 +5,10 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-typedef void tf_debugWriteFunc(void *p_parameter, char p_value);
-
-void debugInit(tf_debugWriteFunc *p_writeFunc, void *p_parameter);
+void debugInit(
+    void (*p_writeFunc)(void *p_parameter, char p_value),
+    void *p_parameter
+);
 void debug(const char *p_format, ...);
 
 #endif

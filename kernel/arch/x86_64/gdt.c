@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include <kernel/arch/x86/inline.h>
+#include <kernel/arch/x86_64/inline.h>
 #include <kernel/debug.h>
 
 struct ts_gdtEntry {

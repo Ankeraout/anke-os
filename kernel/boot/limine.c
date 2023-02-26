@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include <kernel/arch/x86_64/inline.h>
 #include <kernel/boot/boot.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
@@ -16,6 +17,8 @@ static volatile struct limine_framebuffer_request s_framebufferRequest = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0
 };
+
+static void bootDebugWrite(void *p_parameter, char p_value);
 
 void _start(void) {
     struct ts_bootMemoryMapEntry l_memoryMap[s_memmapRequest.response->entry_count];
@@ -43,16 +46,16 @@ void _start(void) {
 
     struct ts_boot l_boot = {
         .a_memoryMap = l_memoryMap,
-        .a_memoryMapLength = s_memmapRequest.response->entry_count,
-        .a_framebuffer = {
-            .a_buffer = s_framebufferRequest.response->framebuffers[0]->address,
-            .a_width = s_framebufferRequest.response->framebuffers[0]->width,
-            .a_height = s_framebufferRequest.response->framebuffers[0]->height,
-            .a_pitch = s_framebufferRequest.response->framebuffers[0]->pitch
-        }
+        .a_memoryMapLength = s_memmapRequest.response->entry_count
     };
 
+    debugInit(bootDebugWrite, NULL);
+
     main(&l_boot);
+}
+
+static void bootDebugWrite(void *p_parameter, char p_value) {
+    outb(0xe9, p_value);
 }
 
 #endif

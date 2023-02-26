@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <kernel/dev/framebuffer.h>
-
 enum te_bootMemoryMapEntryType {
     E_MMAP_TYPE_FREE,
     E_MMAP_TYPE_RECLAIMABLE,
@@ -22,7 +20,6 @@ struct ts_bootMemoryMapEntry {
 struct ts_boot {
     size_t a_memoryMapLength;
     const struct ts_bootMemoryMapEntry *a_memoryMap;
-    struct ts_devFramebuffer a_framebuffer;
 };
 
 extern void main(struct ts_boot *p_boot);

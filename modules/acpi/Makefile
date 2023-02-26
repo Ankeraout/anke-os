@@ -13,41 +13,40 @@ CFLAGS += -W -Wall -Wextra
 CFLAGS += -std=gnu99 -pedantic-errors
 CFLAGS += -g3 -O2
 CFLAGS += -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64
-CFLAGS += -I../include -I../limine-bootloader
+CFLAGS += -I../../include
 LDFLAGS += -nostdlib -static -m elf_x86_64
 LDFLAGS += -z max-page-size=0x1000
-LDFLAGS += -T kernel.ld
+LDFLAGS += -r
 
 rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
 SOURCES_C := $(call rwildcard, ., *.c)
 SOURCES_ASM := $(call rwildcard, ., *.asm)
 SOURCES := $(SOURCES_C) $(SOURCES_ASM)
-OBJECTS_C := $(patsubst ./%.c, ../obj/kernel/%.c.o, $(SOURCES_C))
-OBJECTS_ASM := $(patsubst ./%.asm, ../obj/kernel/%.asm.o, $(SOURCES_ASM))
+OBJECTS_C := $(patsubst ./%.c, ../../obj/modules/acpi/%.c.o, $(SOURCES_C))
+OBJECTS_ASM := $(patsubst ./%.asm, ../../obj/modules/acpi/%.asm.o, $(SOURCES_ASM))
 OBJECTS := $(OBJECTS_C) $(OBJECTS_ASM)
-DIRECTORIES := $(patsubst ./%, ../obj/kernel/%, $(dir $(SOURCES)))
-EXECUTABLE := ../bin/kernel/kernel.elf
-DEPENDENCIES := $(patsubst ./%.c, ../obj/kernel/%.c.d, $(SOURCES_C))
-MODULES_KERNEL_EXECUTABLES := $(foreach module,$(MODULES_KERNEL),../bin/modules/$(module).elf)
+DIRECTORIES := $(patsubst ./%, ../../obj/modules/acpi/%, $(dir $(SOURCES)))
+EXECUTABLE := ../../bin/modules/acpi.elf
+DEPENDENCIES := $(patsubst ./%.c, ../../obj/modules/acpi/%.c.d, $(SOURCES_C))
 
 all: dirs $(EXECUTABLE)
 
-../obj/kernel/%.c.o: ./%.c
+../../obj/modules/acpi/%.c.o: ./%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-../obj/kernel/%.asm.o: ./%.asm
+../../obj/modules/acpi/%.asm.o: ./%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
-$(EXECUTABLE): $(OBJECTS) ../bin/libc/libc.a $(MODULES_KERNEL_EXECUTABLES)
+$(EXECUTABLE): $(OBJECTS)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 clean:
-	$(RM) ../bin/kernel ../obj/kernel
+	$(RM) $(EXECUTABLE) $(OBJECTS)
 
 -include $(DEPENDENCIES)
 
 dirs:
-	$(MKDIR) ../bin/kernel $(DIRECTORIES)
+	$(MKDIR) ../../bin/modules $(DIRECTORIES)
 
 .PHONY: all clean dirs

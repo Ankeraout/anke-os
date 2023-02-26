@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_ARCH_X86_INLINE_H__
-#define __INCLUDE_ARCH_X86_INLINE_H__
+#ifndef __INCLUDE_ARCH_X86_64_INLINE_H__
+#define __INCLUDE_ARCH_X86_64_INLINE_H__
 
 #include <stdint.h>
 
