@@ -55,6 +55,8 @@ void _start(void) {
 }
 
 static void bootDebugWrite(void *p_parameter, char p_value) {
+    M_UNUSED_PARAMETER(p_parameter);
+
     outb(0xe9, p_value);
 }
 

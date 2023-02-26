@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include <kernel/debug.h>
 #include <kernel/module.h>
 #include <kernel/misc/list.h>
 
@@ -15,6 +16,20 @@ static size_t moduleGetKernelModuleCount(void);
 int moduleInit(void) {
     if(arrayListInit(&s_loadedModules) != 0) {
         return 1;
+    }
+
+    const size_t l_kernelModuleCount = moduleGetKernelModuleCount();
+
+    debug(
+        "kernel: Found %d loadable kernel modules:\n",
+        l_kernelModuleCount
+    );
+
+    for(size_t l_index = 0; l_index < l_kernelModuleCount; l_index++) {
+        debug(
+            "kernel:   - %s\n",
+            g_kernelModules[l_index].a_name
+        );
     }
 
     return 0;
@@ -36,15 +51,21 @@ const struct ts_module *moduleGetKernelModule(const char *p_name) {
 }
 
 int moduleLoad(const struct ts_module *p_module, const char *p_args) {
+    if(moduleIsModuleLoaded(p_module)) {
+        return 0;
+    }
+
     int l_returnValue = arrayListAdd(&s_loadedModules, (void *)p_module);
 
     if(l_returnValue != 0) {
         return l_returnValue;
     }
 
-    l_returnValue = p_module->a_init(p_args);
+    l_returnValue = p_module->a_call(E_MODULECALL_INIT, (void *)p_args);
 
     if(l_returnValue != 0) {
+        arrayListRemoveItem(&s_loadedModules, p_module);
+
         return l_returnValue;
     }
 
@@ -52,6 +73,12 @@ int moduleLoad(const struct ts_module *p_module, const char *p_args) {
 }
 
 int moduleUnload(const struct ts_module *p_module) {
+    if(!moduleIsModuleLoaded(p_module)) {
+        return 0;
+    }
+
+    p_module->a_call(E_MODULECALL_QUIT, NULL);
+
     return arrayListRemoveItem(&s_loadedModules, p_module);
 }
 

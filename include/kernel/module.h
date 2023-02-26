@@ -5,11 +5,21 @@
 #include <stddef.h>
 
 #define M_DECLARE_MODULE __attribute__((section(".modules")))
+#define C_MODULE_FIRST_FREE_CALL 2
+
+enum {
+    E_MODULECALL_INIT,
+    E_MODULECALL_QUIT
+};
+
+enum {
+    E_MODULECALLRESULT_SUCCESS,
+    E_MODULECALLRESULT_NOT_IMPLEMENTED
+};
 
 struct ts_module {
     const char *a_name;
-    int (*a_init)(const char *p_commandLine);
-    void (*a_quit)(void);
+    int (*a_call)(int, void *);
 };
 
 /**

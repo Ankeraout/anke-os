@@ -9,6 +9,7 @@
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/debug.h>
+#include <kernel/module.h>
 
 int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
@@ -23,7 +24,8 @@ int archPreinit(struct ts_boot *p_boot) {
 }
 
 int archInit(void) {
-    debug("arch: init()\n");
+    // Load PCI (main bus) module.
+    moduleLoad(moduleGetKernelModule("pci"), NULL);
 
     return 0;
 }

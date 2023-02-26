@@ -15,8 +15,6 @@ void main(struct ts_boot *p_boot) {
         archHaltAndCatchFire();
     }
 
-    // Here, memory management is available.
-
     if(moduleInit() != 0) {
         debug("kernel: Failed to initialize module subsystem.\n");
         archHaltAndCatchFire();
