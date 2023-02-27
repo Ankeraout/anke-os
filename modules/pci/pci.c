@@ -216,27 +216,26 @@ static void pciCheckDeviceFunction(
 static void pciInitDevice(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
     uint16_t l_deviceId = pciConfigRead16(p_bus, p_slot, p_function, 0);
     uint16_t l_vendorId = pciConfigRead16(p_bus, p_slot, p_function, 2);
-
-    /*
     uint8_t l_deviceClass = pciConfigRead8(p_bus, p_slot, p_function, 8);
     uint8_t l_deviceSubclass = pciConfigRead8(p_bus, p_slot, p_function, 9);
     uint8_t l_deviceProgrammingInterface = pciConfigRead8(p_bus, p_slot, p_function, 10);
     uint8_t l_deviceRevision = pciConfigRead8(p_bus, p_slot, p_function, 11);
-    */
 
     debug(
-        "pci: %02x:%02x.%x: %04x:%04x\n",
+        "pci: %02x:%02x.%x: %04x:%04x (%02x:%02x:%02x:%02x)\n",
         p_bus,
         p_slot,
         p_function,
         l_vendorId,
-        l_deviceId
+        l_deviceId,
+        l_deviceClass,
+        l_deviceSubclass,
+        l_deviceProgrammingInterface,
+        l_deviceRevision
     );
 }
 
 static int pciCall(int l_operation, void *p_arg) {
-    M_UNUSED_PARAMETER(p_arg);
-
     switch(l_operation) {
         case E_MODULECALL_INIT: return pciInit();
 

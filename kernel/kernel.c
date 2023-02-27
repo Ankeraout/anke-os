@@ -3,6 +3,7 @@
 #include <kernel/arch/arch.h>
 #include <kernel/boot/boot.h>
 #include <kernel/fonts/fonts.h>
+#include <kernel/fs/vfs.h>
 #include <kernel/debug.h>
 #include <kernel/module.h>
 
@@ -12,6 +13,11 @@ void main(struct ts_boot *p_boot) {
     if(archPreinit(p_boot) != 0) {
         debug("kernel: Architecture-specific initialization failed.\n");
         debug("kernel: System halted.\n");
+        archHaltAndCatchFire();
+    }
+
+    if(vfsInit() != 0) {
+        debug("kernel: Failed to initialize VFS subsystem.\n");
         archHaltAndCatchFire();
     }
 
