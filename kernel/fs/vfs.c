@@ -26,3 +26,7 @@ int vfsInit(void) {
 
     return 0;
 }
+
+struct ts_vfsNode *vfsOpen(const char *p_path) {
+
+}
