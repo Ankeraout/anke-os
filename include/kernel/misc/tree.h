@@ -11,7 +11,7 @@ struct ts_treeNode {
 };
 
 int treeInit(struct ts_treeNode *p_tree, void *p_data);
-int treeAddChild(struct ts_treeNode *p_tree, void *p_data);
+struct ts_treeNode *treeAddChild(struct ts_treeNode *p_tree, void *p_data);
 int treeDestroy(struct ts_treeNode *p_tree);
 size_t treeGetLength(struct ts_treeNode *p_tree);
 

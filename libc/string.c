@@ -72,8 +72,12 @@ char *strdup(const char *p_src) {
     size_t l_length = strlen(p_src) + 1;
     char *l_copy = malloc(l_length);
 
+    if(l_copy == NULL) {
+        return NULL;
+    }
+
     memcpy(l_copy, p_src, l_length);
-    
+
     return l_copy;
 }
 
@@ -134,6 +138,6 @@ char *strndup(const char *p_src, size_t p_length) {
     memcpy(l_copy, p_src, l_length);
 
     l_copy[l_length] = '\0';
-    
+
     return l_copy;
 }

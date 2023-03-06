@@ -68,42 +68,42 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
 
 static void panic(const struct ts_isrRegisters *p_registers) {
     debug(
-        "panic: RIP=0x%016x RSP=0x%016x RBP=0x%016x\n",
+        "panic: RIP=0x%016lx RSP=0x%016lx RBP=0x%016lx\n",
         p_registers->a_rip,
         p_registers->a_rsp,
         p_registers->a_rbp
     );
 
     debug(
-        "panic: RSI=0x%016x RDI=0x%016x RAX=0x%016x\n",
+        "panic: RSI=0x%016lx RDI=0x%016lx RAX=0x%016lx\n",
         p_registers->a_rsi,
         p_registers->a_rdi,
         p_registers->a_rax
     );
 
     debug(
-        "panic: RBX=0x%016x RCX=0x%016x RDX=0x%016x\n",
+        "panic: RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n",
         p_registers->a_rbx,
         p_registers->a_rcx,
         p_registers->a_rdx
     );
 
     debug(
-        "panic: R8 =0x%016x R9 =0x%016x R10=0x%016x\n",
+        "panic: R8 =0x%016lx R9 =0x%016lx R10=0x%016lx\n",
         p_registers->a_r8,
         p_registers->a_r9,
         p_registers->a_r10
     );
 
     debug(
-        "panic: R11=0x%016x R12=0x%016x R13=0x%016x\n",
+        "panic: R11=0x%016lx R12=0x%016lx R13=0x%016lx\n",
         p_registers->a_r11,
         p_registers->a_r12,
         p_registers->a_r13
     );
 
     debug(
-        "panic: R14=0x%016x R15=0x%016x RFLAGS=0x%016x\n",
+        "panic: R14=0x%016lx R15=0x%016lx RFLAGS=0x%016lx\n",
         p_registers->a_r14,
         p_registers->a_r15,
         p_registers->a_rflags

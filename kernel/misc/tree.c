@@ -10,26 +10,27 @@ int treeInit(struct ts_treeNode *p_tree, void *p_data) {
     return linkedListInit(&p_tree->a_children);
 }
 
-int treeAddChild(struct ts_treeNode *p_tree, void *p_data) {
+struct ts_treeNode *treeAddChild(struct ts_treeNode *p_tree, void *p_data) {
     struct ts_treeNode *l_newNode = kmalloc(sizeof(struct ts_treeNode));
 
     if(l_newNode == NULL) {
-        return 1;
+        return NULL;
     }
 
     if(treeInit(l_newNode, p_data) != 0) {
         kfree(l_newNode);
-        return 1;
+        return NULL;
     }
 
     if(linkedListAdd(&p_tree->a_children, l_newNode) != 0) {
+        linkedListDestroy(&l_newNode->a_children);
         kfree(l_newNode);
-        return 1;
+        return NULL;
     }
 
     l_newNode->a_parent = p_tree;
 
-    return 0;
+    return l_newNode;
 }
 
 int treeDestroy(struct ts_treeNode *p_tree) {
