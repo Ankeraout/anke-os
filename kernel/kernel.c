@@ -4,6 +4,7 @@
 #include <kernel/arch/arch.h>
 #include <kernel/boot/boot.h>
 #include <kernel/fonts/fonts.h>
+#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/debug.h>
 #include <kernel/module.h>
@@ -22,6 +23,22 @@ void main(struct ts_boot *p_boot) {
         archHaltAndCatchFire();
     }
 
+    debug("kernel: Mounting /dev...\n");
+
+    struct ts_vfsFileDescriptor *l_devFileDescriptor = devfsInit();
+
+    if(l_devFileDescriptor == NULL) {
+        debug("panic: Failed to create /dev.\n");
+        archHaltAndCatchFire();
+    }
+
+    if(vfsMount("/dev", l_devFileDescriptor) != 0) {
+        debug("panic: Failed to mount /dev.\n");
+        archHaltAndCatchFire();
+    }
+
+    vfsDebug();
+
     if(moduleInit() != 0) {
         debug("kernel: Failed to initialize module subsystem.\n");
         archHaltAndCatchFire();
@@ -34,33 +51,6 @@ void main(struct ts_boot *p_boot) {
     }
 
     debug("kernel: Done.\n");
-
-    // Create a dummy file descriptor for /.
-    struct ts_vfsFileDescriptor l_rootFileDescriptor = {
-        .a_name = ""
-    };
-
-    // Create a dummy file descriptor for /dev.
-    struct ts_vfsFileDescriptor l_devFileDescriptor = {
-        .a_name = "dev"
-    };
-
-    vfsMount("/", &l_rootFileDescriptor);
-    vfsMount("/dev", &l_devFileDescriptor);
-
-    vfsDebug();
-
-    debug("kernel: Getting /dev mount point...\n");
-
-    const char *l_relativePath = NULL;
-    struct ts_vfsFileDescriptor *l_devMountPoint =
-        vfsGetMountPoint("/dev/sda", &l_relativePath);
-
-    if(l_devMountPoint == NULL) {
-        debug("kernel: /dev is not mounted.\n");
-    } else {
-        debug("kernel: /dev is mounted. Relative path: %s\n", l_relativePath);
-    }
 
     archHaltAndCatchFire();
 }

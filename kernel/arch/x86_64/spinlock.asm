@@ -2,6 +2,11 @@ bits 64
 
 section .text
 
+global spinlockInit
+spinlockInit:
+    mov dword [edi], 0
+    ret
+
 global spinlockAcquire
 spinlockAcquire:
     lock bts dword [edi], 0

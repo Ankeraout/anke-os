@@ -13,6 +13,7 @@
 #define C_VFS_PATH_SEPARATOR '/'
 
 static struct ts_treeNode s_vfsRootNode;
+static t_spinlock s_vfsSpinlock;
 
 static void vfsDebug2(struct ts_treeNode *p_node, size_t p_depth);
 static void vfsGetMountPoint2(
@@ -44,6 +45,8 @@ int vfsInit(void) {
         return 1;
     }
 
+    spinlockInit(&s_vfsSpinlock);
+
     debug("vfs: VFS initialized.\n");
 
     return 0;
@@ -60,6 +63,8 @@ struct ts_vfsFileDescriptor *vfsGetMountPoint(
 
     struct ts_vfsFileDescriptor *l_returnValue;
 
+    spinlockAcquire(&s_vfsSpinlock);
+
     // Check if root is mounted
     struct ts_vfsNode *l_rootVfsNode = s_vfsRootNode.a_data;
 
@@ -74,6 +79,8 @@ struct ts_vfsFileDescriptor *vfsGetMountPoint(
         &s_vfsRootNode,
         &l_returnValue
     );
+
+    spinlockRelease(&s_vfsSpinlock);
 
     return l_returnValue;
 }
@@ -93,6 +100,8 @@ int vfsMount(
     }
 
     size_t l_pathIndex = 1;
+
+    spinlockAcquire(&s_vfsSpinlock);
 
     struct ts_treeNode *l_currentNode = &s_vfsRootNode;
     struct ts_vfsNode *l_currentNodeVfs = l_currentNode->a_data;
@@ -122,6 +131,7 @@ int vfsMount(
         l_fileNameBuffer[l_fileNameLength] = '\0';
 
         if(!l_isValid) {
+            spinlockRelease(&s_vfsSpinlock);
             debug("vfs: mount: Invalid mount path (file name too long).\n");
             return -EINVAL;
         }
@@ -154,6 +164,7 @@ int vfsMount(
             if(l_childNodeVfs == NULL) {
                 debug("vfs: mount: Failed to allocate memory.\n");
                 kfree(l_childNode);
+                spinlockRelease(&s_vfsSpinlock);
                 return -ENOMEM;
             }
 
@@ -163,6 +174,7 @@ int vfsMount(
                 debug("vfs: mount: Failed to allocate memory.\n");
                 kfree(l_childNodeVfs);
                 kfree(l_childNode);
+                spinlockRelease(&s_vfsSpinlock);
                 return -ENOMEM;
             }
 
@@ -175,6 +187,7 @@ int vfsMount(
                 kfree(l_childNodeVfs->a_name);
                 kfree(l_childNodeVfs);
                 kfree(l_childNode);
+                spinlockRelease(&s_vfsSpinlock);
                 return -ENOMEM;
             }
         }
@@ -196,9 +209,28 @@ int vfsMount(
 
     l_currentNodeVfs->a_fileDescriptor = p_fileDescriptor;
 
+    spinlockRelease(&s_vfsSpinlock);
+
     debug("vfs: mounted %s.\n", p_mountPath);
 
     return 0;
+}
+
+struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags) {
+    const char *l_relativePath = NULL;
+
+    struct ts_vfsFileDescriptor *l_mountPoint =
+        vfsGetMountPoint(p_path, &l_relativePath);
+
+    if(l_mountPoint == NULL) {
+        return NULL;
+    }
+
+    if(l_mountPoint->a_open == NULL) {
+        return NULL;
+    }
+
+    return l_mountPoint->a_open(l_mountPoint, l_relativePath, p_flags);
 }
 
 static void vfsDebug2(

@@ -5,6 +5,7 @@
 
 typedef uint32_t t_spinlock;
 
+void spinlockInit(t_spinlock *p_spinlock);
 void spinlockAcquire(t_spinlock *p_spinlock);
 void spinlockRelease(t_spinlock *p_spinlock);
 

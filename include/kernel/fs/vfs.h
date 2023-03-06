@@ -2,27 +2,56 @@
 #define __INCLUDE_KERNEL_FS_VFS_H__
 
 #include <kernel/arch/spinlock.h>
+#include <sys/types.h>
 
 #define C_VFS_MAX_FILENAME_SIZE 256
 
-#define C_VFS_FILETYPE_FILE 0x01
-#define C_VFS_FILETYPE_FOLDER 0x02
-#define C_VFS_FILETYPE_MOUNT 0x04
+enum {
+    E_VFS_FILETYPE_FILE = 1,
+    E_VFS_FILETYPE_FOLDER,
+    E_VFS_FILETYPE_BLOCK,
+    E_VFS_FILETYPE_CHARACTER
+};
 
 struct ts_vfsFileDescriptor;
 
-typedef int tf_vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
+typedef struct ts_vfsFileDescriptor *tf_vfsOpen(
+    struct ts_vfsFileDescriptor *p_file,
+    const char *p_path,
+    int p_flags
+);
 typedef void tf_vfsClose(struct ts_vfsFileDescriptor *p_file);
+typedef ssize_t tf_vfsRead(
+    struct ts_vfsFileDescriptor *p_file,
+    void *p_buffer,
+    size_t p_size
+);
+typedef ssize_t tf_vfsWrite(
+    struct ts_vfsFileDescriptor *p_file,
+    const void *p_buffer,
+    size_t p_size
+);
+typedef int tf_vfsIoctl(
+    struct ts_vfsFileDescriptor *p_file,
+    int p_request,
+    void *p_arg
+);
 
 /**
  * @brief This structure represents a file descriptor.
  */
 struct ts_vfsFileDescriptor {
+    // Free for use by the FS driver.
+    void *a_context;
+
     int a_openFlags;
     char a_name[C_VFS_MAX_FILENAME_SIZE];
     int a_type;
     tf_vfsOpen *a_open;
     tf_vfsClose *a_close;
+    tf_vfsRead *a_read;
+    tf_vfsWrite *a_write;
+    tf_vfsIoctl *a_ioctl;
 };
 
 /**
@@ -62,7 +91,7 @@ struct ts_vfsFileDescriptor *vfsGetMountPoint(
 
 /**
  * @brief Mounts the given file descriptor at the given path.
- * 
+ *
  * @retval 0 if the file was mounted successfully
  * @retval Any other value if an error occurred
  */
@@ -70,5 +99,12 @@ int vfsMount(
     const char *p_mountPath,
     struct ts_vfsFileDescriptor *p_fileDescriptor
 );
+
+/**
+ * @brief Gets the file descriptor for the given path.
+ *
+ * @retval NULL if the file could not be opened.
+ */
+struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags);
 
 #endif
