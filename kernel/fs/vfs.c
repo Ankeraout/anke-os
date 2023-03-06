@@ -133,7 +133,7 @@ int vfsMount(
         }
 
         struct ts_linkedListNode *l_child = l_currentNode->a_children.a_first;
-        struct ts_treeNode *l_childNode;
+        struct ts_treeNode *l_childNode = NULL;
         struct ts_vfsNode *l_childNodeVfs;
 
         while(l_child != NULL) {
