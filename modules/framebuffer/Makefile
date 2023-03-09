@@ -23,19 +23,19 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 SOURCES_C := $(call rwildcard, ., *.c)
 SOURCES_ASM := $(call rwildcard, ., *.asm)
 SOURCES := $(SOURCES_C) $(SOURCES_ASM)
-OBJECTS_C := $(patsubst ./%.c, ../../obj/modules/acpi/%.c.o, $(SOURCES_C))
-OBJECTS_ASM := $(patsubst ./%.asm, ../../obj/modules/acpi/%.asm.o, $(SOURCES_ASM))
+OBJECTS_C := $(patsubst ./%.c, ../../obj/modules/framebuffer/%.c.o, $(SOURCES_C))
+OBJECTS_ASM := $(patsubst ./%.asm, ../../obj/modules/framebuffer/%.asm.o, $(SOURCES_ASM))
 OBJECTS := $(OBJECTS_C) $(OBJECTS_ASM)
-DIRECTORIES := $(patsubst ./%, ../../obj/modules/acpi/%, $(dir $(SOURCES)))
-EXECUTABLE := ../../bin/modules/acpi.elf
-DEPENDENCIES := $(patsubst ./%.c, ../../obj/modules/acpi/%.c.d, $(SOURCES_C))
+DIRECTORIES := $(patsubst ./%, ../../obj/modules/framebuffer/%, $(dir $(SOURCES)))
+EXECUTABLE := ../../bin/modules/framebuffer.elf
+DEPENDENCIES := $(patsubst ./%.c, ../../obj/modules/framebuffer/%.c.d, $(SOURCES_C))
 
 all: dirs $(EXECUTABLE)
 
-../../obj/modules/acpi/%.c.o: ./%.c
+../../obj/modules/framebuffer/%.c.o: ./%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-../../obj/modules/acpi/%.asm.o: ./%.asm
+../../obj/modules/framebuffer/%.asm.o: ./%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)

@@ -46,7 +46,13 @@ void _start(void) {
 
     struct ts_boot l_boot = {
         .a_memoryMap = l_memoryMap,
-        .a_memoryMapLength = s_memmapRequest.response->entry_count
+        .a_memoryMapLength = s_memmapRequest.response->entry_count,
+        .a_framebuffer = {
+            .a_buffer = s_framebufferRequest.response->framebuffers[0]->address,
+            .a_width = s_framebufferRequest.response->framebuffers[0]->width,
+            .a_height = s_framebufferRequest.response->framebuffers[0]->height,
+            .a_pitch = s_framebufferRequest.response->framebuffers[0]->pitch
+        }
     };
 
     debugInit(bootDebugWrite, NULL);

@@ -24,9 +24,6 @@ int archPreinit(struct ts_boot *p_boot) {
 }
 
 int archInit(void) {
-    // Load PCI (main bus) module.
-    moduleLoad(moduleGetKernelModule("pci"), NULL);
-
     return 0;
 }
 

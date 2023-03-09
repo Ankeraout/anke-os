@@ -17,9 +17,17 @@ struct ts_bootMemoryMapEntry {
     enum te_bootMemoryMapEntryType a_type;
 };
 
+struct ts_bootFramebuffer {
+    void *a_buffer;
+    uint32_t a_width;
+    uint32_t a_height;
+    uint32_t a_pitch;
+};
+
 struct ts_boot {
     size_t a_memoryMapLength;
     const struct ts_bootMemoryMapEntry *a_memoryMap;
+    const struct ts_bootFramebuffer a_framebuffer;
 };
 
 extern void main(struct ts_boot *p_boot);

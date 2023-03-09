@@ -1,8 +1,10 @@
 #ifndef __INCLUDE_FONTS_FONTS_H__
 #define __INCLUDE_FONTS_FONTS_H__
 
+#include <stdint.h>
+
 struct ts_consoleFont {
-    int a_width;
+    int a_height;
     uint8_t a_data[];
 };
 

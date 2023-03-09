@@ -61,7 +61,7 @@ int moduleLoad(const struct ts_module *p_module, const char *p_args) {
         return l_returnValue;
     }
 
-    l_returnValue = p_module->a_call(E_MODULECALL_INIT, (void *)p_args);
+    l_returnValue = p_module->a_init(p_args);
 
     if(l_returnValue != 0) {
         arrayListRemoveItem(&s_loadedModules, p_module);
@@ -77,7 +77,7 @@ int moduleUnload(const struct ts_module *p_module) {
         return 0;
     }
 
-    p_module->a_call(E_MODULECALL_QUIT, NULL);
+    p_module->a_quit();
 
     return arrayListRemoveItem(&s_loadedModules, p_module);
 }

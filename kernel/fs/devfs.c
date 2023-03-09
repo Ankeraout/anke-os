@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include <kernel/common.h>
+#include <kernel/debug.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
@@ -51,6 +53,8 @@ static struct ts_vfsFileDescriptor *devfsOpen(
     const char *p_path,
     int p_flags
 ) {
+    M_UNUSED_PARAMETER(p_flags);
+
     if(p_path[0] == '\0') {
         return p_file;
     }
@@ -65,6 +69,8 @@ static struct ts_vfsFileDescriptor *devfsOpen(
         if(strcmp(l_nodeFile->a_name, p_path) == 0) {
             break;
         }
+
+        l_node = l_node->a_next;
     }
 
     if(l_node == NULL) {

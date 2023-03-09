@@ -267,7 +267,7 @@ static void vfsGetMountPoint2(
 
     // Compute file name
     while(true) {
-        char l_fileNameCharacter = p_path[l_pathIndex++];
+        char l_fileNameCharacter = p_path[l_pathIndex];
 
         if(l_fileNameCharacter == C_VFS_PATH_SEPARATOR) {
             l_isFile = false;
@@ -279,6 +279,7 @@ static void vfsGetMountPoint2(
             break;
         } else {
             l_fileName[l_fileNameLength++] = l_fileNameCharacter;
+            l_pathIndex++;
         }
     }
 
@@ -316,7 +317,12 @@ static void vfsGetMountPoint2(
 
     // Check if the current node is a mount point
     if(l_fileDescriptor != NULL) {
-        *p_relativePath = &p_path[l_pathIndex];
+        if(l_isFile) {
+            *p_relativePath = &p_path[l_pathIndex];
+        } else {
+            *p_relativePath = &p_path[l_pathIndex + 1];
+        }
+
         *p_returnValue = l_fileDescriptor;
     }
 
