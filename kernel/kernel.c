@@ -6,13 +6,17 @@
 #include <kernel/fonts/fonts.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
+#include <kernel/klibc/stdlib.h>
 #include <kernel/debug.h>
 #include <kernel/module.h>
 #include <modules/framebuffer.h>
+#include <modules/tty.h>
 
 static int initializeFramebuffer(
     const struct ts_bootFramebuffer *p_framebuffer
 );
+static int initializeTty(const char *p_fbDeviceName);
+static void ttyDebug(void *p_parameter, char p_character);
 
 void main(struct ts_boot *p_boot) {
     debug("kernel: Starting AnkeKernel...\n");
@@ -45,8 +49,6 @@ void main(struct ts_boot *p_boot) {
         archHaltAndCatchFire();
     }
 
-    vfsDebug();
-
     // Initialize modules
     if(moduleInit() != 0) {
         debug("kernel: Failed to initialize module subsystem.\n");
@@ -54,7 +56,9 @@ void main(struct ts_boot *p_boot) {
     }
 
     // Initialize framebuffer
-    initializeFramebuffer(&p_boot->a_framebuffer);
+    if(initializeFramebuffer(&p_boot->a_framebuffer) == 0) {
+        initializeTty("/dev/fb0");
+    }
 
     // Initialize arch-specific devices.
     if(archInit() != 0) {
@@ -110,9 +114,69 @@ static int initializeFramebuffer(
             &l_requestCreate
         ) != 0
     ) {
+        kfree(l_framebuffer);
         debug("kernel: Failed to create framebuffer device file.\n");
         return 1;
     }
 
+    kfree(l_framebuffer);
+
     return 0;
+}
+
+static int initializeTty(const char *p_fbDeviceName) {
+    // Load tty module
+    debug("kernel: Loading tty module...\n");
+
+    const struct ts_module *l_moduleTty = moduleGetKernelModule("tty");
+
+    if(l_moduleTty == NULL) {
+        debug("kernel: tty module was not found.\n");
+        return 1;
+    }
+
+    if(moduleLoad(l_moduleTty, NULL) != 0) {
+        debug("kernel: Failed to load tty module.\n");
+        return 1;
+    }
+
+    // Open tty driver
+    struct ts_vfsFileDescriptor *l_tty = vfsOpen("/dev/tty", 0);
+
+    if(l_tty == NULL) {
+        debug("kernel: Failed to open tty driver file.\n");
+        return 1;
+    }
+
+    // Create tty device
+    int l_returnValue = l_tty->a_ioctl(
+        l_tty,
+        E_IOCTL_TTY_CREATE,
+        (void *)p_fbDeviceName
+    );
+
+    kfree(l_tty);
+
+    if(l_returnValue != 0) {
+        debug("kernel: Failed to create /dev/tty0.\n");
+        return l_returnValue;
+    }
+
+    debug("kernel: Created /dev/tty0.\n");
+
+    l_tty = vfsOpen("/dev/tty0", 0);
+
+    // Set kernel debug function
+    debugInit(ttyDebug, l_tty);
+
+    debug("kernel: Now printing on /dev/tty0.\n");
+
+    return 0;
+}
+
+static void ttyDebug(void *p_parameter, char p_character) {
+    struct ts_vfsFileDescriptor *l_tty =
+        (struct ts_vfsFileDescriptor *)p_parameter;
+
+    l_tty->a_write(l_tty, &p_character, 1);
 }

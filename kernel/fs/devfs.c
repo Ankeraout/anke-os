@@ -56,7 +56,7 @@ static struct ts_vfsFileDescriptor *devfsOpen(
     M_UNUSED_PARAMETER(p_flags);
 
     if(p_path[0] == '\0') {
-        return p_file;
+        return vfsClone(p_file);
     }
 
     // Look for a file with the given name
@@ -77,7 +77,7 @@ static struct ts_vfsFileDescriptor *devfsOpen(
         return NULL;
     }
 
-    return l_node->a_data;
+    return vfsClone(l_node->a_data);
 }
 
 static int devfsIoctl(

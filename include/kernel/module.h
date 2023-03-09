@@ -10,6 +10,7 @@ struct ts_module {
     const char *a_name;
     int (*a_init)(const char *p_args);
     void (*a_quit)(void);
+    void *a_reserved; // TODO: fix linker in-section alignment issue
 };
 
 /**

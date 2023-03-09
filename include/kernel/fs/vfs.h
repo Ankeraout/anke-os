@@ -107,4 +107,11 @@ int vfsMount(
  */
 struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags);
 
+/**
+ * @brief Clones the given file descriptor.
+ *
+ * @retval NULL if an error occurred.
+ */
+struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file);
+
 #endif

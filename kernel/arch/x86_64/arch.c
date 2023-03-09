@@ -11,6 +11,8 @@
 #include <kernel/debug.h>
 #include <kernel/module.h>
 
+static int archInitPci(void);
+
 int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
     idtInit();
@@ -24,6 +26,7 @@ int archPreinit(struct ts_boot *p_boot) {
 }
 
 int archInit(void) {
+    archInitPci();
     return 0;
 }
 
@@ -44,4 +47,24 @@ void archHaltAndCatchFire(void) {
         cli();
         hlt();
     }
+}
+
+static int archInitPci(void) {
+    // Find PCI module
+    const struct ts_module *l_pciModule = moduleGetKernelModule("pci");
+
+    if(l_pciModule == NULL) {
+        debug("kernel: pci module not found.\n");
+        return 1;
+    }
+
+    // Load PCI module
+    if(moduleLoad(l_pciModule, NULL) != 0) {
+        debug("kernel: pci module initialization failed.\n");
+        return 1;
+    }
+
+    debug("kernel: pci module was initialized successfully.\n");
+
+    return 0;
 }

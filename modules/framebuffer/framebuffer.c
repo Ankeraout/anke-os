@@ -88,6 +88,8 @@ static int framebufferInit(const char *p_arg) {
         l_framebufferDevice
     );
 
+    kfree(l_dev);
+
     if(l_returnValue != 0) {
         debug("framebuffer: Failed to create driver device file.\n");
         kfree(l_framebufferDevice);
@@ -108,6 +110,8 @@ static int framebufferIoctlDriver(
     int p_request,
     void *p_arg
 ) {
+    M_UNUSED_PARAMETER(p_file);
+
     switch(p_request) {
         case E_IOCTL_FRAMEBUFFER_CREATE:
             return framebufferCreate(p_arg);
@@ -125,6 +129,12 @@ static int framebufferIoctlDevice(
     struct ts_framebuffer *l_framebuffer = p_file->a_context;
 
     switch(p_request) {
+        case E_IOCTL_FRAMEBUFFER_GET_WIDTH:
+            return (int)l_framebuffer->a_width;
+
+        case E_IOCTL_FRAMEBUFFER_GET_HEIGHT:
+            return (int)l_framebuffer->a_height;
+
         case E_IOCTL_FRAMEBUFFER_FILL:
             framebufferFill(l_framebuffer, p_arg);
             return 0;

@@ -233,6 +233,20 @@ struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags) {
     return l_mountPoint->a_open(l_mountPoint, l_relativePath, p_flags);
 }
 
+struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file) {
+    struct ts_vfsFileDescriptor *l_clone =
+        kmalloc(sizeof(struct ts_vfsFileDescriptor));
+
+    if(l_clone == NULL) {
+        debug("vfs: clone: Failed to allocate memory.\n");
+        return NULL;
+    }
+
+    memcpy(l_clone, p_file, sizeof(struct ts_vfsFileDescriptor));
+
+    return l_clone;
+}
+
 static void vfsDebug2(
     struct ts_treeNode *p_node,
     size_t p_depth
