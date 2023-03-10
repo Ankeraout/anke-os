@@ -113,6 +113,11 @@ static ssize_t ataWritePata(
     const void *p_buffer,
     size_t p_size
 );
+static ssize_t ataReadPataSector(
+    struct ts_ataDriveContext *p_context,
+    uint64_t p_lba,
+    void *p_buffer
+);
 
 M_DECLARE_MODULE struct ts_module g_moduleAta = {
     .a_name = "ata",
@@ -559,11 +564,28 @@ static ssize_t ataReadPata(
     void *p_buffer,
     size_t p_size
 ) {
-    M_UNUSED_PARAMETER(p_file);
-    M_UNUSED_PARAMETER(p_buffer);
-    M_UNUSED_PARAMETER(p_size);
+    struct ts_ataDriveContext *l_context = p_file->a_context;
 
-    return 0;
+    // Compute offset
+    size_t l_sector = l_context->a_position >> 9;
+    size_t l_sectorOffset = l_context->a_position & 0x1ff;
+    size_t l_bytesRead = 0;
+
+    while(l_bytesRead < p_size) {
+        uint8_t l_buffer[512];
+
+        if(ataReadPataSector(l_context, l_sector, l_buffer) != 512) {
+            return (ssize_t)l_bytesRead;
+        }
+
+        while((l_sectorOffset < 512) && (l_bytesRead < p_size)) {
+            ((uint8_t *)p_buffer)[l_bytesRead++] = l_buffer[l_sectorOffset++];
+        }
+
+        l_sectorOffset = 0;
+    }
+
+    return (ssize_t)l_bytesRead;
 }
 
 static ssize_t ataWritePata(
@@ -576,4 +598,74 @@ static ssize_t ataWritePata(
     M_UNUSED_PARAMETER(p_size);
 
     return 0;
+}
+
+static ssize_t ataReadPataSector(
+    struct ts_ataDriveContext *p_context,
+    uint64_t p_lba,
+    void *p_buffer
+) {
+    // Cannot read beyond drive capacity.
+    if(p_lba >= p_context->a_sectorCount) {
+        return 0;
+    }
+
+    ataSelectDrive(p_context->a_channel, p_context->a_driveNumber);
+    ataWaitUntilNotBusy(p_context->a_channel);
+
+    // Set register values
+    p_context->a_channel->a_registerCacheDriveHead &= 0xf0;
+
+    if(p_context->a_usesLba) {
+        if(p_context->a_usesLba48) {
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 0);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba >> 24);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 32);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 40);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS_EXT);
+        } else {
+            p_context->a_channel->a_registerCacheDriveHead |= (p_lba >> 24) & 0x0f;
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
+            ataWait(p_context->a_channel);
+
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
+            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
+        }
+    } else {
+        uint32_t l_sectorsPerCylinder = p_context->a_sectors * p_context->a_heads;
+        uint8_t l_head = (p_lba % l_sectorsPerCylinder) / p_context->a_sectors;
+        uint16_t l_cylinder = p_lba / l_sectorsPerCylinder;
+        uint8_t l_sector = p_lba % p_context->a_sectors + 1;
+
+        p_context->a_channel->a_registerCacheDriveHead |= l_head & 0x0f;
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
+        ataWait(p_context->a_channel);
+
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_NUMBER, l_sector);
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_LOW, l_cylinder);
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_HIGH, l_cylinder >> 8);
+        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
+    }
+
+    ataWaitUntilNotBusy(p_context->a_channel);
+    ataWaitUntilDataRequestOrError(p_context->a_channel);
+
+    if((p_context->a_channel->a_registerCacheDriveHead & C_ATA_STATUS_MASK_ERR) != 0) {
+        return 0;
+    }
+
+    for(size_t l_bufferIndex = 0; l_bufferIndex < 256; l_bufferIndex++) {
+        ((uint16_t *)p_buffer)[l_bufferIndex] = inw(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA);
+    }
+
+    return 512;
 }
