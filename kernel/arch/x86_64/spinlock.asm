@@ -4,21 +4,21 @@ section .text
 
 global spinlockInit
 spinlockInit:
-    mov dword [edi], 0
+    mov dword [rdi], 0
     ret
 
 global spinlockAcquire
 spinlockAcquire:
-    lock bts dword [edi], 0
+    lock bts dword [rdi], 0
     jc .wait
     ret
 
     .wait:
-        test dword [edi], 1
+        test dword [rdi], 1
         jnz .wait
         jmp spinlockAcquire
 
 global spinlockRelease
 spinlockRelease:
-    lock btr dword [edi], 0
+    lock btr dword [rdi], 0
     ret
