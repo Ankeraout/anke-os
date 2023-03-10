@@ -12,6 +12,7 @@
 #include <kernel/module.h>
 
 static int archInitPci(void);
+static int archInitPciide(void);
 
 int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
@@ -27,6 +28,7 @@ int archPreinit(struct ts_boot *p_boot) {
 
 int archInit(void) {
     archInitPci();
+    archInitPciide();
     return 0;
 }
 
@@ -65,6 +67,25 @@ static int archInitPci(void) {
     }
 
     debug("kernel: pci module was initialized successfully.\n");
+
+    return 0;
+}
+
+static int archInitPciide(void) {
+    // Find pciide module
+    const struct ts_module *l_pciideModule = moduleGetKernelModule("pciide");
+
+    if(l_pciideModule == NULL) {
+        debug("kernel: pciide module not found.\n");
+        return 1;
+    }
+
+    if(moduleLoad(l_pciideModule, NULL) != 0) {
+        debug("kernel: pciide module initialization failed.\n");
+        return 1;
+    }
+
+    debug("kernel: pciide module was initialized successfully.\n");
 
     return 0;
 }

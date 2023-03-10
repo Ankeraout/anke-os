@@ -79,6 +79,7 @@ static void pciScanFunction(
     uint8_t p_function
 );
 static void pciInitDevice(uint8_t p_bus, uint8_t p_slot, uint8_t p_function);
+static void pciIdentify(struct ts_pciRequestIdentification *p_request);
 
 M_DECLARE_MODULE struct ts_module g_modulePci = {
     .a_name = "pci",
@@ -151,6 +152,10 @@ static int pciIoctlDriver(
     switch(p_request) {
         case E_IOCTL_PCI_SCAN:
             pciScan(((struct ts_pciRequestScan *)p_arg)->a_callback);
+            return 0;
+
+        case E_IOCTL_PCI_IDENTIFY:
+            pciIdentify(p_arg);
             return 0;
 
         default:
@@ -332,4 +337,13 @@ static void pciInitDevice(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
         l_deviceProgrammingInterface,
         l_deviceRevision
     );
+}
+
+static void pciIdentify(struct ts_pciRequestIdentification *p_request) {
+    p_request->a_device = pciConfigRead16(p_request->a_bus, p_request->a_slot, p_request->a_function, 0);
+    p_request->a_vendor = pciConfigRead16(p_request->a_bus, p_request->a_slot, p_request->a_function, 2);
+    p_request->a_class = pciConfigRead8(p_request->a_bus, p_request->a_slot, p_request->a_function, 8);
+    p_request->a_subclass = pciConfigRead8(p_request->a_bus, p_request->a_slot, p_request->a_function, 9);
+    p_request->a_programmingInterface = pciConfigRead8(p_request->a_bus, p_request->a_slot, p_request->a_function, 10);
+    p_request->a_revision = pciConfigRead8(p_request->a_bus, p_request->a_slot, p_request->a_function, 11);
 }
