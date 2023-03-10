@@ -1,6 +1,8 @@
 #ifndef __INCLUDE_KERNEL_FS_VFS_H__
 #define __INCLUDE_KERNEL_FS_VFS_H__
 
+#include <stdio.h>
+
 #include <kernel/arch/spinlock.h>
 #include <sys/types.h>
 
@@ -15,11 +17,11 @@ enum {
 
 struct ts_vfsFileDescriptor;
 
-typedef struct ts_vfsFileDescriptor *tf_vfsOpen(
+typedef struct ts_vfsFileDescriptor *tf_vfsFind(
     struct ts_vfsFileDescriptor *p_file,
-    const char *p_path,
-    int p_flags
+    const char *p_path
 );
+typedef int tf_vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
 typedef void tf_vfsClose(struct ts_vfsFileDescriptor *p_file);
 typedef ssize_t tf_vfsRead(
     struct ts_vfsFileDescriptor *p_file,
@@ -36,6 +38,11 @@ typedef int tf_vfsIoctl(
     int p_request,
     void *p_arg
 );
+typedef off_t tf_vfsLseek(
+    struct ts_vfsFileDescriptor *p_file,
+    off_t p_offset,
+    int p_whence
+);
 
 /**
  * @brief This structure represents a file descriptor.
@@ -48,10 +55,12 @@ struct ts_vfsFileDescriptor {
     char a_name[C_VFS_MAX_FILENAME_SIZE];
     int a_type;
     tf_vfsOpen *a_open;
+    tf_vfsFind *a_find;
     tf_vfsClose *a_close;
     tf_vfsRead *a_read;
     tf_vfsWrite *a_write;
     tf_vfsIoctl *a_ioctl;
+    tf_vfsLseek *a_lseek;
 };
 
 /**
@@ -105,7 +114,7 @@ int vfsMount(
  *
  * @retval NULL if the file could not be opened.
  */
-struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags);
+struct ts_vfsFileDescriptor *vfsFind(const char *p_path);
 
 /**
  * @brief Clones the given file descriptor.

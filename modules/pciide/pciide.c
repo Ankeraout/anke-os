@@ -28,10 +28,10 @@ static int pciideInit(const char *p_args) {
 
     debug("pciide: Scanning PCI bus...\n");
 
-    s_pciDriver = vfsOpen("/dev/pci", 0);
+    s_pciDriver = vfsFind("/dev/pci");
 
     if(s_pciDriver == NULL) {
-        debug("pciide: Failed to open /dev/pci.\n");
+        debug("pciide: Failed to find /dev/pci.\n");
         return 1;
     }
 
@@ -98,10 +98,10 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
     }
 
     // Open the ata module driver file
-    struct ts_vfsFileDescriptor *l_ataDriver = vfsOpen("/dev/ata", 0);
+    struct ts_vfsFileDescriptor *l_ataDriver = vfsFind("/dev/ata");
 
     if(l_ataDriver == NULL) {
-        debug("pciide: Failed to open /dev/ata.\n");
+        debug("pciide: Failed to find /dev/ata.\n");
         return;
     }
 

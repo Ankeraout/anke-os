@@ -64,10 +64,10 @@ static int ttyInit(const char *p_arg) {
     l_ttyDriver->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register driver file
-    struct ts_vfsFileDescriptor *l_dev = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
 
     if(l_dev == NULL) {
-        debug("tty: Failed to open /dev.\n");
+        debug("tty: Failed to find /dev.\n");
         kfree(l_ttyDriver);
         return -ENOENT;
     }
@@ -197,20 +197,20 @@ static int ttyCreate(
     }
 
     // Open /dev
-    struct ts_vfsFileDescriptor *l_devfs = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
 
     if(l_devfs == NULL) {
-        debug("tty: Failed to open /dev.\n");
+        debug("tty: Failed to find /dev.\n");
         kfree(l_context);
         return -ENOENT;
     }
 
     // Open framebuffer driver
     struct ts_vfsFileDescriptor *l_framebufferDevice =
-        vfsOpen(p_framebufferFileName, 0);
+        vfsFind(p_framebufferFileName);
 
     if(l_framebufferDevice == NULL) {
-        debug("tty: Failed to open %s.\n", p_framebufferFileName);
+        debug("tty: Failed to find %s.\n", p_framebufferFileName);
         kfree(l_context);
         kfree(l_devfs);
         return -ENOENT;

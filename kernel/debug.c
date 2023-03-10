@@ -140,8 +140,9 @@ static void checkAction(
     if(p_character == '%') {
         s_debugWriteFunc(s_debugWriteFuncParameter, '%');
     } else if(p_character == 'c') {
-        int l_character = va_arg(p_argList, int);
+        char l_character = va_arg(p_argList, int);
         s_debugWriteFunc(s_debugWriteFuncParameter, l_character);
+        p_context->a_state = E_PARSERSTATE_START;
     } else if(p_character == 'd') {
         char l_buffer[32];
         int l_index = 32;

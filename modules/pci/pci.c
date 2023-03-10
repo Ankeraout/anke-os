@@ -106,10 +106,10 @@ static int pciInit(const char *p_arg) {
     l_pciDriver->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register driver file
-    struct ts_vfsFileDescriptor *l_dev = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
 
     if(l_dev == NULL) {
-        debug("pci: Failed to open /dev.\n");
+        debug("pci: Failed to find /dev.\n");
         kfree(l_pciDriver);
         return -ENOENT;
     }

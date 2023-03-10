@@ -92,10 +92,10 @@ static int initializeFramebuffer(
     }
 
     // Open framebuffer driver
-    struct ts_vfsFileDescriptor *l_framebuffer = vfsOpen("/dev/fb", 0);
+    struct ts_vfsFileDescriptor *l_framebuffer = vfsFind("/dev/fb");
 
     if(l_framebuffer == NULL) {
-        debug("kernel: Failed to open framebuffer driver file.\n");
+        debug("kernel: Failed to find framebuffer driver file.\n");
         return 1;
     }
 
@@ -141,10 +141,10 @@ static int initializeTty(const char *p_fbDeviceName) {
     }
 
     // Open tty driver
-    struct ts_vfsFileDescriptor *l_tty = vfsOpen("/dev/tty", 0);
+    struct ts_vfsFileDescriptor *l_tty = vfsFind("/dev/tty");
 
     if(l_tty == NULL) {
-        debug("kernel: Failed to open tty driver file.\n");
+        debug("kernel: Failed to find tty driver file.\n");
         return 1;
     }
 
@@ -164,7 +164,7 @@ static int initializeTty(const char *p_fbDeviceName) {
 
     debug("kernel: Created /dev/tty0.\n");
 
-    l_tty = vfsOpen("/dev/tty0", 0);
+    l_tty = vfsFind("/dev/tty0");
 
     // Set kernel debug function
     debugInit(ttyDebug, l_tty);

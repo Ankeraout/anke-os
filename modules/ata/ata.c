@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <kernel/arch/x86_64/inline.h>
@@ -52,9 +53,16 @@ struct ts_ataDriveContext {
     struct ts_vfsFileDescriptor *a_file;
     int a_driveNumber;
     bool a_usesLba;
+    bool a_usesLba48;
+    uint64_t a_sectorCount;
+    uint16_t a_cylinders;
+    uint8_t a_heads;
+    uint8_t a_sectors;
+    off_t a_position;
 };
 
 struct ts_ataChannelContext {
+    struct ts_vfsFileDescriptor *a_file;
     uint16_t a_ioPortBase;
     uint16_t a_ioPortControl;
     uint16_t a_ioPortBusMaster;
@@ -88,6 +96,22 @@ static void ataWait(struct ts_ataChannelContext *p_channel);
 static void ataWaitUntilNotBusy(struct ts_ataChannelContext *p_channel);
 static void ataWaitUntilDataRequestOrError(
     struct ts_ataChannelContext *p_channel
+);
+static int ataOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
+static off_t ataLseek(
+    struct ts_vfsFileDescriptor *p_file,
+    off_t p_offset,
+    int p_whence
+);
+static ssize_t ataReadPata(
+    struct ts_vfsFileDescriptor *p_file,
+    void *p_buffer,
+    size_t p_size
+);
+static ssize_t ataWritePata(
+    struct ts_vfsFileDescriptor *p_file,
+    const void *p_buffer,
+    size_t p_size
 );
 
 M_DECLARE_MODULE struct ts_module g_moduleAta = {
@@ -126,10 +150,10 @@ static int ataInit(const char *p_args) {
     l_ataDriver->a_context = l_context;
 
     // Register driver file
-    struct ts_vfsFileDescriptor *l_devfs = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
 
     if(l_devfs == NULL) {
-        debug("ata: Failed to open /dev.\n");
+        debug("ata: Failed to find /dev.\n");
         kfree(l_context);
         kfree(l_ataDriver);
         return -ENOENT;
@@ -215,6 +239,7 @@ static int ataIoctlCreate(
     l_channelContext->a_drives[0].a_channel = l_channelContext;
     l_channelContext->a_drives[1].a_channel = l_channelContext;
     l_channelContext->a_drives[1].a_driveNumber = 1;
+    l_channelContext->a_file = l_channelFile;
 
     strcpy(l_channelFile->a_name, "ata0");
     l_channelFile->a_name[3] += l_context->l_ataChannelCount++;
@@ -222,10 +247,10 @@ static int ataIoctlCreate(
     l_channelFile->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register channel device file
-    struct ts_vfsFileDescriptor *l_devfs = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
 
     if(l_devfs == NULL) {
-        debug("ata: Failed to open /dev.\n");
+        debug("ata: Failed to find /dev.\n");
         kfree(l_channelFile->a_context);
         kfree(l_channelFile);
         return 1;
@@ -328,8 +353,80 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
         inb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH);
     uint16_t l_driveType = (l_lbaHigh << 8) | l_lbaMid;
 
+    struct ts_vfsFileDescriptor *l_driveFile = NULL;
+
     if(l_driveType == 0x0000) {
         debug("ata: Detected PATA drive.\n");
+
+        ataWaitUntilDataRequestOrError(p_context->a_channel);
+
+        // Read identification data
+        uint16_t l_identificationData[256];
+
+        for(int l_index = 0; l_index < 256; l_index++) {
+            l_identificationData[l_index] =
+                inw(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA);
+        }
+
+        debug("ata: Drive name: ");
+
+        for(int l_index = 0; l_index < 20; l_index++) {
+            const uint16_t l_word = l_identificationData[27 + l_index];
+            debug("%c%c", l_word >> 8, l_word);
+        }
+
+        debug("\n");
+
+        const uint64_t l_totalSectorsLong =
+            (uint64_t)l_identificationData[100]
+            | ((uint64_t)l_identificationData[101] << 16)
+            | ((uint64_t)l_identificationData[102] << 32)
+            | ((uint64_t)l_identificationData[103] << 48);
+        const uint32_t l_totalSectors =
+            (uint32_t)l_identificationData[60]
+            | ((uint32_t)l_identificationData[61] << 16);
+
+        if(l_totalSectorsLong != 0) {
+            debug("ata: Drive supports LBA48.\n");
+            p_context->a_usesLba = true;
+            p_context->a_usesLba48 = true;
+            p_context->a_sectorCount = l_totalSectorsLong;
+        } else if(l_totalSectors != 0) {
+            debug("ata: Drive supports LBA.\n");
+            p_context->a_usesLba = true;
+            p_context->a_sectorCount = l_totalSectors;
+
+            if((l_identificationData[83] & (1 << 10)) != 0) {
+                debug("ata: Drive supports LBA48.\n");
+                p_context->a_usesLba48 = true;
+            } else {
+                debug("ata: Drive supports LBA28.\n");
+                p_context->a_usesLba48 = false;
+            }
+        } else {
+            debug("ata: Drive does not support LBA.\n");
+            p_context->a_usesLba = false;
+            p_context->a_usesLba48 = false;
+            p_context->a_cylinders = l_identificationData[1];
+            p_context->a_heads = l_identificationData[3];
+            p_context->a_sectors = l_identificationData[6];
+            p_context->a_sectorCount =
+                p_context->a_cylinders
+                * p_context->a_heads
+                * p_context->a_sectors;
+        }
+
+        // Create device file
+        l_driveFile = kcalloc(sizeof(struct ts_vfsFileDescriptor));
+
+        if(l_driveFile == NULL) {
+            debug("ata: Failed to allocate memory for drive file.\n");
+            return;
+        }
+
+        // Assign drive file operations
+        l_driveFile->a_read = ataReadPata;
+        l_driveFile->a_write = ataWritePata;
     } else if(l_driveType == 0xeb14) {
         debug("ata: Detected PATAPI drive.\n");
     } else if(l_driveType == 0x9669) {
@@ -338,6 +435,39 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
         debug("ata: Detected SATAPI drive.\n");
     } else {
         debug("ata: Unknown drive type.\n");
+    }
+
+    if(l_driveFile != NULL) {
+        strcpy(l_driveFile->a_name, p_context->a_channel->a_file->a_name);
+        l_driveFile->a_name[4] = '-';
+        l_driveFile->a_name[5] = '0' + p_context->a_driveNumber;
+        l_driveFile->a_name[6] = '\0';
+        l_driveFile->a_type = E_VFS_FILETYPE_BLOCK;
+        l_driveFile->a_open = ataOpen;
+        l_driveFile->a_lseek = ataLseek;
+
+        struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
+
+        if(l_devfs == NULL) {
+            debug("ata: Failed to find /dev.\n");
+            kfree(l_driveFile);
+            return;
+        }
+
+        int l_returnValue = l_devfs->a_ioctl(
+            l_devfs,
+            C_IOCTL_DEVFS_CREATE,
+            l_driveFile
+        );
+
+        if(l_returnValue != 0) {
+            debug("ata: Failed to create /dev/%s.\n", l_driveFile->a_name);
+            kfree(l_driveFile);
+            kfree(l_devfs);
+            return;
+        }
+
+        debug("ata: Registered /dev/%s.\n", l_driveFile->a_name);
     }
 }
 
@@ -392,4 +522,58 @@ static void ataWaitUntilDataRequestOrError(
         p_channel->a_registerCacheStatus =
             inb(p_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
     } while((p_channel->a_registerCacheStatus & l_mask) == 0);
+}
+
+static int ataOpen(struct ts_vfsFileDescriptor *p_file, int p_flags) {
+    M_UNUSED_PARAMETER(p_flags);
+
+    struct ts_ataDriveContext *l_context = p_file->a_context;
+
+    l_context->a_position = 0;
+
+    return 0;
+}
+
+static off_t ataLseek(
+    struct ts_vfsFileDescriptor *p_file,
+    off_t p_offset,
+    int p_whence
+) {
+    struct ts_ataDriveContext *l_context = p_file->a_context;
+
+    if(p_whence == SEEK_CUR) {
+        l_context->a_position += p_offset;
+    } else if(p_whence == SEEK_END) {
+        l_context->a_position = l_context->a_sectorCount * 512 + p_offset;
+    } else if(p_whence == SEEK_SET) {
+        l_context->a_position = p_offset;
+    } else {
+        return -1;
+    }
+
+    return l_context->a_position;
+}
+
+static ssize_t ataReadPata(
+    struct ts_vfsFileDescriptor *p_file,
+    void *p_buffer,
+    size_t p_size
+) {
+    M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_buffer);
+    M_UNUSED_PARAMETER(p_size);
+
+    return 0;
+}
+
+static ssize_t ataWritePata(
+    struct ts_vfsFileDescriptor *p_file,
+    const void *p_buffer,
+    size_t p_size
+) {
+    M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_buffer);
+    M_UNUSED_PARAMETER(p_size);
+
+    return 0;
 }

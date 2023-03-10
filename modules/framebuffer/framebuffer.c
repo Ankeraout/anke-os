@@ -72,10 +72,10 @@ static int framebufferInit(const char *p_arg) {
     l_framebufferDevice->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register framebuffer device
-    struct ts_vfsFileDescriptor *l_dev = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
 
     if(l_dev == NULL) {
-        debug("framebuffer: Failed to open /dev.\n");
+        debug("framebuffer: Failed to find /dev.\n");
 
         kfree(l_framebufferDevice);
         // /dev is not mounted?!
@@ -158,10 +158,10 @@ static int framebufferIoctlDevice(
 
 static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
     // Get devfs node
-    struct ts_vfsFileDescriptor *l_dev = vfsOpen("/dev", 0);
+    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
 
     if(l_dev == NULL) {
-        debug("framebuffer: Failed to open /dev.\n");
+        debug("framebuffer: Failed to find /dev.\n");
         return -ENOENT;
     }
 

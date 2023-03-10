@@ -216,7 +216,7 @@ int vfsMount(
     return 0;
 }
 
-struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags) {
+struct ts_vfsFileDescriptor *vfsFind(const char *p_path) {
     const char *l_relativePath = NULL;
 
     struct ts_vfsFileDescriptor *l_mountPoint =
@@ -226,11 +226,11 @@ struct ts_vfsFileDescriptor *vfsOpen(const char *p_path, int p_flags) {
         return NULL;
     }
 
-    if(l_mountPoint->a_open == NULL) {
+    if(l_mountPoint->a_find == NULL) {
         return NULL;
     }
 
-    return l_mountPoint->a_open(l_mountPoint, l_relativePath, p_flags);
+    return l_mountPoint->a_find(l_mountPoint, l_relativePath);
 }
 
 struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file) {

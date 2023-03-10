@@ -8,10 +8,9 @@
 #include <kernel/klibc/stdlib.h>
 #include <kernel/misc/list.h>
 
-static struct ts_vfsFileDescriptor *devfsOpen(
+static struct ts_vfsFileDescriptor *devfsFind(
     struct ts_vfsFileDescriptor *p_file,
-    const char *p_path,
-    int p_flags
+    const char *p_path
 );
 static int devfsIoctl(
     struct ts_vfsFileDescriptor *p_file,
@@ -42,20 +41,17 @@ struct ts_vfsFileDescriptor *devfsInit(void) {
 
     strcpy(l_fileDescriptor->a_name, "dev");
     l_fileDescriptor->a_ioctl = devfsIoctl;
-    l_fileDescriptor->a_open = devfsOpen;
+    l_fileDescriptor->a_find = devfsFind;
     l_fileDescriptor->a_context = l_fileList;
     l_fileDescriptor->a_type = E_VFS_FILETYPE_FOLDER;
 
     return l_fileDescriptor;
 }
 
-static struct ts_vfsFileDescriptor *devfsOpen(
+static struct ts_vfsFileDescriptor *devfsFind(
     struct ts_vfsFileDescriptor *p_file,
-    const char *p_path,
-    int p_flags
+    const char *p_path
 ) {
-    M_UNUSED_PARAMETER(p_flags);
-
     if(p_path[0] == '\0') {
         return vfsClone(p_file);
     }
