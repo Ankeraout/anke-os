@@ -44,6 +44,7 @@ struct ts_vfsFileDescriptor *devfsInit(void) {
     l_fileDescriptor->a_ioctl = devfsIoctl;
     l_fileDescriptor->a_open = devfsOpen;
     l_fileDescriptor->a_context = l_fileList;
+    l_fileDescriptor->a_type = E_VFS_FILETYPE_FOLDER;
 
     return l_fileDescriptor;
 }
