@@ -11,8 +11,14 @@
 #include <kernel/debug.h>
 #include <kernel/module.h>
 
-static int archInitPci(void);
-static int archInitPciide(void);
+const char *s_moduleList[] = {
+    "pci",
+    "pciide",
+    "cmos"
+};
+
+static void archLoadModules(void);
+static int archLoadModule(const char *p_moduleName);
 
 int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
@@ -27,8 +33,7 @@ int archPreinit(struct ts_boot *p_boot) {
 }
 
 int archInit(void) {
-    archInitPci();
-    archInitPciide();
+    archLoadModules();
     return 0;
 }
 
@@ -51,41 +56,33 @@ void archHaltAndCatchFire(void) {
     }
 }
 
-static int archInitPci(void) {
-    // Find PCI module
-    const struct ts_module *l_pciModule = moduleGetKernelModule("pci");
+static void archLoadModules(void) {
+    size_t l_nbModules = sizeof(s_moduleList) / sizeof(const char *);
 
-    if(l_pciModule == NULL) {
-        debug("kernel: pci module not found.\n");
-        return 1;
+    for(size_t l_index = 0; l_index < l_nbModules; l_index++) {
+        archLoadModule(s_moduleList[l_index]);
     }
-
-    // Load PCI module
-    if(moduleLoad(l_pciModule, NULL) != 0) {
-        debug("kernel: pci module initialization failed.\n");
-        return 1;
-    }
-
-    debug("kernel: pci module was initialized successfully.\n");
-
-    return 0;
 }
 
-static int archInitPciide(void) {
-    // Find pciide module
-    const struct ts_module *l_pciideModule = moduleGetKernelModule("pciide");
+static int archLoadModule(const char *p_moduleName) {
+    const struct ts_module *l_module = moduleGetKernelModule(p_moduleName);
 
-    if(l_pciideModule == NULL) {
-        debug("kernel: pciide module not found.\n");
+    if(l_module == NULL) {
+        debug("kernel: Module %s not found.\n", p_moduleName);
         return 1;
     }
 
-    if(moduleLoad(l_pciideModule, NULL) != 0) {
-        debug("kernel: pciide module initialization failed.\n");
+    if(moduleIsModuleLoaded(l_module)) {
+        debug("kernel: Module %s is already loaded.\n", p_moduleName);
+        return 0;
+    }
+
+    if(moduleLoad(l_module, NULL) != 0) {
+        debug("kernel: Initialization of module %s failed.\n", p_moduleName);
         return 1;
     }
 
-    debug("kernel: pciide module was initialized successfully.\n");
+    debug("kernel: Module %s was initialized successfully.\n", p_moduleName);
 
     return 0;
 }
