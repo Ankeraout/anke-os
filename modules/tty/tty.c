@@ -142,7 +142,7 @@ static ssize_t ttyWriteDevice(
                 .a_font = l_context->a_font,
                 .a_character = l_character,
                 .a_x = l_context->a_x * 8,
-                .a_y = l_context->a_y * 8
+                .a_y = l_context->a_y * l_context->a_font->a_height
             };
 
             l_context->a_framebufferDevice->a_ioctl(
@@ -160,9 +160,15 @@ static ssize_t ttyWriteDevice(
         }
 
         if(l_context->a_y >= l_context->a_height) {
+            int l_scrollRows = l_context->a_y - l_context->a_height + 1;
+
+            if(l_scrollRows >= l_context->a_height) {
+                l_scrollRows = l_context->a_height;
+            }
+
             struct ts_framebufferRequestScrollUp l_requestScrollUp = {
                 .a_color = l_context->a_backgroundColor,
-                .a_rows = l_context->a_y - l_context->a_height + 1
+                .a_rows = l_scrollRows * l_context->a_font->a_height
             };
 
             l_context->a_framebufferDevice->a_ioctl(
@@ -171,7 +177,7 @@ static ssize_t ttyWriteDevice(
                 &l_requestScrollUp
             );
 
-            l_context->a_y -= l_requestScrollUp.a_rows;
+            l_context->a_y -= l_scrollRows;
 
             if(l_context->a_y < 0) {
                 l_context->a_y = 0;
@@ -216,6 +222,10 @@ static int ttyCreate(
         return -ENOENT;
     }
 
+    l_context->a_foregroundColor = 0xffaaaaaa;
+    l_context->a_framebufferDevice = l_framebufferDevice;
+    l_context->a_font = &g_font16;
+
     l_context->a_width = l_framebufferDevice->a_ioctl(
         l_framebufferDevice,
         E_IOCTL_FRAMEBUFFER_GET_WIDTH,
@@ -226,11 +236,7 @@ static int ttyCreate(
         l_framebufferDevice,
         E_IOCTL_FRAMEBUFFER_GET_HEIGHT,
         NULL
-    ) / 8;
-
-    l_context->a_foregroundColor = 0xffaaaaaa;
-    l_context->a_framebufferDevice = l_framebufferDevice;
-    l_context->a_font = &g_font8;
+    ) / l_context->a_font->a_height;
 
     // Create tty device
     struct ts_vfsFileDescriptor *l_ttyDevice =
