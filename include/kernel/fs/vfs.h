@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include <kernel/arch/spinlock.h>
+#include <kernel/misc/spinlock.h>
 #include <sys/types.h>
 
 #define C_VFS_MAX_FILENAME_SIZE 256
