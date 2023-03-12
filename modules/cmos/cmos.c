@@ -190,15 +190,9 @@ static void cmosCheckFloppy(
         .a_driveNumber = p_driveNumber
     };
 
-    if(
-        l_floppyDriver->a_ioctl(
-            l_floppyDriver,
-            E_IOCTL_FLOPPY_CREATE,
-            &l_requestFloppyCreate
-        ) != 0
-    ) {
-        debug("cmos: Failed to create /dev/fd%d.\n", p_driveNumber);
-    }
-
-    debug("cmos: Created /dev/fd%d.\n", p_driveNumber);
+    l_floppyDriver->a_ioctl(
+        l_floppyDriver,
+        E_IOCTL_FLOPPY_CREATE,
+        &l_requestFloppyCreate
+    );
 }

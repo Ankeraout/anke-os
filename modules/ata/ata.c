@@ -450,6 +450,7 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
         l_driveFile->a_type = E_VFS_FILETYPE_BLOCK;
         l_driveFile->a_open = ataOpen;
         l_driveFile->a_lseek = ataLseek;
+        l_driveFile->a_context = p_context;
 
         struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
 
@@ -491,7 +492,7 @@ static void ataSelectDrive(
     }
 
     if(p_channel->a_drives[p_drive].a_usesLba) {
-        p_channel->a_registerCacheDriveHead |= 0x10;
+        p_channel->a_registerCacheDriveHead |= 0x40;
     }
 
     outb(

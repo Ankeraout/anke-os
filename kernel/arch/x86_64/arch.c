@@ -82,7 +82,5 @@ static int archLoadModule(const char *p_moduleName) {
         return 1;
     }
 
-    debug("kernel: Module %s was initialized successfully.\n", p_moduleName);
-
     return 0;
 }

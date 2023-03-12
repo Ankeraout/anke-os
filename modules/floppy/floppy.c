@@ -156,7 +156,7 @@ static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
     strcpy(l_floppyDevice->a_name, "fd");
     l_floppyDevice->a_name[2] = '0' + p_request->a_driveNumber;
     l_floppyDevice->a_name[3] = '\0';
-    l_floppyDevice->a_type = E_VFS_FILETYPE_CHARACTER;
+    l_floppyDevice->a_type = E_VFS_FILETYPE_BLOCK;
     l_floppyDevice->a_read = floppyRead;
     l_floppyDevice->a_context = l_context;
 
