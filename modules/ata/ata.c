@@ -1,12 +1,13 @@
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/ata.h>
@@ -130,7 +131,7 @@ static int ataInit(const char *p_args) {
 
     if(l_ataDriver == NULL) {
         debug("ata: Failed to allocate memory for driver file.\n");
-        return -ENOMEM;
+        return 1;
     }
 
     strcpy(l_ataDriver->a_name, "ata");
@@ -138,26 +139,10 @@ static int ataInit(const char *p_args) {
     l_ataDriver->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register driver file
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("ata: Failed to find /dev.\n");
-        kfree(l_ataDriver);
-        return -ENOENT;
-    }
-
-    int l_returnValue = l_devfs->a_ioctl(
-        l_devfs,
-        C_IOCTL_DEVFS_CREATE,
-        l_ataDriver
-    );
-
-    kfree(l_devfs);
-
-    if(l_returnValue != 0) {
+    if(deviceMount("/dev/ata", l_ataDriver) != 0) {
         debug("ata: Failed to create driver file.\n");
         kfree(l_ataDriver);
-        return l_returnValue;
+        return 1;
     }
 
     debug("ata: Registered /dev/ata.\n");
@@ -190,20 +175,12 @@ static int ataIoctlCreate(
 ) {
     M_UNUSED_PARAMETER(p_driverFile);
 
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("ata: Failed to find /dev.\n");
-        return 1;
-    }
-
     // Create channel device file
     struct ts_vfsFileDescriptor *l_channelFile =
-        devfsCreateDevice(l_devfs, "ata%d", 0);
+        deviceCreate("/dev/ata%d", 0);
 
     if(l_channelFile == NULL) {
         debug("ata: Failed to allocate memory for channel device file.\n");
-        kfree(l_devfs);
         return -ENOMEM;
     }
 
@@ -212,7 +189,6 @@ static int ataIoctlCreate(
 
     if(l_channelContext == NULL) {
         debug("ata: Failed to allocate memory for channel context.\n");
-        kfree(l_devfs);
         kfree(l_channelFile);
         return -ENOMEM;
     }
@@ -232,15 +208,11 @@ static int ataIoctlCreate(
     l_channelContext->a_file = l_channelFile;
 
     // Register channel device file
-    int l_returnValue = l_devfs->a_ioctl(
-        l_devfs,
-        C_IOCTL_DEVFS_CREATE,
-        l_channelFile
-    );
+    char l_path[PATH_MAX];
 
-    kfree(l_devfs);
+    snprintf(l_path, PATH_MAX, "/dev/%s", l_channelFile->a_name);
 
-    if(l_returnValue != 0) {
+    if(vfsMount(l_path, l_channelFile) != 0) {
         debug("ata: Failed to register /dev/%s.\n", l_channelFile->a_name);
         kfree(l_channelFile->a_context);
         kfree(l_channelFile);
@@ -423,24 +395,9 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
         l_driveFile->a_lseek = ataLseek;
         l_driveFile->a_context = p_context;
 
-        struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-        if(l_devfs == NULL) {
-            debug("ata: Failed to find /dev.\n");
-            kfree(l_driveFile);
-            return;
-        }
-
-        int l_returnValue = l_devfs->a_ioctl(
-            l_devfs,
-            C_IOCTL_DEVFS_CREATE,
-            l_driveFile
-        );
-
-        if(l_returnValue != 0) {
+        if(deviceMount("/dev/%s", l_driveFile) != 0) {
             debug("ata: Failed to create /dev/%s.\n", l_driveFile->a_name);
             kfree(l_driveFile);
-            kfree(l_devfs);
             return;
         }
 

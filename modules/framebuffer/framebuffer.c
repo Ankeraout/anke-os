@@ -4,10 +4,10 @@
 
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
 #include <kernel/boot/boot.h>
 #include <kernel/fonts/fonts.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/framebuffer.h>
@@ -72,28 +72,10 @@ static int framebufferInit(const char *p_arg) {
     l_framebufferDevice->a_type = E_VFS_FILETYPE_CHARACTER;
 
     // Register framebuffer device
-    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
-
-    if(l_dev == NULL) {
-        debug("framebuffer: Failed to find /dev.\n");
-
-        kfree(l_framebufferDevice);
-        // /dev is not mounted?!
-        return -ENOENT;
-    }
-
-    int l_returnValue = l_dev->a_ioctl(
-        l_dev,
-        C_IOCTL_DEVFS_CREATE,
-        l_framebufferDevice
-    );
-
-    kfree(l_dev);
-
-    if(l_returnValue != 0) {
+    if(deviceMount("/dev/%s", l_framebufferDevice) != 0) {
         debug("framebuffer: Failed to create driver device file.\n");
         kfree(l_framebufferDevice);
-        return l_returnValue;
+        return 1;
     }
 
     debug("framebuffer: Module initialized successfully.\n");
@@ -157,14 +139,6 @@ static int framebufferIoctlDevice(
 }
 
 static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
-    // Get devfs node
-    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
-
-    if(l_dev == NULL) {
-        debug("framebuffer: Failed to find /dev.\n");
-        return -ENOENT;
-    }
-
     // Allocate memory for framebuffer data
     struct ts_framebuffer *l_framebuffer =
         kmalloc(sizeof(struct ts_framebuffer));
@@ -175,8 +149,7 @@ static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
     }
 
     // Allocate memory for framebuffer node.
-    struct ts_vfsFileDescriptor *l_fb =
-        devfsCreateDevice(l_dev, "fb%d", 0);
+    struct ts_vfsFileDescriptor *l_fb = deviceCreate("/dev/fb%d", 0);
 
     if(l_fb == NULL) {
         debug("framebuffer: Failed to allocate memory for device node.\n");
@@ -196,14 +169,14 @@ static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
     l_fb->a_ioctl = framebufferIoctlDevice;
 
     // Register device node
-    if(l_dev->a_ioctl(l_dev, C_IOCTL_DEVFS_CREATE, l_fb) != 0) {
+    if(deviceMount("/dev/%s", l_fb) != 0) {
         kfree(l_framebuffer);
         kfree(l_fb);
-        debug("framebuffer: create: Failed to create /dev/%s.\n", l_dev->a_name);
+        debug("framebuffer: create: Failed to create /dev/%s.\n", l_fb->a_name);
         return -EFAULT;
     }
 
-    debug("framebuffer: Registered /dev/%s.\n", l_dev->a_name);
+    debug("framebuffer: Registered /dev/%s.\n", l_fb->a_name);
 
     return 0;
 }

@@ -61,7 +61,7 @@ struct ts_vfsFileDescriptor *vfsGetMountPoint(
         return NULL;
     }
 
-    struct ts_vfsFileDescriptor *l_returnValue;
+    struct ts_vfsFileDescriptor *l_returnValue = NULL;
 
     spinlockAcquire(&s_vfsSpinlock);
 
@@ -226,6 +226,10 @@ struct ts_vfsFileDescriptor *vfsFind(const char *p_path) {
         return NULL;
     }
 
+    if(l_relativePath[0] == '\0') {
+        return l_mountPoint;
+    }
+
     if(l_mountPoint->a_find == NULL) {
         return NULL;
     }
@@ -330,20 +334,23 @@ static void vfsGetMountPoint2(
         l_childVfsNode->a_fileDescriptor;
 
     // Check if the current node is a mount point
-    if(l_fileDescriptor != NULL) {
-        if(l_isFile) {
-            *p_relativePath = &p_path[l_pathIndex];
-        } else {
-            *p_relativePath = &p_path[l_pathIndex + 1];
-        }
+    const char *l_relativePath;
 
+    if(l_isFile) {
+        l_relativePath = &p_path[l_pathIndex];
+    } else {
+        l_relativePath = &p_path[l_pathIndex + 1];
+    }
+
+    if(l_fileDescriptor != NULL) {
+        *p_relativePath = l_relativePath;
         *p_returnValue = l_fileDescriptor;
     }
 
     // Check if we can find a mount point further
     if(!l_isFile) {
         vfsGetMountPoint2(
-            &p_path[l_pathIndex],
+            l_relativePath,
             p_relativePath,
             l_childTreeNode,
             p_returnValue

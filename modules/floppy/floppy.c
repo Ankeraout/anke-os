@@ -3,8 +3,8 @@
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/floppy.h>
@@ -44,20 +44,11 @@ static const uint16_t s_floppyControllerIoBase[] = {
 static int floppyInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
-    // Find the /dev node
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("floppy: Failed to find /dev.\n");
-        return 1;
-    }
-
     // Create /dev/floppy file
     s_floppyDriver = kcalloc(sizeof(struct ts_vfsFileDescriptor));
 
     if(s_floppyDriver == NULL) {
         debug("floppy: Failed to allocate memory for floppy driver.\n");
-        kfree(l_devfs);
         return 1;
     }
 
@@ -66,15 +57,8 @@ static int floppyInit(const char *p_args) {
     s_floppyDriver->a_ioctl = floppyIoctl;
 
     // Register the floppy driver file.
-    if(
-        l_devfs->a_ioctl(
-            l_devfs,
-            C_IOCTL_DEVFS_CREATE,
-            s_floppyDriver
-        ) != 0
-    ) {
+    if(deviceMount("/dev/%s", s_floppyDriver)) {
         debug("floppy: Failed to create /dev/floppy.\n");
-        kfree(l_devfs);
         kfree(s_floppyDriver);
         return 1;
     }
@@ -133,23 +117,12 @@ static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
         sizeof(struct ts_floppyGeometry)
     );
 
-    // Find the /dev node
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("floppy: Failed to find /dev.\n");
-        kfree(l_context);
-        return 1;
-    }
-
     // Create device file
-    struct ts_vfsFileDescriptor *l_floppyDevice =
-        devfsCreateDevice(l_devfs, "fd%d", 0);
+    struct ts_vfsFileDescriptor *l_floppyDevice = deviceCreate("/dev/fd%d", 0);
 
     if(l_floppyDevice == NULL) {
         debug("floppy: Failed to allocate memory for floppy device.\n");
         kfree(l_context);
-        kfree(l_devfs);
         return 1;
     }
 
@@ -158,17 +131,10 @@ static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
     l_floppyDevice->a_context = l_context;
 
     // Register the floppy device file.
-    if(
-        l_devfs->a_ioctl(
-            l_devfs,
-            C_IOCTL_DEVFS_CREATE,
-            l_floppyDevice
-        ) != 0
-    ) {
+    if(deviceMount("/dev/%s", l_floppyDevice) != 0) {
         debug("floppy: Failed to create /dev/%s.\n", l_floppyDevice->a_name);
         kfree(l_context);
         kfree(l_floppyDevice);
-        kfree(l_devfs);
         return 1;
     }
 

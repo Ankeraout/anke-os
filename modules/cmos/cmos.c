@@ -2,8 +2,8 @@
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/floppy.h>
@@ -76,20 +76,11 @@ static struct ts_vfsFileDescriptor *s_rtcDevice;
 static int cmosInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
-    // Find the /dev node
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("cmos: Failed to find /dev.\n");
-        return 1;
-    }
-
     // Create /dev/rtc file
-    s_rtcDevice = devfsCreateDevice(l_devfs, "rtc%d", 0);
+    s_rtcDevice = kcalloc(sizeof(struct ts_vfsFileDescriptor *));
 
     if(s_rtcDevice == NULL) {
         debug("cmos: Failed to allocate memory for RTC driver.\n");
-        kfree(l_devfs);
         return 1;
     }
 
@@ -98,20 +89,11 @@ static int cmosInit(const char *p_args) {
     s_rtcDevice->a_read = cmosRtcRead;
 
     // Register the RTC device file.
-    if(
-        l_devfs->a_ioctl(
-            l_devfs,
-            C_IOCTL_DEVFS_CREATE,
-            s_rtcDevice
-        ) != 0
-    ) {
+    if(deviceMount("/dev/%s", s_rtcDevice) != 0) {
         debug("cmos: Failed to create /dev/%s.\n", s_rtcDevice->a_name);
-        kfree(l_devfs);
         kfree(s_rtcDevice);
         return 1;
     }
-
-    kfree(l_devfs);
 
     debug("cmos: Registered /dev/%s.\n", s_rtcDevice->a_name);
 

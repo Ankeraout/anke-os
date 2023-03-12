@@ -5,7 +5,6 @@
 #include <kernel/common.h>
 #include <kernel/debug.h>
 #include <kernel/module.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/ata.h>

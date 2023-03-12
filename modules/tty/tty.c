@@ -3,9 +3,9 @@
 
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
 #include <kernel/fonts/fonts.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/framebuffer.h>
@@ -63,31 +63,13 @@ static int ttyInit(const char *p_arg) {
     l_ttyDriver->a_ioctl = ttyIoctlDriver;
     l_ttyDriver->a_type = E_VFS_FILETYPE_CHARACTER;
 
-    // Register driver file
-    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
-
-    if(l_dev == NULL) {
-        debug("tty: Failed to find /dev.\n");
-        kfree(l_ttyDriver);
-        return -ENOENT;
-    }
-
-    int l_returnValue = l_dev->a_ioctl(
-        l_dev,
-        C_IOCTL_DEVFS_CREATE,
-        l_ttyDriver
-    );
-
-    kfree(l_dev);
-
-    if(l_returnValue != 0) {
+    if(deviceMount("/dev/%s", l_ttyDriver) != 0) {
         debug("tty: Failed to create driver file.\n");
         kfree(l_ttyDriver);
-        return l_returnValue;
+        return 1;
     }
 
     debug("tty: Registered /dev/tty.\n");
-
     debug("tty: Module initialized successfully.\n");
 
     return 0;
@@ -199,16 +181,7 @@ static int ttyCreate(
 
     if(l_context == NULL) {
         debug("tty: Failed to allocate memory for tty context.\n");
-        return -ENOMEM;
-    }
-
-    // Open /dev
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("tty: Failed to find /dev.\n");
-        kfree(l_context);
-        return -ENOENT;
+        return 1;
     }
 
     // Open framebuffer driver
@@ -218,13 +191,12 @@ static int ttyCreate(
     if(l_framebufferDevice == NULL) {
         debug("tty: Failed to find %s.\n", p_framebufferFileName);
         kfree(l_context);
-        kfree(l_devfs);
-        return -ENOENT;
+        return 1;
     }
 
     l_context->a_foregroundColor = 0xffaaaaaa;
     l_context->a_framebufferDevice = l_framebufferDevice;
-    l_context->a_font = &g_font16;
+    l_context->a_font = &g_font8;
 
     l_context->a_width = l_framebufferDevice->a_ioctl(
         l_framebufferDevice,
@@ -240,41 +212,30 @@ static int ttyCreate(
 
     // Create tty device
     struct ts_vfsFileDescriptor *l_ttyDevice =
-        devfsCreateDevice(l_devfs, "tty%d", 0);
+        deviceCreate("/dev/tty%d", 0);
 
     if(l_ttyDevice == NULL) {
         debug("tty: Failed to allocate memory for tty device.\n");
         kfree(l_context);
-        kfree(l_devfs);
         kfree(l_framebufferDevice);
-        return -ENOMEM;
+        return 1;
     }
 
     l_ttyDevice->a_type = E_VFS_FILETYPE_CHARACTER;
     l_ttyDevice->a_write = ttyWriteDevice;
     l_ttyDevice->a_context = l_context;
 
-    // Register tty device
-    int l_returnValue = l_devfs->a_ioctl(
-        l_devfs,
-        C_IOCTL_DEVFS_CREATE,
-        l_ttyDevice
-    );
-
-    if(l_returnValue != 0) {
+    if(deviceMount("/dev/%s", l_ttyDevice) != 0) {
         debug("tty: Failed to create tty device file.\n");
 
         kfree(l_context);
-        kfree(l_devfs);
         kfree(l_framebufferDevice);
         kfree(l_ttyDevice);
 
-        return l_returnValue;
+        return 1;
     }
 
     debug("tty: Registered /dev/%s.\n", l_ttyDevice->a_name);
-
-    kfree(l_devfs);
 
     return 0;
 }

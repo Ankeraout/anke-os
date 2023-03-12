@@ -5,7 +5,6 @@
 #include <kernel/arch/arch.h>
 #include <kernel/boot/boot.h>
 #include <kernel/fonts/fonts.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <kernel/debug.h>
@@ -32,21 +31,6 @@ void main(struct ts_boot *p_boot) {
     // Initialize VFS
     if(vfsInit() != 0) {
         debug("kernel: Failed to initialize VFS subsystem.\n");
-        archHaltAndCatchFire();
-    }
-
-    // Mounts
-    debug("kernel: Mounting /dev...\n");
-
-    struct ts_vfsFileDescriptor *l_devFileDescriptor = devfsInit();
-
-    if(l_devFileDescriptor == NULL) {
-        debug("panic: Failed to create /dev.\n");
-        archHaltAndCatchFire();
-    }
-
-    if(vfsMount("/dev", l_devFileDescriptor) != 0) {
-        debug("panic: Failed to mount /dev.\n");
         archHaltAndCatchFire();
     }
 

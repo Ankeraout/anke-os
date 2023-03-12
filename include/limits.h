@@ -6,6 +6,7 @@
 /* POSIX pathname variable values (incomplete) */
 #define FILESIZEBITS 64
 #define NAME_MAX 255
+#define PATH_MAX 1024
 
 /* POSIX maximum values */
 #define _POSIX_CLOCKRES_MIN 20000000

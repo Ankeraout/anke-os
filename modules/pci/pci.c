@@ -4,8 +4,8 @@
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
+#include <kernel/device.h>
 #include <kernel/module.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <modules/pci.h>
@@ -98,34 +98,17 @@ static int pciInit(const char *p_arg) {
 
     if(l_pciDriver == NULL) {
         debug("pci: Failed to allocate memory for driver file.\n");
-        return -ENOMEM;
+        return 1;
     }
 
     strcpy(l_pciDriver->a_name, "pci");
     l_pciDriver->a_ioctl = pciIoctlDriver;
     l_pciDriver->a_type = E_VFS_FILETYPE_CHARACTER;
 
-    // Register driver file
-    struct ts_vfsFileDescriptor *l_dev = vfsFind("/dev");
-
-    if(l_dev == NULL) {
-        debug("pci: Failed to find /dev.\n");
-        kfree(l_pciDriver);
-        return -ENOENT;
-    }
-
-    int l_returnValue = l_dev->a_ioctl(
-        l_dev,
-        C_IOCTL_DEVFS_CREATE,
-        l_pciDriver
-    );
-
-    kfree(l_dev);
-
-    if(l_returnValue != 0) {
+    if(deviceMount("/dev/%s", l_pciDriver) != 0) {
         debug("pci: Failed to create driver file.\n");
         kfree(l_pciDriver);
-        return l_returnValue;
+        return 1;
     }
 
     debug("pci: Registered /dev/pci.\n");

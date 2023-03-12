@@ -141,3 +141,17 @@ char *strndup(const char *p_src, size_t p_length) {
 
     return l_copy;
 }
+
+char *strrchr(const char *p_str, int p_character) {
+    const char *l_lastOccurrence = NULL;
+
+    while(*p_str != '\0') {
+        if(*p_str == p_character) {
+            l_lastOccurrence = p_str;
+        }
+
+        p_str++;
+    }
+
+    return (char *)l_lastOccurrence;
+}

@@ -13,5 +13,6 @@ size_t strlen(const char *p_str);
 int strncmp(const char *p_str1, const char *p_str2, size_t p_length);
 char *strncpy(char *p_dst, const char *p_src, size_t p_length);
 char *strndup(const char *p_src, size_t p_length);
+char *strrchr(const char *p_str, int p_character);
 
 #endif
