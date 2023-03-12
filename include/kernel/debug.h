@@ -5,8 +5,10 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+typedef void tf_debugPrint(void *p_parameter, const char *p_value);
+
 void debugInit(
-    void (*p_writeFunc)(void *p_parameter, char p_value),
+    tf_debugPrint *p_writeFunc,
     void *p_parameter
 );
 void debug(const char *p_format, ...);

@@ -18,7 +18,7 @@ static volatile struct limine_framebuffer_request s_framebufferRequest = {
     .revision = 0
 };
 
-static void bootDebugWrite(void *p_parameter, char p_value);
+static void bootDebugWrite(void *p_parameter, const char *p_str);
 
 void _start(void) {
     struct ts_bootMemoryMapEntry l_memoryMap[s_memmapRequest.response->entry_count];
@@ -60,10 +60,16 @@ void _start(void) {
     main(&l_boot);
 }
 
-static void bootDebugWrite(void *p_parameter, char p_value) {
+static void bootDebugWrite(void *p_parameter, const char *p_str) {
     M_UNUSED_PARAMETER(p_parameter);
 
-    outb(0xe9, p_value);
+    size_t l_index = 0;
+
+    while(p_str[l_index] != '\0') {
+        outb(0xe9, p_str[l_index]);
+        l_index++;
+    }
+
 }
 
 #endif

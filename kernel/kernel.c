@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <kernel/arch/arch.h>
 #include <kernel/boot/boot.h>
@@ -16,7 +17,7 @@ static int initializeFramebuffer(
     const struct ts_bootFramebuffer *p_framebuffer
 );
 static int initializeTty(const char *p_fbDeviceName);
-static void ttyDebug(void *p_parameter, char p_character);
+static void ttyDebug(void *p_parameter, const char *p_buffer);
 
 void main(struct ts_boot *p_boot) {
     debug("kernel: Starting AnkeKernel...\n");
@@ -174,9 +175,9 @@ static int initializeTty(const char *p_fbDeviceName) {
     return 0;
 }
 
-static void ttyDebug(void *p_parameter, char p_character) {
+static void ttyDebug(void *p_parameter, const char *p_buffer) {
     struct ts_vfsFileDescriptor *l_tty =
         (struct ts_vfsFileDescriptor *)p_parameter;
 
-    l_tty->a_write(l_tty, &p_character, 1);
+    l_tty->a_write(l_tty, p_buffer, strlen(p_buffer));
 }
