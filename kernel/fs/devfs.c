@@ -1,4 +1,6 @@
 #include <errno.h>
+#include <limits.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <kernel/common.h>
@@ -46,6 +48,36 @@ struct ts_vfsFileDescriptor *devfsInit(void) {
     l_fileDescriptor->a_type = E_VFS_FILETYPE_FOLDER;
 
     return l_fileDescriptor;
+}
+
+struct ts_vfsFileDescriptor *devfsCreateDevice(
+    struct ts_vfsFileDescriptor *p_devfs,
+    const char *p_format,
+    int p_firstValue
+) {
+    char l_buffer[NAME_MAX + 1];
+    int l_value = p_firstValue;
+    struct ts_vfsFileDescriptor *l_file;
+
+    do {
+        snprintf(l_buffer, sizeof(l_buffer), p_format, l_value);
+
+        l_file = devfsFind(p_devfs, l_buffer);
+
+        if(l_file != NULL) {
+            l_value++;
+        }
+    } while(l_file != NULL);
+
+    l_file = kcalloc(sizeof(struct ts_vfsFileDescriptor));
+
+    if(l_file == NULL) {
+        return NULL;
+    }
+
+    strcpy(l_file->a_name, l_buffer);
+
+    return l_file;
 }
 
 static struct ts_vfsFileDescriptor *devfsFind(

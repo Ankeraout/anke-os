@@ -2,6 +2,7 @@
 #define __INCLUDE_STDIO_H__
 
 #include <stdarg.h>
+#include <stddef.h>
 
 enum {
     SEEK_CUR,

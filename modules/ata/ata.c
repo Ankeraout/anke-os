@@ -42,10 +42,6 @@ enum {
     E_ATA_COMMAND_IDENTIFY = 0xec
 };
 
-struct ts_ataDriverContext {
-    int l_ataChannelCount;
-};
-
 struct ts_ataChannelContext;
 
 struct ts_ataDriveContext {
@@ -128,38 +124,24 @@ M_DECLARE_MODULE struct ts_module g_moduleAta = {
 static int ataInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
-    // Create ATA driver context
-    struct ts_ataDriverContext *l_context =
-        kmalloc(sizeof(struct ts_ataDriverContext));
-
-    if(l_context == NULL) {
-        debug("ata: Failed to allocate memory for driver context.\n");
-        return -ENOMEM;
-    }
-
-    l_context->l_ataChannelCount = 0;
-
     // Create ATA driver file
     struct ts_vfsFileDescriptor *l_ataDriver =
         kcalloc(sizeof(struct ts_vfsFileDescriptor));
 
     if(l_ataDriver == NULL) {
         debug("ata: Failed to allocate memory for driver file.\n");
-        kfree(l_context);
         return -ENOMEM;
     }
 
     strcpy(l_ataDriver->a_name, "ata");
     l_ataDriver->a_ioctl = ataIoctlDriver;
     l_ataDriver->a_type = E_VFS_FILETYPE_CHARACTER;
-    l_ataDriver->a_context = l_context;
 
     // Register driver file
     struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
 
     if(l_devfs == NULL) {
         debug("ata: Failed to find /dev.\n");
-        kfree(l_context);
         kfree(l_ataDriver);
         return -ENOENT;
     }
@@ -174,7 +156,6 @@ static int ataInit(const char *p_args) {
 
     if(l_returnValue != 0) {
         debug("ata: Failed to create driver file.\n");
-        kfree(l_context);
         kfree(l_ataDriver);
         return l_returnValue;
     }
@@ -207,22 +188,22 @@ static int ataIoctlCreate(
     struct ts_vfsFileDescriptor *p_driverFile,
     struct ts_ataRequestCreate *p_request
 ) {
-    debug(
-        "ata: create(0x%04x, 0x%04x, 0x%04x, %d)\n",
-        p_request->a_ioPortBase,
-        p_request->a_ioPortControl,
-        p_request->a_ioPortBusMaster,
-        p_request->a_irq
-    );
+    M_UNUSED_PARAMETER(p_driverFile);
 
-    struct ts_ataDriverContext *l_context = p_driverFile->a_context;
+    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
+
+    if(l_devfs == NULL) {
+        debug("ata: Failed to find /dev.\n");
+        return 1;
+    }
 
     // Create channel device file
     struct ts_vfsFileDescriptor *l_channelFile =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+        devfsCreateDevice(l_devfs, "ata%d", 0);
 
     if(l_channelFile == NULL) {
         debug("ata: Failed to allocate memory for channel device file.\n");
+        kfree(l_devfs);
         return -ENOMEM;
     }
 
@@ -231,12 +212,16 @@ static int ataIoctlCreate(
 
     if(l_channelContext == NULL) {
         debug("ata: Failed to allocate memory for channel context.\n");
+        kfree(l_devfs);
         kfree(l_channelFile);
         return -ENOMEM;
     }
 
     // Initialize channel context
     l_channelFile->a_context = l_channelContext;
+    l_channelFile->a_ioctl = ataIoctlDeviceChannel;
+    l_channelFile->a_type = E_VFS_FILETYPE_CHARACTER;
+
     l_channelContext->a_ioPortBase = p_request->a_ioPortBase;
     l_channelContext->a_ioPortControl = p_request->a_ioPortControl;
     l_channelContext->a_ioPortBusMaster = p_request->a_ioPortBusMaster;
@@ -246,21 +231,7 @@ static int ataIoctlCreate(
     l_channelContext->a_drives[1].a_driveNumber = 1;
     l_channelContext->a_file = l_channelFile;
 
-    strcpy(l_channelFile->a_name, "ata0");
-    l_channelFile->a_name[3] += l_context->l_ataChannelCount++;
-    l_channelFile->a_ioctl = ataIoctlDeviceChannel;
-    l_channelFile->a_type = E_VFS_FILETYPE_CHARACTER;
-
     // Register channel device file
-    struct ts_vfsFileDescriptor *l_devfs = vfsFind("/dev");
-
-    if(l_devfs == NULL) {
-        debug("ata: Failed to find /dev.\n");
-        kfree(l_channelFile->a_context);
-        kfree(l_channelFile);
-        return 1;
-    }
-
     int l_returnValue = l_devfs->a_ioctl(
         l_devfs,
         C_IOCTL_DEVFS_CREATE,

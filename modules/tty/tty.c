@@ -234,7 +234,7 @@ static int ttyCreate(
 
     // Create tty device
     struct ts_vfsFileDescriptor *l_ttyDevice =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+        devfsCreateDevice(l_devfs, "tty%d", 0);
 
     if(l_ttyDevice == NULL) {
         debug("tty: Failed to allocate memory for tty device.\n");
@@ -244,7 +244,6 @@ static int ttyCreate(
         return -ENOMEM;
     }
 
-    strcpy(l_ttyDevice->a_name, "tty0");
     l_ttyDevice->a_type = E_VFS_FILETYPE_CHARACTER;
     l_ttyDevice->a_write = ttyWriteDevice;
     l_ttyDevice->a_context = l_context;
@@ -267,7 +266,7 @@ static int ttyCreate(
         return l_returnValue;
     }
 
-    debug("tty: Registered /dev/tty0.\n");
+    debug("tty: Registered /dev/%s.\n", l_ttyDevice->a_name);
 
     kfree(l_devfs);
 

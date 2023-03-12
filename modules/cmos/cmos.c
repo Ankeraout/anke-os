@@ -85,7 +85,7 @@ static int cmosInit(const char *p_args) {
     }
 
     // Create /dev/rtc file
-    s_rtcDevice = kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    s_rtcDevice = devfsCreateDevice(l_devfs, "rtc%d", 0);
 
     if(s_rtcDevice == NULL) {
         debug("cmos: Failed to allocate memory for RTC driver.\n");
@@ -105,7 +105,7 @@ static int cmosInit(const char *p_args) {
             s_rtcDevice
         ) != 0
     ) {
-        debug("cmos: Failed to create /dev/rtc.\n");
+        debug("cmos: Failed to create /dev/%s.\n", s_rtcDevice->a_name);
         kfree(l_devfs);
         kfree(s_rtcDevice);
         return 1;
@@ -113,7 +113,7 @@ static int cmosInit(const char *p_args) {
 
     kfree(l_devfs);
 
-    debug("cmos: Registered /dev/rtc.\n");
+    debug("cmos: Registered /dev/%s.\n", s_rtcDevice->a_name);
 
     // Read floppy disk information (register 0x10)
     outb(C_IOPORT_CMOS_REGISTER_NUMBER, E_CMOS_REGISTER_FLOPPY_INFO);

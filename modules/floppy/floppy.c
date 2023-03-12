@@ -144,7 +144,7 @@ static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
 
     // Create device file
     struct ts_vfsFileDescriptor *l_floppyDevice =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+        devfsCreateDevice(l_devfs, "fd%d", 0);
 
     if(l_floppyDevice == NULL) {
         debug("floppy: Failed to allocate memory for floppy device.\n");
@@ -153,9 +153,6 @@ static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
         return 1;
     }
 
-    strcpy(l_floppyDevice->a_name, "fd");
-    l_floppyDevice->a_name[2] = '0' + p_request->a_driveNumber;
-    l_floppyDevice->a_name[3] = '\0';
     l_floppyDevice->a_type = E_VFS_FILETYPE_BLOCK;
     l_floppyDevice->a_read = floppyRead;
     l_floppyDevice->a_context = l_context;

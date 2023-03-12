@@ -176,7 +176,7 @@ static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
 
     // Allocate memory for framebuffer node.
     struct ts_vfsFileDescriptor *l_fb =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+        devfsCreateDevice(l_dev, "fb%d", 0);
 
     if(l_fb == NULL) {
         debug("framebuffer: Failed to allocate memory for device node.\n");
@@ -191,7 +191,6 @@ static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
     l_framebuffer->a_pitch = p_request->a_pitch;
 
     // Initialize framebuffer device node
-    strcpy(l_fb->a_name, "fb0");
     l_fb->a_type = E_VFS_FILETYPE_CHARACTER;
     l_fb->a_context = l_framebuffer;
     l_fb->a_ioctl = framebufferIoctlDevice;
@@ -200,11 +199,11 @@ static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
     if(l_dev->a_ioctl(l_dev, C_IOCTL_DEVFS_CREATE, l_fb) != 0) {
         kfree(l_framebuffer);
         kfree(l_fb);
-        debug("framebuffer: create: Failed to create /dev/fb0.\n");
+        debug("framebuffer: create: Failed to create /dev/%s.\n", l_dev->a_name);
         return -EFAULT;
     }
 
-    debug("framebuffer: Registered /dev/fb0.\n");
+    debug("framebuffer: Registered /dev/%s.\n", l_dev->a_name);
 
     return 0;
 }
