@@ -6,7 +6,7 @@
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
-#include <kernel/device.h>
+#include <kernel/dev/device.h>
 #include <kernel/module.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
@@ -120,6 +120,10 @@ M_DECLARE_MODULE struct ts_module g_moduleAta = {
     .a_name = "ata",
     .a_init = ataInit,
     .a_quit = ataQuit
+};
+
+static const struct ts_vfsFileOperations s_ataFopsDriver = {
+
 };
 
 static int ataInit(const char *p_args) {

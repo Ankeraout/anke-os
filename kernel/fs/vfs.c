@@ -218,23 +218,59 @@ int vfsMount(
 
 struct ts_vfsFileDescriptor *vfsFind(const char *p_path) {
     const char *l_relativePath = NULL;
-
-    struct ts_vfsFileDescriptor *l_mountPoint =
+    struct ts_vfsFileDescriptor *l_currentDescriptor =
         vfsGetMountPoint(p_path, &l_relativePath);
 
-    if(l_mountPoint == NULL) {
-        return NULL;
-    }
-
     if(l_relativePath[0] == '\0') {
-        return l_mountPoint;
+        return l_currentDescriptor;
     }
 
-    if(l_mountPoint->a_find == NULL) {
-        return NULL;
-    }
+    while(true) {
+        if(l_currentDescriptor == NULL) {
+            return NULL;
+        }
 
-    return l_mountPoint->a_find(l_mountPoint, l_relativePath);
+        if(l_currentDescriptor->a_operations->a_find == NULL) {
+            kfree(l_currentDescriptor);
+            return NULL;
+        }
+
+        // Extract next file name
+        const char *l_fileNameEnd =
+            strchr(l_relativePath, C_VFS_PATH_SEPARATOR);
+        int l_fileNameLength;
+
+        if(l_fileNameEnd == NULL) {
+            l_fileNameLength = strlen(l_relativePath);
+        } else {
+            l_fileNameLength = l_fileNameEnd - l_relativePath;
+        }
+
+        if(strlen(l_relativePath) > NAME_MAX) {
+            kfree(l_currentDescriptor);
+            return NULL;
+        }
+
+        char l_fileNameBuffer[NAME_MAX + 1];
+
+        strncpy(l_fileNameBuffer, l_relativePath, l_fileNameLength);
+
+        // Find descriptor
+        struct ts_vfsFileDescriptor *l_nextDescriptor =
+            l_currentDescriptor->a_operations->a_find(
+                l_currentDescriptor,
+                l_fileNameBuffer
+            );
+
+        kfree(l_currentDescriptor);
+
+        if(l_fileNameEnd == NULL) {
+            return l_currentDescriptor;
+        } else {
+            l_currentDescriptor = l_nextDescriptor;
+            l_relativePath += l_fileNameLength + 1;
+        }
+    }
 }
 
 struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file) {
@@ -249,6 +285,62 @@ struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file) {
     memcpy(l_clone, p_file, sizeof(struct ts_vfsFileDescriptor));
 
     return l_clone;
+}
+
+int vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags) {
+    if(p_file->a_referenceCount >= 0) {
+        spinlockAcquire(&p_file->a_referenceCountLock);
+
+        p_file->a_referenceCount++;
+
+        spinlockRelease(&p_file->a_referenceCountLock);
+    }
+
+    if(p_file->a_operations->a_open != NULL) {
+        if(p_file->a_operations->a_open(p_file, p_flags) != 0) {
+            vfsClose(p_file);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void vfsClose(struct ts_vfsFileDescriptor *p_file) {
+    if(p_file->a_referenceCount < 0) {
+        return;
+    }
+
+    spinlockAcquire(&p_file->a_referenceCountLock);
+
+    p_file->a_referenceCount--;
+
+    if(p_file->a_referenceCount == 0) {
+        if(p_file->a_operations->a_close != NULL) {
+            p_file->a_operations->a_close(p_file);
+        }
+
+        kfree(p_file);
+    } else {
+        spinlockRelease(&p_file->a_referenceCountLock);
+    }
+}
+
+struct ts_vfsFileDescriptor *vfsCreateDescriptor(bool p_disposable) {
+    struct ts_vfsFileDescriptor *l_descriptor =
+        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+
+    if(l_descriptor == NULL) {
+        return NULL;
+    }
+
+    spinlockInit(&l_descriptor->a_referenceCountLock);
+
+    if(!p_disposable) {
+        l_descriptor->a_referenceCount = -1;
+    }
+
+    return l_descriptor;
 }
 
 static void vfsDebug2(

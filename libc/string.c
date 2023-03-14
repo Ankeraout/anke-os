@@ -155,3 +155,15 @@ char *strrchr(const char *p_str, int p_character) {
 
     return (char *)l_lastOccurrence;
 }
+
+char *strchr(const char *p_str, int p_character) {
+    while(*p_str != '\0') {
+        if(*p_str == p_character) {
+            return (char *)p_str;
+        }
+
+        p_str++;
+    }
+
+    return NULL;
+}

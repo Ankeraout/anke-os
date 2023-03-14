@@ -2,7 +2,7 @@
 #include <kernel/arch/x86_64/inline.h>
 #include <kernel/common.h>
 #include <kernel/debug.h>
-#include <kernel/device.h>
+#include <kernel/dev/device.h>
 #include <kernel/module.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>

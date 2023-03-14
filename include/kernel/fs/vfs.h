@@ -11,7 +11,7 @@
 enum {
     E_VFS_FILETYPE_FILE = 1,
     E_VFS_FILETYPE_FOLDER,
-    E_VFS_FILETYPE_BLOCK,
+    E_VFS_FILETYPE_MOUNTPOINT,
     E_VFS_FILETYPE_CHARACTER
 };
 
@@ -19,7 +19,7 @@ struct ts_vfsFileDescriptor;
 
 typedef struct ts_vfsFileDescriptor *tf_vfsFind(
     struct ts_vfsFileDescriptor *p_file,
-    const char *p_path
+    const char *p_name
 );
 typedef int tf_vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
 typedef void tf_vfsClose(struct ts_vfsFileDescriptor *p_file);
@@ -43,17 +43,27 @@ typedef off_t tf_vfsLseek(
     off_t p_offset,
     int p_whence
 );
+typedef int tf_vfsMkdir(
+    struct ts_vfsFileDescriptor *p_file,
+    const char *p_name,
+    mode_t p_mode
+);
+typedef int tf_vfsCreate(
+    struct ts_vfsFileDescriptor *p_file,
+    const char *p_name,
+    mode_t p_mode
+);
+typedef int tf_vfsMknod(
+    struct ts_vfsFileDescriptor *p_file,
+    const char *p_name,
+    mode_t p_mode,
+    dev_t p_device
+);
 
 /**
- * @brief This structure represents a file descriptor.
+ * @brief This structure represents file operations.
  */
-struct ts_vfsFileDescriptor {
-    // Free for use by the FS driver.
-    void *a_context;
-
-    int a_openFlags;
-    char a_name[C_VFS_MAX_FILENAME_SIZE];
-    int a_type;
+struct ts_vfsFileOperations {
     tf_vfsOpen *a_open;
     tf_vfsFind *a_find;
     tf_vfsClose *a_close;
@@ -61,6 +71,24 @@ struct ts_vfsFileDescriptor {
     tf_vfsWrite *a_write;
     tf_vfsIoctl *a_ioctl;
     tf_vfsLseek *a_lseek;
+    tf_vfsMkdir *a_mkdir;
+    tf_vfsCreate *a_create;
+    tf_vfsMknod *a_mknod;
+};
+
+/**
+ * @brief This structure represents a file descriptor.
+ */
+struct ts_vfsFileDescriptor {
+    int a_type;
+    int a_major;
+    int a_minor;
+    char a_name[C_VFS_MAX_FILENAME_SIZE];
+    ssize_t a_size;
+    void *a_custom;
+    t_spinlock a_referenceCountLock;
+    int a_referenceCount;
+    const struct ts_vfsFileOperations *a_operations;
 };
 
 /**
@@ -122,5 +150,23 @@ struct ts_vfsFileDescriptor *vfsFind(const char *p_path);
  * @retval NULL if an error occurred.
  */
 struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file);
+
+/**
+ * @brief Opens the given file descriptor.
+ */
+int vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
+
+/**
+ * @brief Closes the given file descriptor.
+ */
+void vfsClose(struct ts_vfsFileDescriptor *p_file);
+
+/**
+ * @brief Creates a new file descriptor.
+ *
+ * @param[in] p_disposable A boolean value that indicates if the new descriptor
+ * can free itself.
+ */
+struct ts_vfsFileDescriptor *vfsCreateDescriptor(bool p_disposable);
 
 #endif
