@@ -1,172 +1,214 @@
 #ifndef __INCLUDE_KERNEL_FS_VFS_H__
 #define __INCLUDE_KERNEL_FS_VFS_H__
 
-#include <stdio.h>
-
 #include <kernel/misc/spinlock.h>
+#include <kernel/misc/tree.h>
+#include <stdbool.h>
 #include <sys/types.h>
 
-#define C_VFS_MAX_FILENAME_SIZE 256
-
-enum {
-    E_VFS_FILETYPE_FILE = 1,
-    E_VFS_FILETYPE_FOLDER,
-    E_VFS_FILETYPE_MOUNTPOINT,
-    E_VFS_FILETYPE_CHARACTER
+enum te_vfsNodeType {
+    E_VFSNODETYPE_FILE,
+    E_VFSNODETYPE_DIRECTORY,
+    E_VFSNODETYPE_CHARACTERDEVICE
 };
 
-struct ts_vfsFileDescriptor;
+struct ts_vfsNode;
 
-typedef struct ts_vfsFileDescriptor *tf_vfsFind(
-    struct ts_vfsFileDescriptor *p_file,
+typedef int tf_vfsClose(struct ts_vfsNode *p_node);
+typedef int tf_vfsCreate(
+    struct ts_vfsNode *p_node,
     const char *p_name
 );
-typedef int tf_vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
-typedef void tf_vfsClose(struct ts_vfsFileDescriptor *p_file);
+typedef int tf_vfsIoctl(
+    struct ts_vfsNode *p_node
+    // TODO
+);
+typedef int tf_vfsLookup(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
+);
+typedef int tf_vfsMkdir(
+    struct ts_vfsNode *p_node,
+    const char *p_name
+);
+typedef int tf_vfsMknod(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    enum te_vfsNodeType p_type,
+    dev_t p_deviceNumber
+);
+typedef int tf_vfsOpen(struct ts_vfsNode *p_node, int p_flags);
 typedef ssize_t tf_vfsRead(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_node,
     void *p_buffer,
     size_t p_size
 );
+typedef int tf_vfsRemove(struct ts_vfsNode *p_node, const char *p_name);
+typedef int tf_vfsRmdir(struct ts_vfsNode *p_node, const char *p_name);
 typedef ssize_t tf_vfsWrite(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_node,
     const void *p_buffer,
     size_t p_size
 );
-typedef int tf_vfsIoctl(
-    struct ts_vfsFileDescriptor *p_file,
-    int p_request,
-    void *p_arg
-);
-typedef off_t tf_vfsLseek(
-    struct ts_vfsFileDescriptor *p_file,
-    off_t p_offset,
-    int p_whence
-);
-typedef int tf_vfsMkdir(
-    struct ts_vfsFileDescriptor *p_file,
-    const char *p_name,
-    mode_t p_mode
-);
-typedef int tf_vfsCreate(
-    struct ts_vfsFileDescriptor *p_file,
-    const char *p_name,
-    mode_t p_mode
-);
-typedef int tf_vfsMknod(
-    struct ts_vfsFileDescriptor *p_file,
-    const char *p_name,
-    mode_t p_mode,
-    dev_t p_device
-);
 
-/**
- * @brief This structure represents file operations.
- */
-struct ts_vfsFileOperations {
-    tf_vfsOpen *a_open;
-    tf_vfsFind *a_find;
+struct ts_vfsNodeOperations {
     tf_vfsClose *a_close;
-    tf_vfsRead *a_read;
-    tf_vfsWrite *a_write;
-    tf_vfsIoctl *a_ioctl;
-    tf_vfsLseek *a_lseek;
-    tf_vfsMkdir *a_mkdir;
     tf_vfsCreate *a_create;
+    tf_vfsIoctl *a_ioctl;
+    tf_vfsLookup *a_lookup;
+    tf_vfsMkdir *a_mkdir;
     tf_vfsMknod *a_mknod;
+    tf_vfsOpen *a_open;
+    tf_vfsRead *a_read;
+    tf_vfsRemove *a_remove;
+    tf_vfsRmdir *a_rmdir;
+    tf_vfsWrite *a_write;
 };
 
-/**
- * @brief This structure represents a file descriptor.
- */
-struct ts_vfsFileDescriptor {
-    int a_type;
-    int a_major;
-    int a_minor;
-    char a_name[C_VFS_MAX_FILENAME_SIZE];
-    ssize_t a_size;
-    void *a_custom;
-    t_spinlock a_referenceCountLock;
-    int a_referenceCount;
-    const struct ts_vfsFileOperations *a_operations;
-};
+struct ts_vfsTreeNode;
 
-/**
- * @brief This structure represents a VFS tree node. Note that a VFS tree node
- *        must always have a name. The a_fileDescriptor field is NULL unless the
- *        node is a mount point or a special file.
- */
 struct ts_vfsNode {
-    char *a_name;
-    struct ts_vfsFileDescriptor *a_fileDescriptor;
+    t_spinlock a_lock;
+    int a_referenceCount;
+    enum te_vfsNodeType a_type;
+    struct ts_treeNode *a_vfs;
+    struct ts_vfsNodeOperations a_operations;
+    dev_t a_deviceNumber;
+    void *a_fsData;
+};
+
+struct ts_vfsFileSystem {
+    const char *a_name;
+    struct ts_vfsNodeOperations a_operations;
+    int (*a_onMount)(struct ts_vfsNode *p_node, dev_t p_device);
 };
 
 /**
- * @brief Prints the VFS tree.
+ * @brief Creates a new VFS node.
+ *
+ * @param[in] p_parent The parent of the new VFS node. Setting this parameter to
+ * NULL means that the new VFS node is a child of the root node.
+ * @param[in] p_name The name of the new VFS node.
+ * @param[in] p_autoFree A boolean value that indicates whether this node will
+ * use the reference counter. The reference counter should be used for every
+ * node but the root node and mount point nodes.
+ * @param[out] p_output The created node.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
  */
+int vfsCreateNode(
+    struct ts_vfsNode *p_parent,
+    const char *p_name,
+    bool p_autoFree,
+    struct ts_vfsNode **p_output
+);
+
 void vfsDebug(void);
 
 /**
  * @brief Initializes the VFS.
- */
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
 int vfsInit(void);
 
 /**
- * @brief Gets the mount point for the given path.
+ * @brief Looks for a file and returns its node.
  *
- * @param[in] p_path The path to find the mount point of
- * @param[out] p_relativePath The path relative to the mount point
+ * @param[in] p_cwd The current working directory. This will be ignored (can be
+ * set to NULL) if p_path is an absolute path.
+ * @param[in] p_path The path of the file to look for.
+ * @param[out] p_output The node of the searched file.
  *
- * @returns The mount point file descriptor
- * @retval NULL if the mount point could not be found or if the path was
- *         invalid.
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
  */
-struct ts_vfsFileDescriptor *vfsGetMountPoint(
+int vfsLookup(
+    const char *p_cwd,
     const char *p_path,
-    const char **p_relativePath
+    struct ts_vfsNode **p_output
 );
 
 /**
- * @brief Mounts the given file descriptor at the given path.
+ * @brief Mounts a file system.
  *
- * @retval 0 if the file was mounted successfully
- * @retval Any other value if an error occurred
+ * @param[in] p_node The node to mount the file system in.
+ * @param[in] p_fs The file system to mount.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
  */
-int vfsMount(
-    const char *p_mountPath,
-    struct ts_vfsFileDescriptor *p_fileDescriptor
+int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs);
+
+/**
+ * @brief Closes the given node.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int vfsOperationClose(struct ts_vfsNode *p_node);
+
+/**
+ * @brief Looks for a child file and returns its node.
+ *
+ * @param[in] p_node The node to search in.
+ * @param[in] p_name The name of the file to look for.
+ * @param[out] p_output The node of the searched file.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int vfsOperationLookup(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
 );
 
 /**
- * @brief Gets the file descriptor for the given path.
+ * @brief Creates a directory.
  *
- * @retval NULL if the file could not be opened.
- */
-struct ts_vfsFileDescriptor *vfsFind(const char *p_path);
-
-/**
- * @brief Clones the given file descriptor.
+ * @param[in] p_node The node to create the directory in. This node must be a
+ * directory.
+ * @param[in] p_name The name of the new directory.
  *
- * @retval NULL if an error occurred.
- */
-struct ts_vfsFileDescriptor *vfsClone(struct ts_vfsFileDescriptor *p_file);
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int vfsOperationMkdir(
+    struct ts_vfsNode *p_node,
+    const char *p_name
+);
 
 /**
- * @brief Opens the given file descriptor.
- */
-int vfsOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
-
-/**
- * @brief Closes the given file descriptor.
- */
-void vfsClose(struct ts_vfsFileDescriptor *p_file);
-
-/**
- * @brief Creates a new file descriptor.
+ * @brief Creates a new special file.
  *
- * @param[in] p_disposable A boolean value that indicates if the new descriptor
- * can free itself.
- */
-struct ts_vfsFileDescriptor *vfsCreateDescriptor(bool p_disposable);
+ * @param[in] p_node The node to create the file in. This node must be a
+ * directory.
+ * @param[in] p_name The name of the new file.
+ * @param[in] p_type The type of the new file. The only accepted value currently
+ * is E_VFSNODETYPE_CHARACTERDEVICE.
+ * @param[in] p_deviceNumber The device number (for block and character
+ * devices).
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int vfsOperationMknod(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    enum te_vfsNodeType p_type,
+    dev_t p_deviceNumber
+);
 
 #endif

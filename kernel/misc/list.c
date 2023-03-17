@@ -128,17 +128,21 @@ int linkedListRemoveNode(
     struct ts_linkedList *p_list,
     struct ts_linkedListNode *p_node
 ) {
-    struct ts_linkedListNode *p_previousNode = p_node->a_previous;
-    struct ts_linkedListNode *p_nextNode = p_node->a_next;
+    struct ts_linkedListNode *l_previousNode = p_node->a_previous;
+    struct ts_linkedListNode *l_nextNode = p_node->a_next;
 
-    if(p_previousNode != NULL) {
-        p_previousNode->a_next = p_nextNode;
-        p_list->a_first = p_nextNode;
+    // Special case: first node in the list
+    if(l_previousNode == NULL) {
+        p_list->a_first = l_nextNode;
+    } else {
+        l_previousNode->a_next = l_nextNode;
     }
 
-    if(p_nextNode != NULL) {
-        p_nextNode->a_previous = p_previousNode;
-        p_list->a_last = p_previousNode;
+    // Special case: last node in the list
+    if(l_nextNode == NULL) {
+        p_list->a_last = l_previousNode;
+    } else {
+        l_nextNode->a_previous = l_previousNode;
     }
 
     kfree(p_node);
@@ -149,11 +153,11 @@ int linkedListRemoveNode(
 }
 
 int linkedListRemoveItem(struct ts_linkedList *p_list, const void *p_element) {
-    struct ts_linkedListNode *p_currentNode = p_list->a_first;
+    struct ts_linkedListNode *l_currentNode = p_list->a_first;
 
-    while(p_currentNode != NULL) {
-        if(p_currentNode->a_data == p_element) {
-            linkedListRemoveNode(p_list, p_currentNode);
+    while(l_currentNode != NULL) {
+        if(l_currentNode->a_data == p_element) {
+            linkedListRemoveNode(p_list, l_currentNode);
             return 0;
         }
     }
@@ -170,14 +174,14 @@ void linkedListDestroy(struct ts_linkedList *p_list) {
 }
 
 void linkedListClear(struct ts_linkedList *p_list) {
-    struct ts_linkedListNode *p_currentNode = p_list->a_first;
+    struct ts_linkedListNode *l_currentNode = p_list->a_first;
 
-    while(p_currentNode != NULL) {
-        struct ts_linkedListNode *p_nextNode = p_currentNode->a_next;
+    while(l_currentNode != NULL) {
+        struct ts_linkedListNode *p_nextNode = l_currentNode->a_next;
 
-        kfree(p_currentNode);
+        kfree(l_currentNode);
 
-        p_currentNode = p_nextNode;
+        l_currentNode = p_nextNode;
     }
 
     p_list->a_first = NULL;
@@ -190,13 +194,13 @@ void *linkedListGet(struct ts_linkedList *p_list, size_t p_index) {
         return NULL;
     }
 
-    struct ts_linkedListNode *p_currentNode = p_list->a_first;
+    struct ts_linkedListNode *l_currentNode = p_list->a_first;
 
     for(size_t l_index = 1; l_index < p_index; l_index++) {
-        p_currentNode = p_currentNode->a_next;
+        l_currentNode = l_currentNode->a_next;
     }
 
-    return p_currentNode->a_data;
+    return l_currentNode->a_data;
 }
 
 static int arrayListExtend(struct ts_arrayList *p_list) {
@@ -206,9 +210,9 @@ static int arrayListExtend(struct ts_arrayList *p_list) {
         if(p_list->a_data == NULL) {
             return 1;
         }
-        
+
         p_list->a_size = C_LIST_INITIAL_SIZE;
-            
+
         return 0;
     }
 

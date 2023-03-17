@@ -39,6 +39,14 @@ static inline void deviceSetMinor(dev_t *p_deviceNumber, uint8_t p_minor) {
 }
 
 /**
+ * @brief Returns the dev_t value for the corresponding major and minor device
+ * numbers.
+*/
+static inline dev_t deviceMake(uint8_t p_major, uint8_t p_minor) {
+    return (p_major << 8) | p_minor;
+}
+
+/**
  * @brief Initializes the device system.
  *
  * @retval 0 on success.
@@ -82,8 +90,24 @@ int deviceRegister(
 int deviceAdd(
     const char *p_name,
     dev_t p_deviceNumber,
-    const struct ts_vfsFileOperations *p_operations,
+    const struct ts_vfsNodeOperations *p_operations,
     int p_minorCount
+);
+
+/**
+ * @brief Gets the operation for the given device.
+ *
+ * @param[out] l_output The ts_vfsNodeOperations structure pointer that will
+ * receive a pointer to the device operations. Note that the output pointer
+ * must not be freed!
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int deviceGetOperations(
+    dev_t p_deviceNumber,
+    const struct ts_vfsNodeOperations **l_output
 );
 
 #endif

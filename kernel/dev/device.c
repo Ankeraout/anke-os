@@ -14,7 +14,7 @@
 
 struct ts_deviceMinorEntry {
     bool a_taken;
-    const struct ts_vfsFileOperations *a_operations;
+    const struct ts_vfsNodeOperations *a_operations;
 };
 
 struct ts_deviceMajorEntry {
@@ -140,7 +140,7 @@ int deviceRegister(
 int deviceAdd(
     const char *p_name,
     dev_t p_deviceNumber,
-    const struct ts_vfsFileOperations *p_operations,
+    const struct ts_vfsNodeOperations *p_operations,
     int p_minorCount
 ) {
     int l_major = deviceGetMajor(p_deviceNumber);
@@ -182,6 +182,32 @@ int deviceAdd(
             p_operations;
         l_currentMinor++;
     }
+
+    spinlockRelease(&s_deviceTableSpinlock);
+
+    return 0;
+}
+
+int deviceGetOperations(
+    dev_t p_deviceNumber,
+    const struct ts_vfsNodeOperations **l_output
+) {
+    int l_major = deviceGetMajor(p_deviceNumber);
+    int l_minor = deviceGetMinor(p_deviceNumber);
+
+    spinlockAcquire(&s_deviceTableSpinlock);
+
+    if(s_deviceTable[l_major] == NULL) {
+        spinlockRelease(&s_deviceTableSpinlock);
+        return -ENODEV;
+    }
+
+    if(!s_deviceTable[l_major]->a_entries[l_minor].a_taken) {
+        spinlockRelease(&s_deviceTableSpinlock);
+        return -ENODEV;
+    }
+
+    *l_output = s_deviceTable[l_major]->a_entries[l_minor].a_operations;
 
     spinlockRelease(&s_deviceTableSpinlock);
 
