@@ -160,6 +160,8 @@ int linkedListRemoveItem(struct ts_linkedList *p_list, const void *p_element) {
             linkedListRemoveNode(p_list, l_currentNode);
             return 0;
         }
+
+        l_currentNode = l_currentNode->a_next;
     }
 
     return 1;

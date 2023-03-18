@@ -46,7 +46,7 @@ static int pciideInit(const char *p_args) {
 
     debug("pciide: Done.\n");
 
-    kfree(s_pciDriver);
+    vfsOperationClose(s_pciDriver);
 
     return 0;
 }
@@ -141,5 +141,5 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
         debug("pciide: Secondary channel is in PCI native mode (unsupported).\n");
     }
 
-    kfree(l_ataDriver);
+    vfsOperationClose(l_ataDriver);
 }

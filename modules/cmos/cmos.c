@@ -188,4 +188,6 @@ static void cmosCheckFloppy(
         E_IOCTL_FLOPPY_CREATE,
         &l_requestFloppyCreate
     );
+
+    vfsOperationClose(l_floppyDriver);
 }

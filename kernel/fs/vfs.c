@@ -47,7 +47,7 @@ int vfsCreateNode(
     // Initialize the node
     if(p_autoFree) {
         spinlockInit(&l_node->a_file.a_lock);
-        l_node->a_file.a_referenceCount = 1;
+        l_node->a_file.a_referenceCount = 0;
     } else {
         l_node->a_file.a_referenceCount = -1;
     }
@@ -188,6 +188,8 @@ int vfsLookup(
                 l_nextNode = &l_childVfsTreeNode->a_file;
                 break;
             }
+
+            l_childNode = l_childNode->a_next;
         }
 
         // If the node was not found then we need to look it up from the
@@ -204,6 +206,11 @@ int vfsLookup(
                 kfree((void *)l_path);
                 return l_returnValue;
             }
+
+            // Increment the reference count of the parent node
+            spinlockAcquire(&l_currentNodeData->a_file.a_lock);
+            l_currentNodeData->a_file.a_referenceCount++;
+            spinlockRelease(&l_currentNodeData->a_file.a_lock);
         }
 
         // Check the node type.
@@ -225,6 +232,11 @@ int vfsLookup(
     // Return the found node.
     struct ts_vfsTreeNode *l_currentNodeData = l_currentNode->a_data;
     *p_output = &l_currentNodeData->a_file;
+
+    // Increment the reference count
+    spinlockAcquire(&(*p_output)->a_lock);
+    (*p_output)->a_referenceCount++;
+    spinlockRelease(&(*p_output)->a_lock);
 
     // No error code.
     return 0;
