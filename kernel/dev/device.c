@@ -159,12 +159,12 @@ int deviceAdd(
 
     // Make sure that the minor count is valid
     if((p_minorCount < 0) || (p_minorCount >= (C_DEVICE_MAX_MINOR + 1))) {
-        return -1;
+        return -EINVAL;
     }
 
     // Make sure that the device range is valid
     if((l_minor + p_minorCount) > (C_DEVICE_MAX_MINOR + 1)) {
-        return -1;
+        return -EINVAL;
     }
 
     spinlockAcquire(&s_deviceTableSpinlock);
@@ -172,7 +172,7 @@ int deviceAdd(
     // Make sure that the device driver name is correct
     if(strcmp(p_name, s_deviceTable[l_major]->a_name) != 0) {
         spinlockRelease(&s_deviceTableSpinlock);
-        return -1;
+        return -EINVAL;
     }
 
     // Set the device operations

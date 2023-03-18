@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <kernel/arch/x86_64/inline.h>
@@ -43,12 +44,7 @@ enum {
     E_ATA_COMMAND_IDENTIFY = 0xec
 };
 
-struct ts_ataChannelContext;
-
-struct ts_ataDriveContext {
-    struct ts_ataChannelContext *a_channel;
-    struct ts_vfsFileDescriptor *a_file;
-    int a_driveNumber;
+struct ts_ataDrive {
     bool a_usesLba;
     bool a_usesLba48;
     uint64_t a_sectorCount;
@@ -58,13 +54,12 @@ struct ts_ataDriveContext {
     off_t a_position;
 };
 
-struct ts_ataChannelContext {
-    struct ts_vfsFileDescriptor *a_file;
+struct ts_ataChannel {
     uint16_t a_ioPortBase;
     uint16_t a_ioPortControl;
     uint16_t a_ioPortBusMaster;
     int a_irq;
-    struct ts_ataDriveContext a_drives[2];
+    struct ts_ataDrive a_drives[2];
     int a_selectedDrive;
     uint8_t a_registerCacheStatus;
     uint8_t a_registerCacheDriveHead;
@@ -73,45 +68,44 @@ struct ts_ataChannelContext {
 static int ataInit(const char *p_args);
 static void ataQuit(void);
 static int ataIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 );
-static int ataIoctlCreate(
-    struct ts_vfsFileDescriptor *p_driverFile,
+static int ataIoctlDriverCreate(
+    struct ts_vfsNode *p_driverFile,
     struct ts_ataRequestCreate *p_request
 );
-static int ataIoctlDeviceChannel(
-    struct ts_vfsFileDescriptor *p_file,
+static int ataIoctlChannel(
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 );
-static void ataChannelScan(struct ts_vfsFileDescriptor *p_channelFile);
-static void ataDriveScan(struct ts_ataDriveContext *p_context);
-static void ataSelectDrive(struct ts_ataChannelContext *p_channel, int p_drive);
-static void ataWait(struct ts_ataChannelContext *p_channel);
-static void ataWaitUntilNotBusy(struct ts_ataChannelContext *p_channel);
-static void ataWaitUntilDataRequestOrError(
-    struct ts_ataChannelContext *p_channel
-);
-static int ataOpen(struct ts_vfsFileDescriptor *p_file, int p_flags);
+static void ataIoctlChannelScan(struct ts_vfsNode *p_channelFile);
+static void ataDriveScan(int p_channelNumber, int p_driveNumber);
+static void ataSelectDrive(int p_channelNumber, int p_driveNumber);
+static void ataWait(int p_channelNumber);
+static void ataWaitUntilNotBusy(int p_channelNumber);
+static void ataWaitUntilDataRequestOrError(int p_channelNumber);
+static int ataOpen(struct ts_vfsNode *p_file, int p_flags);
 static off_t ataLseek(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     off_t p_offset,
     int p_whence
 );
 static ssize_t ataReadPata(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 );
 static ssize_t ataWritePata(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     const void *p_buffer,
     size_t p_size
 );
 static ssize_t ataReadPataSector(
-    struct ts_ataDriveContext *p_context,
+    int p_channelNumber,
+    int p_driveNumber,
     uint64_t p_lba,
     void *p_buffer
 );
@@ -122,30 +116,54 @@ M_DECLARE_MODULE struct ts_module g_moduleAta = {
     .a_quit = ataQuit
 };
 
-static const struct ts_vfsFileOperations s_ataFopsDriver = {
-
+static const struct ts_vfsNodeOperations s_ataOperationsDriver = {
+    .a_ioctl = ataIoctlDriver
 };
+
+static const struct ts_vfsNodeOperations s_ataOperationsChannel = {
+    .a_ioctl = ataIoctlChannel
+};
+
+static const struct ts_vfsNodeOperations s_ataOperationsDrivePata = {
+    .a_lseek = ataLseek,
+    .a_open = ataOpen,
+    .a_read = ataReadPata,
+    .a_write = ataWritePata,
+};
+
+static dev_t s_ataDeviceNumber;
+static int s_ataChannelCount;
+static struct ts_ataChannel s_ataChannelContext[2];
 
 static int ataInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
-    // Create ATA driver file
-    struct ts_vfsFileDescriptor *l_ataDriver =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    s_ataChannelCount = 0;
 
-    if(l_ataDriver == NULL) {
-        debug("ata: Failed to allocate memory for driver file.\n");
+    // Create ATA driver file
+    s_ataDeviceNumber = deviceMake(0, 0);
+
+    int l_returnValue =
+        deviceRegister(E_DEVICETYPE_CHARACTER, "ata", &s_ataDeviceNumber, 7);
+
+    if(l_returnValue != 0) {
+        debug("ata: Failed to register device: %d.\n", l_returnValue);
         return 1;
     }
 
-    strcpy(l_ataDriver->a_name, "ata");
-    l_ataDriver->a_ioctl = ataIoctlDriver;
-    l_ataDriver->a_type = E_VFS_FILETYPE_CHARACTER;
+    l_returnValue =
+        deviceAdd("ata", s_ataDeviceNumber, &s_ataOperationsDriver, 1);
 
-    // Register driver file
-    if(deviceMount("/dev/ata", l_ataDriver) != 0) {
-        debug("ata: Failed to create driver file.\n");
-        kfree(l_ataDriver);
+    if(l_returnValue != 0) {
+        debug("ata: Failed to add device: %d.\n", l_returnValue);
+        return 1;
+    }
+
+    l_returnValue =
+        deviceCreateFile2(s_ataDeviceNumber, "ata");
+
+    if(l_returnValue != 0) {
+        debug("ata: Failed to create device file: %d.\n", l_returnValue);
         return 1;
     }
 
@@ -159,84 +177,90 @@ static void ataQuit(void) {
 }
 
 static int ataIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 ) {
     M_UNUSED_PARAMETER(p_file);
 
     switch(p_request) {
-        case E_IOCTL_ATA_DRIVER_CREATE: return ataIoctlCreate(p_file, p_arg);
+        case E_IOCTL_ATA_DRIVER_CREATE:
+            return ataIoctlDriverCreate(p_file, p_arg);
+
         default: return -EINVAL;
     }
 
     return -EINVAL;
 }
 
-static int ataIoctlCreate(
-    struct ts_vfsFileDescriptor *p_driverFile,
+static int ataIoctlDriverCreate(
+    struct ts_vfsNode *p_driverFile,
     struct ts_ataRequestCreate *p_request
 ) {
     M_UNUSED_PARAMETER(p_driverFile);
 
-    // Create channel device file
-    struct ts_vfsFileDescriptor *l_channelFile =
-        deviceCreate("/dev/ata%d", 0);
-
-    if(l_channelFile == NULL) {
-        debug("ata: Failed to allocate memory for channel device file.\n");
-        return -ENOMEM;
-    }
-
-    struct ts_ataChannelContext *l_channelContext =
-        kcalloc(sizeof(struct ts_ataChannelContext));
-
-    if(l_channelContext == NULL) {
-        debug("ata: Failed to allocate memory for channel context.\n");
-        kfree(l_channelFile);
-        return -ENOMEM;
-    }
+    int l_channelIndex = s_ataChannelCount;
 
     // Initialize channel context
-    l_channelFile->a_context = l_channelContext;
-    l_channelFile->a_ioctl = ataIoctlDeviceChannel;
-    l_channelFile->a_type = E_VFS_FILETYPE_CHARACTER;
+    s_ataChannelContext[l_channelIndex].a_ioPortBase =
+        p_request->a_ioPortBase;
+    s_ataChannelContext[l_channelIndex].a_ioPortControl =
+        p_request->a_ioPortControl;
+    s_ataChannelContext[l_channelIndex].a_ioPortBusMaster =
+        p_request->a_ioPortBusMaster;
+    s_ataChannelContext[l_channelIndex].a_irq = p_request->a_irq;
 
-    l_channelContext->a_ioPortBase = p_request->a_ioPortBase;
-    l_channelContext->a_ioPortControl = p_request->a_ioPortControl;
-    l_channelContext->a_ioPortBusMaster = p_request->a_ioPortBusMaster;
-    l_channelContext->a_irq = p_request->a_irq;
-    l_channelContext->a_drives[0].a_channel = l_channelContext;
-    l_channelContext->a_drives[1].a_channel = l_channelContext;
-    l_channelContext->a_drives[1].a_driveNumber = 1;
-    l_channelContext->a_file = l_channelFile;
+    s_ataChannelCount++;
 
-    // Register channel device file
-    char l_path[PATH_MAX];
+    // Create channel device
+    dev_t l_deviceNumber = s_ataDeviceNumber;
+    deviceSetMinor(&l_deviceNumber, l_channelIndex + 1);
 
-    snprintf(l_path, PATH_MAX, "/dev/%s", l_channelFile->a_name);
+    int l_returnValue =
+        deviceAdd("ata", l_deviceNumber, &s_ataOperationsChannel, 1);
 
-    if(vfsMount(l_path, l_channelFile) != 0) {
-        debug("ata: Failed to register /dev/%s.\n", l_channelFile->a_name);
-        kfree(l_channelFile->a_context);
-        kfree(l_channelFile);
-        return 1;
+    if(l_returnValue != 0) {
+        debug("ata: Failed to add channel device: %d.\n", l_returnValue);
+        return l_returnValue;
     }
 
-    debug("ata: Registered channel as /dev/%s.\n", l_channelFile->a_name);
+    l_returnValue = deviceCreateFile(l_deviceNumber);
+
+    if(l_returnValue != 0) {
+        debug(
+            "ata: Failed to create channel device file: %d.\n",
+            l_returnValue
+        );
+
+        return l_returnValue;
+    }
 
     // Scan the channel for drives
-    l_channelFile->a_ioctl(
-        l_channelFile,
-        E_IOCTL_ATA_CHANNEL_SCAN,
-        NULL
-    );
+    char l_driveFileName[NAME_MAX + 1];
+
+    snprintf(l_driveFileName, NAME_MAX, "/dev/ata%d", l_channelIndex + 1);
+
+    struct ts_vfsNode *l_drive;
+    l_returnValue = vfsLookup(NULL, l_driveFileName, &l_drive);
+
+    if(l_returnValue != 0) {
+        debug(
+            "ata: Failed to find %s: %d.\n",
+            l_driveFileName,
+            l_returnValue
+        );
+
+        return l_returnValue;
+    }
+
+    vfsOperationIoctl(l_drive, E_IOCTL_ATA_CHANNEL_SCAN, NULL);
+    vfsOperationClose(l_drive);
 
     return 0;
 }
 
-static int ataIoctlDeviceChannel(
-    struct ts_vfsFileDescriptor *p_file,
+static int ataIoctlChannel(
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 ) {
@@ -244,7 +268,7 @@ static int ataIoctlDeviceChannel(
 
     switch(p_request) {
         case E_IOCTL_ATA_CHANNEL_SCAN:
-            ataChannelScan(p_file);
+            ataIoctlChannelScan(p_file);
             return 0;
 
         default:
@@ -254,70 +278,71 @@ static int ataIoctlDeviceChannel(
     return -EINVAL;
 }
 
-static void ataChannelScan(struct ts_vfsFileDescriptor *p_channelFile) {
-    struct ts_ataChannelContext *l_context = p_channelFile->a_context;
+static void ataIoctlChannelScan(struct ts_vfsNode *p_channelFile) {
+    int l_channelNumber = deviceGetMinor(p_channelFile->a_deviceNumber) - 1;
 
-    debug("ata: Scanning channel...\n");
+    debug("ata: Scanning channel %d...\n", l_channelNumber);
 
-    ataDriveScan(&l_context->a_drives[0]);
-    ataDriveScan(&l_context->a_drives[1]);
+    ataDriveScan(l_channelNumber, 0);
+    ataDriveScan(l_channelNumber, 1);
 }
 
-static void ataDriveScan(struct ts_ataDriveContext *p_context) {
-    debug("ata: Scanning drive %d...\n", p_context->a_driveNumber);
+static void ataDriveScan(int p_channelNumber, int p_driveNumber) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+    struct ts_ataDrive *l_drive =
+        &l_channel->a_drives[p_driveNumber];
 
-    ataSelectDrive(p_context->a_channel, p_context->a_driveNumber);
+    debug("ata: Scanning drive %d...\n", p_driveNumber);
+
+    ataSelectDrive(p_channelNumber, p_driveNumber);
 
     outb(
-        p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT,
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT,
         0x00
     );
     outb(
-        p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW,
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW,
         0x00
     );
     outb(
-        p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID,
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID,
         0x00
     );
     outb(
-        p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH,
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH,
         0x00
     );
     outb(
-        p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND,
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND,
         E_ATA_COMMAND_IDENTIFY
     );
 
-    ataWait(p_context->a_channel);
+    ataWait(p_channelNumber);
 
-    if(p_context->a_channel->a_registerCacheStatus == 0x00) {
+    if(l_channel->a_registerCacheStatus == 0x00) {
         debug("ata: No drive detected.\n");
         return;
     }
 
-    ataWaitUntilNotBusy(p_context->a_channel);
+    ataWaitUntilNotBusy(p_channelNumber);
 
-    // If LBA_MID or LBA_HIGH ports are non-zero, the drive is not an ATA drive.
-    uint8_t l_lbaMid =
-        inb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID);
-    uint8_t l_lbaHigh =
-        inb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH);
+    uint8_t l_lbaMid = inb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID);
+    uint8_t l_lbaHigh = inb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH);
     uint16_t l_driveType = (l_lbaHigh << 8) | l_lbaMid;
-
-    struct ts_vfsFileDescriptor *l_driveFile = NULL;
 
     if(l_driveType == 0x0000) {
         debug("ata: Detected PATA drive.\n");
 
-        ataWaitUntilDataRequestOrError(p_context->a_channel);
+        ataWaitUntilDataRequestOrError(p_channelNumber);
 
         // Read identification data
         uint16_t l_identificationData[256];
 
         for(int l_index = 0; l_index < 256; l_index++) {
-            l_identificationData[l_index] =
-                inw(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA);
+            l_identificationData[l_index] = inw(
+                l_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA
+            );
         }
 
         debug("ata: Drive name: ");
@@ -340,45 +365,64 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
 
         if(l_totalSectorsLong != 0) {
             debug("ata: Drive supports LBA48.\n");
-            p_context->a_usesLba = true;
-            p_context->a_usesLba48 = true;
-            p_context->a_sectorCount = l_totalSectorsLong;
+            l_drive->a_usesLba = true;
+            l_drive->a_usesLba48 = true;
+            l_drive->a_sectorCount = l_totalSectorsLong;
         } else if(l_totalSectors != 0) {
             debug("ata: Drive supports LBA.\n");
-            p_context->a_usesLba = true;
-            p_context->a_sectorCount = l_totalSectors;
+            l_drive->a_usesLba = false;
+            l_drive->a_sectorCount = l_totalSectors;
 
             if((l_identificationData[83] & (1 << 10)) != 0) {
                 debug("ata: Drive supports LBA48.\n");
-                p_context->a_usesLba48 = true;
+                l_drive->a_usesLba48 = true;
             } else {
                 debug("ata: Drive supports LBA28.\n");
-                p_context->a_usesLba48 = false;
+                l_drive->a_usesLba48 = false;
             }
         } else {
             debug("ata: Drive does not support LBA.\n");
-            p_context->a_usesLba = false;
-            p_context->a_usesLba48 = false;
-            p_context->a_cylinders = l_identificationData[1];
-            p_context->a_heads = l_identificationData[3];
-            p_context->a_sectors = l_identificationData[6];
-            p_context->a_sectorCount =
-                p_context->a_cylinders
-                * p_context->a_heads
-                * p_context->a_sectors;
+            l_drive->a_usesLba = false;
+            l_drive->a_usesLba48 = false;
+            l_drive->a_cylinders = l_identificationData[1];
+            l_drive->a_heads = l_identificationData[3];
+            l_drive->a_sectors = l_identificationData[6];
+            l_drive->a_sectorCount =
+                l_drive->a_cylinders
+                * l_drive->a_heads
+                * l_drive->a_sectors;
         }
 
-        // Create device file
-        l_driveFile = kcalloc(sizeof(struct ts_vfsFileDescriptor));
+        // Create device
+        dev_t l_deviceNumber = s_ataDeviceNumber;
 
-        if(l_driveFile == NULL) {
-            debug("ata: Failed to allocate memory for drive file.\n");
+        deviceSetMinor(
+            &l_deviceNumber,
+            3 + p_channelNumber * 2 + p_driveNumber
+        );
+
+        int l_returnValue = deviceAdd(
+            "ata",
+            l_deviceNumber,
+            &s_ataOperationsDrivePata,
+            1
+        );
+
+        if(l_returnValue != 0) {
+            debug("ata: Failed to create drive device: %d.\n", l_returnValue);
             return;
         }
 
-        // Assign drive file operations
-        l_driveFile->a_read = ataReadPata;
-        l_driveFile->a_write = ataWritePata;
+        l_returnValue = deviceCreateFile(l_deviceNumber);
+
+        if(l_returnValue != 0) {
+            debug(
+                "ata: Failed to create drive device file: %d.\n",
+                l_returnValue
+            );
+
+            return;
+        }
     } else if(l_driveType == 0xeb14) {
         debug("ata: Detected PATAPI drive.\n");
     } else if(l_driveType == 0x9669) {
@@ -388,126 +432,120 @@ static void ataDriveScan(struct ts_ataDriveContext *p_context) {
     } else {
         debug("ata: Unknown drive type.\n");
     }
-
-    if(l_driveFile != NULL) {
-        strcpy(l_driveFile->a_name, p_context->a_channel->a_file->a_name);
-        l_driveFile->a_name[4] = '-';
-        l_driveFile->a_name[5] = '0' + p_context->a_driveNumber;
-        l_driveFile->a_name[6] = '\0';
-        l_driveFile->a_type = E_VFS_FILETYPE_BLOCK;
-        l_driveFile->a_open = ataOpen;
-        l_driveFile->a_lseek = ataLseek;
-        l_driveFile->a_context = p_context;
-
-        if(deviceMount("/dev/%s", l_driveFile) != 0) {
-            debug("ata: Failed to create /dev/%s.\n", l_driveFile->a_name);
-            kfree(l_driveFile);
-            return;
-        }
-
-        debug("ata: Registered /dev/%s.\n", l_driveFile->a_name);
-    }
 }
 
-static void ataSelectDrive(
-    struct ts_ataChannelContext *p_channel,
-    int p_drive
-) {
-    if(p_channel->a_selectedDrive == p_drive) {
+static void ataSelectDrive(int p_channelNumber, int p_driveNumber) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+    struct ts_ataDrive *l_drive =
+        &l_channel->a_drives[p_driveNumber];
+
+    if(l_channel->a_selectedDrive == p_driveNumber) {
         return;
     }
 
-    if(p_drive == 0) {
-        p_channel->a_registerCacheDriveHead = 0xa0;
+    if(p_driveNumber == 0) {
+        l_channel->a_registerCacheDriveHead = 0xa0;
     } else {
-        p_channel->a_registerCacheDriveHead = 0xb0;
+        l_channel->a_registerCacheDriveHead = 0xb0;
     }
 
-    if(p_channel->a_drives[p_drive].a_usesLba) {
-        p_channel->a_registerCacheDriveHead |= 0x40;
+    if(l_drive->a_usesLba) {
+        l_channel->a_registerCacheDriveHead |= 0x40;
     }
 
     outb(
-        p_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD,
-        p_channel->a_registerCacheDriveHead
+        l_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD,
+        l_channel->a_registerCacheDriveHead
     );
 
-    ataWait(p_channel);
+    ataWait(p_channelNumber);
 
-    p_channel->a_selectedDrive = p_drive;
+    l_channel->a_selectedDrive = p_driveNumber;
 }
 
-static void ataWait(struct ts_ataChannelContext *p_channel) {
+static void ataWait(int p_channelNumber) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+
     for(int l_count = 0; l_count < 15; l_count++) {
-        p_channel->a_registerCacheStatus =
-            inb(p_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
+        l_channel->a_registerCacheStatus =
+            inb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
     }
 }
 
-static void ataWaitUntilNotBusy(struct ts_ataChannelContext *p_channel) {
+static void ataWaitUntilNotBusy(int p_channelNumber) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+
     do {
-        p_channel->a_registerCacheStatus =
-            inb(p_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
-    } while((p_channel->a_registerCacheStatus & C_ATA_STATUS_MASK_BSY) != 0);
+        l_channel->a_registerCacheStatus =
+            inb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
+    } while((l_channel->a_registerCacheStatus & C_ATA_STATUS_MASK_BSY) != 0);
 }
 
-static void ataWaitUntilDataRequestOrError(
-    struct ts_ataChannelContext *p_channel
-) {
+static void ataWaitUntilDataRequestOrError(int p_channelNumber) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+
     const uint8_t l_mask = C_ATA_STATUS_MASK_DRQ | C_ATA_STATUS_MASK_ERR;
 
     do {
-        p_channel->a_registerCacheStatus =
-            inb(p_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
-    } while((p_channel->a_registerCacheStatus & l_mask) == 0);
+        l_channel->a_registerCacheStatus =
+            inb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_STATUS);
+    } while((l_channel->a_registerCacheStatus & l_mask) == 0);
 }
 
-static int ataOpen(struct ts_vfsFileDescriptor *p_file, int p_flags) {
+static int ataOpen(struct ts_vfsNode *p_file, int p_flags) {
+    M_UNUSED_PARAMETER(p_file);
     M_UNUSED_PARAMETER(p_flags);
-
-    struct ts_ataDriveContext *l_context = p_file->a_context;
-
-    l_context->a_position = 0;
 
     return 0;
 }
 
 static off_t ataLseek(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     off_t p_offset,
     int p_whence
 ) {
-    struct ts_ataDriveContext *l_context = p_file->a_context;
+    M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_offset);
+    M_UNUSED_PARAMETER(p_whence);
 
-    if(p_whence == SEEK_CUR) {
-        l_context->a_position += p_offset;
-    } else if(p_whence == SEEK_END) {
-        l_context->a_position = l_context->a_sectorCount * 512 + p_offset;
-    } else if(p_whence == SEEK_SET) {
-        l_context->a_position = p_offset;
-    } else {
-        return -1;
-    }
-
-    return l_context->a_position;
+    return -EOPNOTSUPP;
 }
 
 static ssize_t ataReadPata(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 ) {
-    struct ts_ataDriveContext *l_context = p_file->a_context;
+    int l_deviceMinor = deviceGetMinor(p_file->a_deviceNumber);
+
+    int l_channelNumber = (l_deviceMinor - 3) / 2;
+    int l_driveNumber = (l_deviceMinor - 3) % 2;
+
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[l_channelNumber];
+    struct ts_ataDrive *l_drive =
+        &l_channel->a_drives[l_driveNumber];
 
     // Compute offset
-    size_t l_sector = l_context->a_position >> 9;
-    size_t l_sectorOffset = l_context->a_position & 0x1ff;
+    size_t l_sector = l_drive->a_position >> 9;
+    size_t l_sectorOffset = l_drive->a_position & 0x1ff;
     size_t l_bytesRead = 0;
 
     while(l_bytesRead < p_size) {
         uint8_t l_buffer[512];
 
-        if(ataReadPataSector(l_context, l_sector, l_buffer) != 512) {
+        if(
+            ataReadPataSector(
+                l_channelNumber,
+                l_driveNumber,
+                l_sector,
+                l_buffer
+            ) != 512
+        ) {
             return (ssize_t)l_bytesRead;
         }
 
@@ -522,7 +560,7 @@ static ssize_t ataReadPata(
 }
 
 static ssize_t ataWritePata(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     const void *p_buffer,
     size_t p_size
 ) {
@@ -530,74 +568,80 @@ static ssize_t ataWritePata(
     M_UNUSED_PARAMETER(p_buffer);
     M_UNUSED_PARAMETER(p_size);
 
-    return 0;
+    return -EOPNOTSUPP;
 }
 
 static ssize_t ataReadPataSector(
-    struct ts_ataDriveContext *p_context,
+    int p_channelNumber,
+    int p_driveNumber,
     uint64_t p_lba,
     void *p_buffer
 ) {
+    struct ts_ataChannel *l_channel =
+        &s_ataChannelContext[p_channelNumber];
+    struct ts_ataDrive *l_drive =
+        &l_channel->a_drives[p_driveNumber];
+
     // Cannot read beyond drive capacity.
-    if(p_lba >= p_context->a_sectorCount) {
+    if(p_lba >= l_drive->a_sectorCount) {
         return 0;
     }
 
-    ataSelectDrive(p_context->a_channel, p_context->a_driveNumber);
-    ataWaitUntilNotBusy(p_context->a_channel);
+    ataSelectDrive(p_channelNumber, p_driveNumber);
+    ataWaitUntilNotBusy(p_channelNumber);
 
     // Set register values
-    p_context->a_channel->a_registerCacheDriveHead &= 0xf0;
+    l_channel->a_registerCacheDriveHead &= 0xf0;
 
-    if(p_context->a_usesLba) {
-        if(p_context->a_usesLba48) {
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 0);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba >> 24);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 32);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 40);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS_EXT);
+    if(l_drive->a_usesLba) {
+        if(l_drive->a_usesLba48) {
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, l_channel->a_registerCacheDriveHead);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 0);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba >> 24);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 32);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 40);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS_EXT);
         } else {
-            p_context->a_channel->a_registerCacheDriveHead |= (p_lba >> 24) & 0x0f;
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
-            ataWait(p_context->a_channel);
+            l_channel->a_registerCacheDriveHead |= (p_lba >> 24) & 0x0f;
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, l_channel->a_registerCacheDriveHead);
+            ataWait(p_channelNumber);
 
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
-            outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_LOW, p_lba);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_MID, p_lba >> 8);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_LBA_HIGH, p_lba >> 16);
+            outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
         }
     } else {
-        uint32_t l_sectorsPerCylinder = p_context->a_sectors * p_context->a_heads;
-        uint8_t l_head = (p_lba % l_sectorsPerCylinder) / p_context->a_sectors;
+        uint32_t l_sectorsPerCylinder = l_drive->a_sectors * l_drive->a_heads;
+        uint8_t l_head = (p_lba % l_sectorsPerCylinder) / l_drive->a_sectors;
         uint16_t l_cylinder = p_lba / l_sectorsPerCylinder;
-        uint8_t l_sector = p_lba % p_context->a_sectors + 1;
+        uint8_t l_sector = p_lba % l_drive->a_sectors + 1;
 
-        p_context->a_channel->a_registerCacheDriveHead |= l_head & 0x0f;
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, p_context->a_channel->a_registerCacheDriveHead);
-        ataWait(p_context->a_channel);
+        l_channel->a_registerCacheDriveHead |= l_head & 0x0f;
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_DRIVE_HEAD, l_channel->a_registerCacheDriveHead);
+        ataWait(p_channelNumber);
 
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_NUMBER, l_sector);
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_LOW, l_cylinder);
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_HIGH, l_cylinder >> 8);
-        outb(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_COUNT, 1);
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_SECTOR_NUMBER, l_sector);
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_LOW, l_cylinder);
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_CYLINDER_HIGH, l_cylinder >> 8);
+        outb(l_channel->a_ioPortBase + E_IOOFFSET_ATA_COMMAND, E_ATA_COMMAND_READ_SECTORS);
     }
 
-    ataWaitUntilNotBusy(p_context->a_channel);
-    ataWaitUntilDataRequestOrError(p_context->a_channel);
+    ataWaitUntilNotBusy(p_channelNumber);
+    ataWaitUntilDataRequestOrError(p_channelNumber);
 
-    if((p_context->a_channel->a_registerCacheDriveHead & C_ATA_STATUS_MASK_ERR) != 0) {
+    if((l_channel->a_registerCacheDriveHead & C_ATA_STATUS_MASK_ERR) != 0) {
         return 0;
     }
 
     for(size_t l_bufferIndex = 0; l_bufferIndex < 256; l_bufferIndex++) {
-        ((uint16_t *)p_buffer)[l_bufferIndex] = inw(p_context->a_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA);
+        ((uint16_t *)p_buffer)[l_bufferIndex] = inw(l_channel->a_ioPortBase + E_IOOFFSET_ATA_DATA);
     }
 
     return 512;

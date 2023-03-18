@@ -108,6 +108,7 @@ static int ramfsOperationLookup(
 
     l_childNode->a_type = l_childFile->a_type;
     l_childNode->a_fsData = l_childTreeNode;
+    l_childNode->a_deviceNumber = l_childFile->a_deviceNumber;
 
     if(
         (l_childNode->a_type == E_VFSNODETYPE_FILE)
