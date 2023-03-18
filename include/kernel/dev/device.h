@@ -47,6 +47,19 @@ static inline dev_t deviceMake(uint8_t p_major, uint8_t p_minor) {
 }
 
 /**
+ * @brief Converts a device type to a file type.
+ */
+static inline enum te_vfsNodeType deviceTypeToFileType(
+    enum te_deviceType p_type
+) {
+    switch(p_type) {
+        case E_DEVICETYPE_BLOCK: return E_VFSNODETYPE_CHARACTERDEVICE; // TODO
+        case E_DEVICETYPE_CHARACTER: return E_VFSNODETYPE_CHARACTERDEVICE;
+        default: return E_VFSNODETYPE_CHARACTERDEVICE; // ?
+    }
+}
+
+/**
  * @brief Initializes the device system.
  *
  * @retval 0 on success.
@@ -108,6 +121,34 @@ int deviceAdd(
 int deviceGetOperations(
     dev_t p_deviceNumber,
     const struct ts_vfsNodeOperations **l_output
+);
+
+/**
+ * @brief Creates the device file for the given device in /dev.
+ *
+ * @param[in] p_deviceNumber The number of the device.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int deviceCreateFile(
+    dev_t p_deviceNumber
+);
+
+/**
+ * @brief Creates the device file for the given device as /dev/{p_name}.
+ *
+ * @param[in] p_deviceNumber The number of the device.
+ * @param[in] p_name The name of the device file.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int deviceCreateFile2(
+    dev_t p_deviceNumber,
+    const char *p_name
 );
 
 #endif

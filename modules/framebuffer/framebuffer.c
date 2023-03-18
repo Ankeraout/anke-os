@@ -21,17 +21,11 @@ struct ts_framebuffer {
 
 static int framebufferInit(const char *p_arg);
 static void framebufferQuit(void);
-static int framebufferIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
-    int p_request,
-    void *p_arg
-);
 static int framebufferIoctlDevice(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 );
-static int framebufferCreate(struct ts_framebufferRequestCreate *p_request);
 static void framebufferFill(
     struct ts_framebuffer *p_framebuffer,
     struct ts_framebufferRequestFill *p_request
@@ -53,29 +47,56 @@ static inline t_framebufferColor framebufferMergeColors (
     t_framebufferColor l_new
 );
 
+static dev_t s_framebufferDeviceNumber;
+static struct ts_framebuffer s_framebuffer;
+static const struct ts_vfsNodeOperations s_framebufferDeviceOperations = {
+    .a_ioctl = framebufferIoctlDevice
+};
+
 static int framebufferInit(const char *p_arg) {
     M_UNUSED_PARAMETER(p_arg);
 
     debug("framebuffer: Initializing module...\n");
 
-    // Create framebuffer device
-    struct ts_vfsFileDescriptor *l_framebufferDevice =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    const struct ts_boot *l_boot = bootGetInfo();
 
-    if(l_framebufferDevice == NULL) {
-        debug("framebuffer: Failed to allocate memory for driver device file.\n");
-        return -ENOMEM;
+    s_framebuffer.a_buffer = l_boot->a_framebuffer.a_buffer;
+    s_framebuffer.a_width = l_boot->a_framebuffer.a_width;
+    s_framebuffer.a_height = l_boot->a_framebuffer.a_height;
+    s_framebuffer.a_pitch = l_boot->a_framebuffer.a_pitch;
+
+    // Register device driver
+    int l_returnValue = deviceRegister(
+        E_DEVICETYPE_CHARACTER,
+        "fb",
+        &s_framebufferDeviceNumber,
+        1
+    );
+
+    if(l_returnValue != 0) {
+        debug("framebuffer: Failed to register device driver.\n");
+        return l_returnValue;
     }
 
-    l_framebufferDevice->a_ioctl = framebufferIoctlDriver;
-    strcpy(l_framebufferDevice->a_name, "fb");
-    l_framebufferDevice->a_type = E_VFS_FILETYPE_CHARACTER;
+    // Register device
+    l_returnValue = deviceAdd(
+        "fb",
+        s_framebufferDeviceNumber,
+        &s_framebufferDeviceOperations,
+        1
+    );
 
-    // Register framebuffer device
-    if(deviceMount("/dev/%s", l_framebufferDevice) != 0) {
-        debug("framebuffer: Failed to create driver device file.\n");
-        kfree(l_framebufferDevice);
-        return 1;
+    if(l_returnValue != 0) {
+        debug("framebuffer: Failed to register device.\n");
+        return l_returnValue;
+    }
+
+    // Create device file
+    l_returnValue = deviceCreateFile(s_framebufferDeviceNumber);
+
+    if(l_returnValue != 0) {
+        debug("framebuffer: Failed to create device file.\n");
+        return l_returnValue;
     }
 
     debug("framebuffer: Module initialized successfully.\n");
@@ -87,98 +108,39 @@ static void framebufferQuit(void) {
 
 }
 
-static int framebufferIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
+static int framebufferIoctlDevice(
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 ) {
     M_UNUSED_PARAMETER(p_file);
 
     switch(p_request) {
-        case E_IOCTL_FRAMEBUFFER_CREATE:
-            return framebufferCreate(p_arg);
-
-        default:
-            return -EINVAL;
-    }
-}
-
-static int framebufferIoctlDevice(
-    struct ts_vfsFileDescriptor *p_file,
-    int p_request,
-    void *p_arg
-) {
-    struct ts_framebuffer *l_framebuffer = p_file->a_context;
-
-    switch(p_request) {
         case E_IOCTL_FRAMEBUFFER_GET_WIDTH:
-            return (int)l_framebuffer->a_width;
+            return *((int *)p_arg) = (int)s_framebuffer.a_width;
 
         case E_IOCTL_FRAMEBUFFER_GET_HEIGHT:
-            return (int)l_framebuffer->a_height;
+            return *((int *)p_arg) = (int)s_framebuffer.a_height;
 
         case E_IOCTL_FRAMEBUFFER_FILL:
-            framebufferFill(l_framebuffer, p_arg);
+            framebufferFill(&s_framebuffer, p_arg);
             return 0;
 
         case E_IOCTL_FRAMEBUFFER_DRAW_CHARACTER:
-            framebufferDrawCharacter(l_framebuffer, p_arg);
+            framebufferDrawCharacter(&s_framebuffer, p_arg);
             return 0;
 
         case E_IOCTL_FRAMEBUFFER_SCROLL_UP:
-            framebufferScrollUp(l_framebuffer, p_arg);
+            framebufferScrollUp(&s_framebuffer, p_arg);
             return 0;
 
         case E_IOCTL_FRAMEBUFFER_SET_PIXEL:
-            framebufferSetPixel(l_framebuffer, p_arg);
+            framebufferSetPixel(&s_framebuffer, p_arg);
             return 0;
 
         default:
             return -EINVAL;
     }
-}
-
-static int framebufferCreate(struct ts_framebufferRequestCreate *p_request) {
-    // Allocate memory for framebuffer data
-    struct ts_framebuffer *l_framebuffer =
-        kmalloc(sizeof(struct ts_framebuffer));
-
-    if(l_framebuffer == NULL) {
-        debug("framebuffer: Failed to allocate memory for device data.\n");
-        return -ENOMEM;
-    }
-
-    // Allocate memory for framebuffer node.
-    struct ts_vfsFileDescriptor *l_fb = deviceCreate("/dev/fb%d", 0);
-
-    if(l_fb == NULL) {
-        debug("framebuffer: Failed to allocate memory for device node.\n");
-        kfree(l_framebuffer);
-        return -ENOMEM;
-    }
-
-    // Initialize framebuffer data
-    l_framebuffer->a_buffer = p_request->a_buffer;
-    l_framebuffer->a_width = p_request->a_width;
-    l_framebuffer->a_height = p_request->a_height;
-    l_framebuffer->a_pitch = p_request->a_pitch;
-
-    // Initialize framebuffer device node
-    l_fb->a_type = E_VFS_FILETYPE_CHARACTER;
-    l_fb->a_context = l_framebuffer;
-    l_fb->a_ioctl = framebufferIoctlDevice;
-
-    // Register device node
-    if(deviceMount("/dev/%s", l_fb) != 0) {
-        kfree(l_framebuffer);
-        kfree(l_fb);
-        debug("framebuffer: create: Failed to create /dev/%s.\n", l_fb->a_name);
-        return -EFAULT;
-    }
-
-    debug("framebuffer: Registered /dev/%s.\n", l_fb->a_name);
-
-    return 0;
 }
 
 static void framebufferFill(

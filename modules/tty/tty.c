@@ -29,7 +29,7 @@ struct ts_ttyDevice {
     int a_backgroundColorIndex;
     t_framebufferColor a_foregroundColor;
     t_framebufferColor a_backgroundColor;
-    struct ts_vfsFileDescriptor *a_framebufferDevice;
+    struct ts_vfsNode *a_framebufferDevice;
     struct ts_consoleFont *a_font;
     enum te_ttyControlSequenceParserState a_parserState;
     bool a_controlSequenceValid;
@@ -40,25 +40,20 @@ struct ts_ttyDevice {
 
 static int ttyInit(const char *p_arg);
 static void ttyQuit(void);
-static int ttyIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
-    int p_request,
-    void *p_arg
-);
 static ssize_t ttyWriteDevice(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     const void *p_buffer,
     size_t p_size
-);
-static int ttyCreate(
-    struct ts_vfsFileDescriptor *p_driverFile,
-    const char *p_framebufferFileName
 );
 static void ttyWriteByte(struct ts_ttyDevice *p_device, char p_character);
 static void ttyWriteByteNormal(struct ts_ttyDevice *p_device, char p_character);
 static void ttyCheckSequence(struct ts_ttyDevice *p_device, char p_character);
 static void ttyCheckCursorPosition(struct ts_ttyDevice *p_device);
 static void ttyHandleSgr(struct ts_ttyDevice *p_device);
+
+static const struct ts_vfsNodeOperations s_ttyOperations = {
+    .a_write = ttyWriteDevice
+};
 
 M_DECLARE_MODULE struct ts_module g_moduleTty = {
     .a_name = "tty",
@@ -85,31 +80,78 @@ static const t_framebufferColor s_ttyPalette[] = {
     0xffffffff
 };
 
+static dev_t s_ttyDeviceNumber;
+struct ts_ttyDevice s_ttyDevice;
+
 static int ttyInit(const char *p_arg) {
     M_UNUSED_PARAMETER(p_arg);
 
     debug("tty: Initializing module...\n");
 
-    // Create TTY driver file
-    struct ts_vfsFileDescriptor *l_ttyDriver =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    s_ttyDeviceNumber = deviceMake(0, 0);
 
-    if(l_ttyDriver == NULL) {
-        debug("tty: Failed to allocate memory for driver file.\n");
-        return -ENOMEM;
+    // Get framebuffer file
+    struct ts_vfsNode *l_framebufferDevice;
+    int l_returnValue = vfsLookup(NULL, p_arg, &l_framebufferDevice);
+
+    if(l_returnValue != 0) {
+        debug("tty: Failed to find %s: %d.\n", p_arg, l_returnValue);
+        return l_returnValue;
     }
 
-    strcpy(l_ttyDriver->a_name, "tty");
-    l_ttyDriver->a_ioctl = ttyIoctlDriver;
-    l_ttyDriver->a_type = E_VFS_FILETYPE_CHARACTER;
+    // Initialize tty
+    s_ttyDevice.a_x = 0;
+    s_ttyDevice.a_y = 0;
+    s_ttyDevice.a_backgroundColorIndex = C_TTY_DEFAULT_COLOR_BACKGROUND;
+    s_ttyDevice.a_foregroundColorIndex = C_TTY_DEFAULT_COLOR_FOREGROUND;
+    s_ttyDevice.a_backgroundColor = s_ttyPalette[C_TTY_DEFAULT_COLOR_BACKGROUND];
+    s_ttyDevice.a_foregroundColor = s_ttyPalette[C_TTY_DEFAULT_COLOR_FOREGROUND];
+    s_ttyDevice.a_framebufferDevice = l_framebufferDevice;
+    s_ttyDevice.a_font = &g_font8;
+    s_ttyDevice.a_parserState = E_STATE_NORMAL;
 
-    if(deviceMount("/dev/%s", l_ttyDriver) != 0) {
-        debug("tty: Failed to create driver file.\n");
-        kfree(l_ttyDriver);
-        return 1;
+    vfsOperationIoctl(
+        l_framebufferDevice,
+        E_IOCTL_FRAMEBUFFER_GET_WIDTH,
+        &s_ttyDevice.a_width
+    );
+    vfsOperationIoctl(
+        l_framebufferDevice,
+        E_IOCTL_FRAMEBUFFER_GET_HEIGHT,
+        &s_ttyDevice.a_height
+    );
+
+    s_ttyDevice.a_width /= 8;
+    s_ttyDevice.a_height /= s_ttyDevice.a_font->a_height;
+
+    // Register driver
+    l_returnValue =
+        deviceRegister(E_DEVICETYPE_CHARACTER, "tty", &s_ttyDeviceNumber, 1);
+
+    if(l_returnValue != 0) {
+        debug("tty: Failed to register device.\n");
+        return l_returnValue;
     }
 
-    debug("tty: Registered /dev/tty.\n");
+    l_returnValue = deviceAdd(
+        "tty",
+        s_ttyDeviceNumber,
+        &s_ttyOperations,
+        1
+    );
+
+    if(l_returnValue != 0) {
+        debug("tty: Failed to add device.\n");
+        return l_returnValue;
+    }
+
+    l_returnValue = deviceCreateFile(s_ttyDeviceNumber);
+
+    if(l_returnValue != 0) {
+        debug("tty: Failed to create device file.\n");
+        return l_returnValue;
+    }
+
     debug("tty: Module initialized successfully.\n");
 
     return 0;
@@ -119,109 +161,20 @@ static void ttyQuit(void) {
 
 }
 
-static int ttyIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
-    int p_request,
-    void *p_arg
-) {
-    M_UNUSED_PARAMETER(p_file);
-
-    switch(p_request) {
-        case E_IOCTL_TTY_CREATE: return ttyCreate(p_file, p_arg);
-        default:
-            return -EINVAL;
-    }
-
-    return -EINVAL;
-}
-
 static ssize_t ttyWriteDevice(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     const void *p_buffer,
     size_t p_size
 ) {
-    struct ts_ttyDevice *l_context = (struct ts_ttyDevice *)p_file->a_context;
+    M_UNUSED_PARAMETER(p_file);
 
     const char *l_str = (const char *)p_buffer;
 
     for(size_t l_index = 0; l_index < p_size; l_index++) {
-        ttyWriteByte(l_context, l_str[l_index]);
+        ttyWriteByte(&s_ttyDevice, l_str[l_index]);
     }
 
     return (ssize_t)p_size;
-}
-
-static int ttyCreate(
-    struct ts_vfsFileDescriptor *p_driverFile,
-    const char *p_framebufferFileName
-) {
-    M_UNUSED_PARAMETER(p_driverFile);
-
-    // Allocate memory for tty context
-    struct ts_ttyDevice *l_context = kcalloc(sizeof(struct ts_ttyDevice));
-
-    if(l_context == NULL) {
-        debug("tty: Failed to allocate memory for tty context.\n");
-        return 1;
-    }
-
-    // Open framebuffer driver
-    struct ts_vfsFileDescriptor *l_framebufferDevice =
-        vfsFind(p_framebufferFileName);
-
-    if(l_framebufferDevice == NULL) {
-        debug("tty: Failed to find %s.\n", p_framebufferFileName);
-        kfree(l_context);
-        return 1;
-    }
-
-    l_context->a_backgroundColorIndex = C_TTY_DEFAULT_COLOR_BACKGROUND;
-    l_context->a_foregroundColorIndex = C_TTY_DEFAULT_COLOR_FOREGROUND;
-    l_context->a_backgroundColor = s_ttyPalette[C_TTY_DEFAULT_COLOR_BACKGROUND];
-    l_context->a_foregroundColor = s_ttyPalette[C_TTY_DEFAULT_COLOR_FOREGROUND];
-    l_context->a_framebufferDevice = l_framebufferDevice;
-    l_context->a_font = &g_font8;
-
-    l_context->a_width = l_framebufferDevice->a_ioctl(
-        l_framebufferDevice,
-        E_IOCTL_FRAMEBUFFER_GET_WIDTH,
-        NULL
-    ) / 8;
-
-    l_context->a_height = l_framebufferDevice->a_ioctl(
-        l_framebufferDevice,
-        E_IOCTL_FRAMEBUFFER_GET_HEIGHT,
-        NULL
-    ) / l_context->a_font->a_height;
-
-    // Create tty device
-    struct ts_vfsFileDescriptor *l_ttyDevice =
-        deviceCreate("/dev/tty%d", 0);
-
-    if(l_ttyDevice == NULL) {
-        debug("tty: Failed to allocate memory for tty device.\n");
-        kfree(l_context);
-        kfree(l_framebufferDevice);
-        return 1;
-    }
-
-    l_ttyDevice->a_type = E_VFS_FILETYPE_CHARACTER;
-    l_ttyDevice->a_write = ttyWriteDevice;
-    l_ttyDevice->a_context = l_context;
-
-    if(deviceMount("/dev/%s", l_ttyDevice) != 0) {
-        debug("tty: Failed to create tty device file.\n");
-
-        kfree(l_context);
-        kfree(l_framebufferDevice);
-        kfree(l_ttyDevice);
-
-        return 1;
-    }
-
-    debug("tty: Registered /dev/%s.\n", l_ttyDevice->a_name);
-
-    return 0;
 }
 
 static void ttyWriteByte(struct ts_ttyDevice *p_device, char p_character) {
@@ -291,8 +244,8 @@ static void ttyWriteByteNormal(
             .a_y = p_device->a_y * p_device->a_font->a_height
         };
 
-        p_device->a_framebufferDevice->a_ioctl(
-            p_device->a_framebufferDevice,
+        vfsOperationIoctl(
+            s_ttyDevice.a_framebufferDevice,
             E_IOCTL_FRAMEBUFFER_DRAW_CHARACTER,
             &l_requestDrawCharacter
         );
@@ -419,8 +372,8 @@ static void ttyCheckSequence(struct ts_ttyDevice *p_device, char p_character) {
                     .a_color = p_device->a_backgroundColor
                 };
 
-                p_device->a_framebufferDevice->a_ioctl(
-                    p_device->a_framebufferDevice,
+                vfsOperationIoctl(
+                    s_ttyDevice.a_framebufferDevice,
                     E_IOCTL_FRAMEBUFFER_FILL,
                     &l_request
                 );
@@ -481,8 +434,8 @@ static void ttyCheckCursorPosition(struct ts_ttyDevice *p_device) {
             .a_rows = l_scrollRows * p_device->a_font->a_height
         };
 
-        p_device->a_framebufferDevice->a_ioctl(
-            p_device->a_framebufferDevice,
+        vfsOperationIoctl(
+            s_ttyDevice.a_framebufferDevice,
             E_IOCTL_FRAMEBUFFER_SCROLL_UP,
             &l_requestScrollUp
         );

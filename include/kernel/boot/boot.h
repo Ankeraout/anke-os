@@ -26,10 +26,11 @@ struct ts_bootFramebuffer {
 
 struct ts_boot {
     size_t a_memoryMapLength;
-    const struct ts_bootMemoryMapEntry *a_memoryMap;
-    const struct ts_bootFramebuffer a_framebuffer;
+    struct ts_bootMemoryMapEntry *a_memoryMap;
+    struct ts_bootFramebuffer a_framebuffer;
 };
 
-extern void main(struct ts_boot *p_boot);
+void main(struct ts_boot *p_boot);
+const struct ts_boot *bootGetInfo(void);
 
 #endif

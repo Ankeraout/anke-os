@@ -265,16 +265,16 @@ int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs) {
     }
 
     // Copy the file system operations on the mount node.
-    memcpy(
-        &p_node->a_operations,
-        &p_fs->a_operations,
-        sizeof(struct ts_vfsNodeOperations)
-    );
+    p_node->a_operations = p_fs->a_operations;
 
     return l_returnValue;
 }
 
 int vfsOperationClose(struct ts_vfsNode *p_node) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
     // If the node is non-auto-disposable (mount points?) then there is nothing
     // to do here.
     if(p_node->a_referenceCount == -1) {
@@ -286,8 +286,11 @@ int vfsOperationClose(struct ts_vfsNode *p_node) {
     p_node->a_referenceCount--;
 
     if(p_node->a_referenceCount == 0) {
-        if(p_node->a_operations.a_close != NULL) {
-            p_node->a_operations.a_close(p_node);
+        if(
+            (p_node->a_operations != NULL)
+            && (p_node->a_operations->a_close != NULL)
+        ) {
+            p_node->a_operations->a_close(p_node);
         }
 
         vfsDisposeNode(p_node);
@@ -298,23 +301,59 @@ int vfsOperationClose(struct ts_vfsNode *p_node) {
     return 0;
 }
 
+int vfsOperationIoctl(
+    struct ts_vfsNode *p_node,
+    int p_request,
+    void *p_arg
+) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_ioctl == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    return p_node->a_operations->a_ioctl(p_node, p_request, p_arg);
+}
+
 int vfsOperationLookup(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_output
 ) {
-    if(p_node->a_operations.a_lookup == NULL) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
         return -EOPNOTSUPP;
     }
 
-    return p_node->a_operations.a_lookup(p_node, p_name, p_output);
+    if(p_node->a_operations->a_lookup == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    return p_node->a_operations->a_lookup(p_node, p_name, p_output);
 }
 
 int vfsOperationMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
 ) {
-    if(p_node->a_operations.a_mkdir == NULL) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_mkdir == NULL) {
         return -EOPNOTSUPP;
     }
 
@@ -323,7 +362,7 @@ int vfsOperationMkdir(
         return -ENOTDIR;
     }
 
-    return p_node->a_operations.a_mkdir(p_node, p_name);
+    return p_node->a_operations->a_mkdir(p_node, p_name);
 }
 
 int vfsOperationMknod(
@@ -332,7 +371,15 @@ int vfsOperationMknod(
     enum te_vfsNodeType p_type,
     dev_t p_deviceNumber
 ) {
-    if(p_node->a_operations.a_mknod == NULL) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_mknod == NULL) {
         return -EOPNOTSUPP;
     }
 
@@ -341,7 +388,27 @@ int vfsOperationMknod(
         return -ENOTDIR;
     }
 
-    return p_node->a_operations.a_mknod(p_node, p_name, p_type, p_deviceNumber);
+    return p_node->a_operations->a_mknod(p_node, p_name, p_type, p_deviceNumber);
+}
+
+ssize_t vfsOperationWrite(
+    struct ts_vfsNode *p_node,
+    const void *p_buffer,
+    size_t p_size
+) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_write == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    return p_node->a_operations->a_write(p_node, p_buffer, p_size);
 }
 
 static int vfsCanonicalizePath(

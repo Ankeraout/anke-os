@@ -3,6 +3,7 @@
 
 #include <kernel/misc/spinlock.h>
 #include <kernel/misc/tree.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <sys/types.h>
 
@@ -20,8 +21,9 @@ typedef int tf_vfsCreate(
     const char *p_name
 );
 typedef int tf_vfsIoctl(
-    struct ts_vfsNode *p_node
-    // TODO
+    struct ts_vfsNode *p_node,
+    int p_request,
+    void *p_arg
 );
 typedef int tf_vfsLookup(
     struct ts_vfsNode *p_node,
@@ -73,14 +75,14 @@ struct ts_vfsNode {
     int a_referenceCount;
     enum te_vfsNodeType a_type;
     struct ts_treeNode *a_vfs;
-    struct ts_vfsNodeOperations a_operations;
+    const struct ts_vfsNodeOperations *a_operations;
     dev_t a_deviceNumber;
     void *a_fsData;
 };
 
 struct ts_vfsFileSystem {
     const char *a_name;
-    struct ts_vfsNodeOperations a_operations;
+    const struct ts_vfsNodeOperations *a_operations;
     int (*a_onMount)(struct ts_vfsNode *p_node, dev_t p_device);
 };
 
@@ -157,6 +159,22 @@ int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs);
 int vfsOperationClose(struct ts_vfsNode *p_node);
 
 /**
+ * @brief Calls ioctl() on the given file.
+ *
+ * @param[in] p_node The file node.
+ * @param[in] p_request The request number.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int vfsOperationIoctl(
+    struct ts_vfsNode *p_node,
+    int p_request,
+    void *p_arg
+);
+
+/**
  * @brief Looks for a child file and returns its node.
  *
  * @param[in] p_node The node to search in.
@@ -209,6 +227,23 @@ int vfsOperationMknod(
     const char *p_name,
     enum te_vfsNodeType p_type,
     dev_t p_deviceNumber
+);
+
+/**
+ * @brief Writes the given data to the given file.
+ *
+ * @param[in] p_node The file to write the data to.
+ * @param[in] p_buffer The data to write.
+ * @param[in] p_size The number of bytes to write.
+ *
+ * @returns An integer that indicates the result of the operation. If it is
+ * negative, then it is an error code. If it is positive or null, then it
+ * contains the number of bytes written.
+ */
+ssize_t vfsOperationWrite(
+    struct ts_vfsNode *p_node,
+    const void *p_buffer,
+    size_t p_size
 );
 
 #endif

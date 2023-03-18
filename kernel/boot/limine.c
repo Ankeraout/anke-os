@@ -18,6 +18,8 @@ static volatile struct limine_framebuffer_request s_framebufferRequest = {
     .revision = 0
 };
 
+struct ts_boot s_boot;
+
 static void bootDebugWrite(void *p_parameter, const char *p_str);
 
 void _start(void) {
@@ -44,20 +46,24 @@ void _start(void) {
         }
     }
 
-    struct ts_boot l_boot = {
-        .a_memoryMap = l_memoryMap,
-        .a_memoryMapLength = s_memmapRequest.response->entry_count,
-        .a_framebuffer = {
-            .a_buffer = s_framebufferRequest.response->framebuffers[0]->address,
-            .a_width = s_framebufferRequest.response->framebuffers[0]->width,
-            .a_height = s_framebufferRequest.response->framebuffers[0]->height,
-            .a_pitch = s_framebufferRequest.response->framebuffers[0]->pitch
-        }
-    };
+    s_boot.a_memoryMap = l_memoryMap;
+    s_boot.a_memoryMapLength = s_memmapRequest.response->entry_count;
+    s_boot.a_framebuffer.a_buffer
+        = s_framebufferRequest.response->framebuffers[0]->address;
+    s_boot.a_framebuffer.a_width
+        = s_framebufferRequest.response->framebuffers[0]->width;
+    s_boot.a_framebuffer.a_height
+        = s_framebufferRequest.response->framebuffers[0]->height;
+    s_boot.a_framebuffer.a_pitch
+        = s_framebufferRequest.response->framebuffers[0]->pitch;
 
     debugInit(bootDebugWrite, NULL);
 
-    main(&l_boot);
+    main(&s_boot);
+}
+
+const struct ts_boot *bootGetInfo(void) {
+    return &s_boot;
 }
 
 static void bootDebugWrite(void *p_parameter, const char *p_str) {

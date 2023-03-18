@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <kernel/debug.h>
 #include <kernel/dev/device.h>
 #include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
@@ -210,6 +211,71 @@ int deviceGetOperations(
     *l_output = s_deviceTable[l_major]->a_entries[l_minor].a_operations;
 
     spinlockRelease(&s_deviceTableSpinlock);
+
+    return 0;
+}
+
+int deviceCreateFile(
+    dev_t p_deviceNumber
+) {
+
+    int l_major = deviceGetMajor(p_deviceNumber);
+    int l_minor = deviceGetMinor(p_deviceNumber);
+
+    // Compute the file name
+    char l_deviceFileName[NAME_MAX + 1];
+
+    spinlockAcquire(&s_deviceTableSpinlock);
+
+    snprintf(
+        l_deviceFileName,
+        NAME_MAX,
+        "%s%d",
+        s_deviceTable[l_major]->a_name,
+        l_minor
+    );
+
+    spinlockRelease(&s_deviceTableSpinlock);
+
+    return deviceCreateFile2(p_deviceNumber, l_deviceFileName);
+}
+
+int deviceCreateFile2(
+    dev_t p_deviceNumber,
+    const char *p_name
+) {
+    int l_major = deviceGetMajor(p_deviceNumber);
+
+    // Create a device file under /dev
+    struct ts_vfsNode *l_dev;
+    int l_returnValue = vfsLookup(NULL, "/dev", &l_dev);
+
+    if(l_returnValue != 0) {
+        debug(
+            "kernel: warning: Failed to find /dev: %d.\n",
+            l_returnValue
+        );
+        return l_returnValue;
+    }
+
+    l_returnValue = vfsOperationMknod(
+        l_dev,
+        p_name,
+        deviceTypeToFileType(s_deviceTable[l_major]->a_type),
+        p_deviceNumber
+    );
+
+    if(l_returnValue != 0) {
+        debug(
+            "kernel: warning: Failed to create /dev/%s: %d.\n",
+            p_name,
+            l_returnValue
+        );
+        return l_returnValue;
+    }
+
+    // And indeed we close the /dev node.
+    vfsOperationClose(l_dev);
 
     return 0;
 }

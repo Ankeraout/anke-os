@@ -1,6 +1,5 @@
 #include <errno.h>
 #include <kernel/common.h>
-#include <kernel/debug.h>
 #include <kernel/dev/device.h>
 #include <kernel/fs/ramfs.h>
 #include <kernel/fs/vfs.h>
@@ -39,14 +38,16 @@ static int ramfsOperationMknod(
     dev_t p_deviceNumber
 );
 
+static const struct ts_vfsNodeOperations s_ramfsOperations = {
+    .a_lookup = ramfsOperationLookup,
+    .a_mkdir = ramfsOperationMkdir,
+    .a_mknod = ramfsOperationMknod
+};
+
 const struct ts_vfsFileSystem g_ramfsFileSystem = {
     .a_name = "ramfs",
     .a_onMount = ramfsOnMount,
-    .a_operations = {
-        .a_lookup = ramfsOperationLookup,
-        .a_mkdir = ramfsOperationMkdir,
-        .a_mknod = ramfsOperationMknod
-    }
+    .a_operations = &s_ramfsOperations
 };
 
 static void ramfsInitFile(struct ts_ramfsFile *p_file) {
@@ -66,6 +67,8 @@ static struct ts_treeNode *ramfsLookup(
         if(strcmp(l_childFile->a_name, p_name) == 0) {
             break;
         }
+
+        l_child = l_child->a_next;
     }
 
     if(l_child == NULL) {
@@ -80,8 +83,6 @@ static int ramfsOperationLookup(
     const char *p_name,
     struct ts_vfsNode **p_output
 ) {
-    debug("ramfs: lookup(%s)\n", p_name);
-
     struct ts_treeNode *l_node = p_node->a_fsData;
     struct ts_ramfsFile *l_file = l_node->a_data;
 
@@ -108,7 +109,31 @@ static int ramfsOperationLookup(
     l_childNode->a_type = l_childFile->a_type;
     l_childNode->a_fsData = l_childTreeNode;
 
-    // TODO: set operations
+    if(
+        (l_childNode->a_type == E_VFSNODETYPE_FILE)
+        || (l_childNode->a_type == E_VFSNODETYPE_DIRECTORY)
+    ) {
+        l_childNode->a_operations = &s_ramfsOperations;
+    }
+
+    switch(l_childNode->a_type) {
+        case E_VFSNODETYPE_FILE:
+        case E_VFSNODETYPE_DIRECTORY:
+            l_childNode->a_operations = &s_ramfsOperations;
+            break;
+
+        case E_VFSNODETYPE_CHARACTERDEVICE:
+            l_returnValue = deviceGetOperations(
+                l_childFile->a_deviceNumber,
+                &l_childNode->a_operations
+            );
+
+            if(l_returnValue != 0) {
+                return l_returnValue;
+            }
+
+            break;
+    }
 
     *p_output = l_childNode;
 
@@ -116,8 +141,6 @@ static int ramfsOperationLookup(
 }
 
 static int ramfsOnMount(struct ts_vfsNode *p_node, dev_t p_device) {
-    debug("ramfs: onMount()\n");
-
     // The p_device parameter is not used. Ramfs is always empty when mounted.
     M_UNUSED_PARAMETER(p_device);
 
@@ -152,8 +175,6 @@ static int ramfsOperationMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
 ) {
-    debug("ramfs: mkdir(%s)\n", p_name);
-
     struct ts_treeNode *l_node = p_node->a_fsData;
     struct ts_ramfsFile *l_parentFile = l_node->a_data;
 
@@ -197,14 +218,6 @@ static int ramfsOperationMknod(
     enum te_vfsNodeType p_type,
     dev_t p_deviceNumber
 ) {
-    debug(
-        "ramfs: mknod(%s, %d, %d, %d)\n",
-        p_name,
-        p_type,
-        deviceGetMajor(p_deviceNumber),
-        deviceGetMinor(p_deviceNumber)
-    );
-
     // Ramfs only supports character devices.
     if(p_type != E_VFSNODETYPE_CHARACTERDEVICE) {
         return -EINVAL;
