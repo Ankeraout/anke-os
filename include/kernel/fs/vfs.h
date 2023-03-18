@@ -30,6 +30,11 @@ typedef int tf_vfsLookup(
     const char *p_name,
     struct ts_vfsNode **p_output
 );
+typedef off_t tf_vfsLseek(
+    struct ts_vfsNode *p_node,
+    off_t p_offset,
+    int p_whence
+);
 typedef int tf_vfsMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
@@ -59,6 +64,7 @@ struct ts_vfsNodeOperations {
     tf_vfsCreate *a_create;
     tf_vfsIoctl *a_ioctl;
     tf_vfsLookup *a_lookup;
+    tf_vfsLseek *a_lseek;
     tf_vfsMkdir *a_mkdir;
     tf_vfsMknod *a_mknod;
     tf_vfsOpen *a_open;
@@ -189,6 +195,15 @@ int vfsOperationLookup(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_output
+);
+
+/**
+ * @brief Sets the position in a given file.
+ */
+off_t tf_vfsOperationLseek(
+    struct ts_vfsNode *p_node,
+    off_t p_offset,
+    int p_whence
 );
 
 /**

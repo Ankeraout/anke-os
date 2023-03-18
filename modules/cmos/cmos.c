@@ -56,7 +56,7 @@ static const struct ts_cmosFloppyType s_cmosFloppyTypes[] = {
 static int cmosInit(const char *p_args);
 static void cmosQuit(void);
 static ssize_t cmosRtcRead(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 );
@@ -71,31 +71,40 @@ M_DECLARE_MODULE struct ts_module g_moduleCmos = {
     .a_quit = cmosQuit
 };
 
-static struct ts_vfsFileDescriptor *s_rtcDevice;
+static dev_t s_cmosDeviceNumber;
+static const struct ts_vfsNodeOperations s_rtcOperations = {
+    .a_read = cmosRtcRead
+};
 
 static int cmosInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
     // Create /dev/rtc file
-    s_rtcDevice = kcalloc(sizeof(struct ts_vfsFileDescriptor *));
+    s_cmosDeviceNumber = deviceMake(0, 0);
 
-    if(s_rtcDevice == NULL) {
-        debug("cmos: Failed to allocate memory for RTC driver.\n");
+    int l_returnValue =
+        deviceRegister(E_DEVICETYPE_CHARACTER, "cmos", &s_cmosDeviceNumber, 1);
+
+    if(l_returnValue != 0) {
+        debug("cmos: Failed to register CMOS device driver.\n");
         return 1;
     }
 
-    strcpy(s_rtcDevice->a_name, "rtc");
-    s_rtcDevice->a_type = E_VFS_FILETYPE_CHARACTER;
-    s_rtcDevice->a_read = cmosRtcRead;
+    l_returnValue =
+        deviceAdd("cmos", s_cmosDeviceNumber, &s_rtcOperations, 1);
 
-    // Register the RTC device file.
-    if(deviceMount("/dev/%s", s_rtcDevice) != 0) {
-        debug("cmos: Failed to create /dev/%s.\n", s_rtcDevice->a_name);
-        kfree(s_rtcDevice);
+    if(l_returnValue != 0) {
+        debug("cmos: Failed to add RTC device.\n");
         return 1;
     }
 
-    debug("cmos: Registered /dev/%s.\n", s_rtcDevice->a_name);
+    l_returnValue =
+        deviceCreateFile2(s_cmosDeviceNumber, "cmos");
+
+    if(l_returnValue != 0) {
+        debug("cmos: Failed to create RTC device file.\n");
+        return 1;
+    }
 
     // Read floppy disk information (register 0x10)
     outb(C_IOPORT_CMOS_REGISTER_NUMBER, E_CMOS_REGISTER_FLOPPY_INFO);
@@ -112,7 +121,7 @@ static void cmosQuit(void) {
 }
 
 static ssize_t cmosRtcRead(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 ) {
@@ -160,10 +169,12 @@ static void cmosCheckFloppy(
     }
 
     // Find /dev/floppy
-    struct ts_vfsFileDescriptor *l_floppyDriver = vfsFind("/dev/floppy");
+    struct ts_vfsNode *l_floppyDriver;
+    int l_returnValue = vfsLookup(NULL, "/dev/floppy", &l_floppyDriver);
 
-    if(l_floppyDriver == NULL) {
-        debug("cmos: Failed to open /dev/floppy.\n");
+    if(l_returnValue != 0) {
+        debug("cmos: Failed to open /dev/floppy: %d\n", l_returnValue);
+        return;
     }
 
     // Create floppy device
@@ -172,7 +183,7 @@ static void cmosCheckFloppy(
         .a_driveNumber = p_driveNumber
     };
 
-    l_floppyDriver->a_ioctl(
+    vfsOperationIoctl(
         l_floppyDriver,
         E_IOCTL_FLOPPY_CREATE,
         &l_requestFloppyCreate

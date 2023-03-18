@@ -20,17 +20,17 @@ M_DECLARE_MODULE struct ts_module g_modulePciide = {
     .a_quit = pciideQuit
 };
 
-static struct ts_vfsFileDescriptor *s_pciDriver;
+static struct ts_vfsNode *s_pciDriver;
 
 static int pciideInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
     debug("pciide: Scanning PCI bus...\n");
 
-    s_pciDriver = vfsFind("/dev/pci");
+    int l_returnValue = vfsLookup(NULL, "/dev/pci", &s_pciDriver);
 
-    if(s_pciDriver == NULL) {
-        debug("pciide: Failed to find /dev/pci.\n");
+    if(l_returnValue != 0) {
+        debug("pciide: Failed to find /dev/pci: %d\n", l_returnValue);
         return 1;
     }
 
@@ -38,7 +38,7 @@ static int pciideInit(const char *p_args) {
         .a_callback = pciideScan
     };
 
-    s_pciDriver->a_ioctl(
+    vfsOperationIoctl(
         s_pciDriver,
         E_IOCTL_PCI_SCAN,
         &l_request
@@ -63,7 +63,7 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
     };
 
     // Read device identification
-    s_pciDriver->a_ioctl(
+    vfsOperationIoctl(
         s_pciDriver,
         E_IOCTL_PCI_IDENTIFY,
         &l_request
@@ -97,10 +97,11 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
     }
 
     // Open the ata module driver file
-    struct ts_vfsFileDescriptor *l_ataDriver = vfsFind("/dev/ata");
+    struct ts_vfsNode *l_ataDriver;
+    int l_returnValue = vfsLookup(NULL, "/dev/ata", &l_ataDriver);
 
-    if(l_ataDriver == NULL) {
-        debug("pciide: Failed to find /dev/ata.\n");
+    if(l_returnValue != 0) {
+        debug("pciide: Failed to find /dev/ata: %d.\n", l_returnValue);
         return;
     }
 
@@ -113,7 +114,11 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
             .a_irq = 14
         };
 
-        l_ataDriver->a_ioctl(l_ataDriver, E_IOCTL_ATA_DRIVER_CREATE, &l_request2);
+        vfsOperationIoctl(
+            l_ataDriver,
+            E_IOCTL_ATA_DRIVER_CREATE,
+            &l_request2
+        );
     } else {
         debug("pciide: Primary channel is in PCI native mode (unsupported).\n");
     }
@@ -127,7 +132,11 @@ static void pciideScan(uint8_t p_bus, uint8_t p_slot, uint8_t p_function) {
             .a_irq = 15
         };
 
-        l_ataDriver->a_ioctl(l_ataDriver, E_IOCTL_ATA_DRIVER_CREATE, &l_request2);
+        vfsOperationIoctl(
+            l_ataDriver,
+            E_IOCTL_ATA_DRIVER_CREATE,
+            &l_request2
+        );
     } else {
         debug("pciide: Secondary channel is in PCI native mode (unsupported).\n");
     }

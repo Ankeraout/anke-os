@@ -65,6 +65,8 @@ char *strcpy(char *p_dst, const char *p_src) {
         l_index++;
     } while(p_src[l_index] != '\0');
 
+    p_dst[l_index] = '\0';
+
     return p_dst;
 }
 
@@ -122,6 +124,8 @@ char *strncpy(char *p_dst, const char *p_src, size_t p_length) {
         (p_src[l_index] != '\0')
         && (l_index < p_length)
     );
+
+    p_dst[l_index] = '\0';
 
     return p_dst;
 }

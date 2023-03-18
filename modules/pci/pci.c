@@ -16,7 +16,7 @@
 static int pciInit(const char *p_arg);
 static void pciQuit(void);
 static int pciIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 );
@@ -87,27 +87,41 @@ M_DECLARE_MODULE struct ts_module g_modulePci = {
     .a_quit = pciQuit
 };
 
+static const struct ts_vfsNodeOperations s_pciOperationsDriver = {
+    .a_ioctl = pciIoctlDriver
+};
+
+static dev_t s_pciDeviceNumber;
+
 static int pciInit(const char *p_arg) {
     M_UNUSED_PARAMETER(p_arg);
 
     debug("pci: Initializing module...\n");
 
     // Create PCI driver file
-    struct ts_vfsFileDescriptor *l_pciDriver =
-        kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    s_pciDeviceNumber = deviceMake(0, 0);
 
-    if(l_pciDriver == NULL) {
-        debug("pci: Failed to allocate memory for driver file.\n");
+    int l_returnValue =
+        deviceRegister(E_DEVICETYPE_CHARACTER, "pci", &s_pciDeviceNumber, 1);
+
+    if(l_returnValue != 0) {
+        debug("pci: Failed to register device.\n");
         return 1;
     }
 
-    strcpy(l_pciDriver->a_name, "pci");
-    l_pciDriver->a_ioctl = pciIoctlDriver;
-    l_pciDriver->a_type = E_VFS_FILETYPE_CHARACTER;
+    l_returnValue =
+        deviceAdd("pci", s_pciDeviceNumber, &s_pciOperationsDriver, 1);
 
-    if(deviceMount("/dev/%s", l_pciDriver) != 0) {
-        debug("pci: Failed to create driver file.\n");
-        kfree(l_pciDriver);
+    if(l_returnValue != 0) {
+        debug("pci: Failed to add device.\n");
+        return 1;
+    }
+
+    l_returnValue =
+        deviceCreateFile2(s_pciDeviceNumber, "pci");
+
+    if(l_returnValue != 0) {
+        debug("pci: Failed to create device file.\n");
         return 1;
     }
 
@@ -126,7 +140,7 @@ static void pciQuit(void) {
 }
 
 static int pciIoctlDriver(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 ) {

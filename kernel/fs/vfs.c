@@ -341,6 +341,27 @@ int vfsOperationLookup(
     return p_node->a_operations->a_lookup(p_node, p_name, p_output);
 }
 
+off_t tf_vfsOperationLseek(
+    struct ts_vfsNode *p_node,
+    off_t p_offset,
+    int p_whence
+) {
+
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_lseek == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    return p_node->a_operations->a_lseek(p_node, p_offset, p_whence);
+}
+
 int vfsOperationMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name

@@ -17,12 +17,12 @@ struct ts_floppyContextDevice {
 static int floppyInit(const char *p_args);
 static void floppyQuit(void);
 static int floppyIoctl(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 );
 static ssize_t floppyRead(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 );
@@ -34,32 +34,49 @@ M_DECLARE_MODULE struct ts_module g_moduleFloppy = {
     .a_quit = floppyQuit
 };
 
-static struct ts_vfsFileDescriptor *s_floppyDriver;
 static const uint16_t s_floppyControllerIoBase[] = {
     0x3f0,
     0x370,
     0x360
+};
+static dev_t s_floppyDeviceNumber;
+static struct ts_floppyContextDevice s_floppyContextDevice[3];
+
+static const struct ts_vfsNodeOperations s_floppyOperationsDriver = {
+    .a_ioctl = floppyIoctl
+};
+
+static const struct ts_vfsNodeOperations s_floppyOperationsDevice = {
+    .a_read = floppyRead
 };
 
 static int floppyInit(const char *p_args) {
     M_UNUSED_PARAMETER(p_args);
 
     // Create /dev/floppy file
-    s_floppyDriver = kcalloc(sizeof(struct ts_vfsFileDescriptor));
+    s_floppyDeviceNumber = deviceMake(0, 0);
 
-    if(s_floppyDriver == NULL) {
-        debug("floppy: Failed to allocate memory for floppy driver.\n");
+    int l_returnValue =
+        deviceRegister(E_DEVICETYPE_CHARACTER, "fd", &s_floppyDeviceNumber, 4);
+
+    if(l_returnValue != 0) {
+        debug("floppy: Failed to register device.\n");
         return 1;
     }
 
-    strcpy(s_floppyDriver->a_name, "floppy");
-    s_floppyDriver->a_type = E_VFS_FILETYPE_CHARACTER;
-    s_floppyDriver->a_ioctl = floppyIoctl;
+    l_returnValue =
+        deviceAdd("fd", s_floppyDeviceNumber, &s_floppyOperationsDriver, 1);
 
-    // Register the floppy driver file.
-    if(deviceMount("/dev/%s", s_floppyDriver)) {
-        debug("floppy: Failed to create /dev/floppy.\n");
-        kfree(s_floppyDriver);
+    if(l_returnValue != 0) {
+        debug("floppy: Failed to add device.\n");
+        return 1;
+    }
+
+    l_returnValue =
+        deviceCreateFile2(s_floppyDeviceNumber, "floppy");
+
+    if(l_returnValue != 0) {
+        debug("floppy: Failed to create device file.\n");
         return 1;
     }
 
@@ -73,7 +90,7 @@ static void floppyQuit(void) {
 }
 
 static int floppyIoctl(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     int p_request,
     void *p_arg
 ) {
@@ -89,7 +106,7 @@ static int floppyIoctl(
 }
 
 static ssize_t floppyRead(
-    struct ts_vfsFileDescriptor *p_file,
+    struct ts_vfsNode *p_file,
     void *p_buffer,
     size_t p_size
 ) {
@@ -101,44 +118,32 @@ static ssize_t floppyRead(
 }
 
 static int floppyCreate(const struct ts_floppyRequestCreate *p_request) {
-    // Allocate memory for the device context
-    struct ts_floppyContextDevice *l_context =
-        kcalloc(sizeof(struct ts_floppyContextDevice));
-
-    if(l_context == NULL) {
-        debug("floppy: Failed to allocate memory for device context.\n");
-        return 1;
-    }
-
-    l_context->a_ioBase = s_floppyControllerIoBase[p_request->a_driveNumber];
+    s_floppyContextDevice[p_request->a_driveNumber].a_ioBase =
+        s_floppyControllerIoBase[p_request->a_driveNumber];
     memcpy(
-        &l_context->a_geometry,
+        &s_floppyContextDevice[p_request->a_driveNumber].a_geometry,
         &p_request->a_geometry,
         sizeof(struct ts_floppyGeometry)
     );
 
     // Create device file
-    struct ts_vfsFileDescriptor *l_floppyDevice = deviceCreate("/dev/fd%d", 0);
+    dev_t l_deviceNumber = s_floppyDeviceNumber;
+    deviceSetMinor(&l_deviceNumber, p_request->a_driveNumber + 1);
 
-    if(l_floppyDevice == NULL) {
-        debug("floppy: Failed to allocate memory for floppy device.\n");
-        kfree(l_context);
-        return 1;
+    int l_returnValue =
+        deviceAdd("fd", l_deviceNumber, &s_floppyOperationsDevice, 1);
+
+    if(l_returnValue != 0) {
+        debug("fd: Failed to add device.\n");
+        return l_returnValue;
     }
 
-    l_floppyDevice->a_type = E_VFS_FILETYPE_BLOCK;
-    l_floppyDevice->a_read = floppyRead;
-    l_floppyDevice->a_context = l_context;
+    l_returnValue = deviceCreateFile(l_deviceNumber);
 
-    // Register the floppy device file.
-    if(deviceMount("/dev/%s", l_floppyDevice) != 0) {
-        debug("floppy: Failed to create /dev/%s.\n", l_floppyDevice->a_name);
-        kfree(l_context);
-        kfree(l_floppyDevice);
+    if(l_returnValue != 0) {
+        debug("fd: Failed to create device file.\n");
         return 1;
     }
-
-    debug("floppy: Registered /dev/%s.\n", l_floppyDevice->a_name);
 
     return 0;
 }

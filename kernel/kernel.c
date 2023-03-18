@@ -15,8 +15,6 @@
 #include <modules/framebuffer.h>
 #include <modules/tty.h>
 
-#include <kernel/arch/x86_64/inline.h>
-
 static int kernelCreateRootDirectories(void);
 static int kernelInitFramebuffer(void);
 static int kernelInitTty(void);
@@ -132,10 +130,6 @@ static void kernelDebugWrite(void *p_parameter, const char *p_value) {
     size_t l_length = strlen(p_value);
 
     vfsOperationWrite(p_parameter, p_value, l_length);
-
-    for(size_t l_index = 0; l_index < l_length; l_index++) {
-        outb(0xe9, p_value[l_index]);
-    }
 }
 
 static int kernelInitFramebuffer(void) {
