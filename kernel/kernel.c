@@ -129,7 +129,7 @@ static int kernelCreateRootDirectories(void) {
 static void kernelDebugWrite(void *p_parameter, const char *p_value) {
     size_t l_length = strlen(p_value);
 
-    vfsOperationWrite(p_parameter, p_value, l_length);
+    vfsOperationWrite(p_parameter, 0, p_value, l_length);
 }
 
 static int kernelInitFramebuffer(void) {

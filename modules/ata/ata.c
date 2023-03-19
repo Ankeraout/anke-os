@@ -51,7 +51,6 @@ struct ts_ataDrive {
     uint16_t a_cylinders;
     uint8_t a_heads;
     uint8_t a_sectors;
-    off_t a_position;
 };
 
 struct ts_ataChannel {
@@ -88,18 +87,15 @@ static void ataWait(int p_channelNumber);
 static void ataWaitUntilNotBusy(int p_channelNumber);
 static void ataWaitUntilDataRequestOrError(int p_channelNumber);
 static int ataOpen(struct ts_vfsNode *p_file, int p_flags);
-static off_t ataLseek(
-    struct ts_vfsNode *p_file,
-    off_t p_offset,
-    int p_whence
-);
 static ssize_t ataReadPata(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     void *p_buffer,
     size_t p_size
 );
 static ssize_t ataWritePata(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 );
@@ -125,7 +121,6 @@ static const struct ts_vfsNodeOperations s_ataOperationsChannel = {
 };
 
 static const struct ts_vfsNodeOperations s_ataOperationsDrivePata = {
-    .a_lseek = ataLseek,
     .a_open = ataOpen,
     .a_read = ataReadPata,
     .a_write = ataWritePata,
@@ -503,36 +498,22 @@ static int ataOpen(struct ts_vfsNode *p_file, int p_flags) {
     return 0;
 }
 
-static off_t ataLseek(
-    struct ts_vfsNode *p_file,
-    off_t p_offset,
-    int p_whence
-) {
-    M_UNUSED_PARAMETER(p_file);
-    M_UNUSED_PARAMETER(p_offset);
-    M_UNUSED_PARAMETER(p_whence);
-
-    return -EOPNOTSUPP;
-}
-
 static ssize_t ataReadPata(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     void *p_buffer,
     size_t p_size
 ) {
+    M_UNUSED_PARAMETER(p_offset);
+
     int l_deviceMinor = deviceGetMinor(p_file->a_deviceNumber);
 
     int l_channelNumber = (l_deviceMinor - 3) / 2;
     int l_driveNumber = (l_deviceMinor - 3) % 2;
 
-    struct ts_ataChannel *l_channel =
-        &s_ataChannelContext[l_channelNumber];
-    struct ts_ataDrive *l_drive =
-        &l_channel->a_drives[l_driveNumber];
-
     // Compute offset
-    size_t l_sector = l_drive->a_position >> 9;
-    size_t l_sectorOffset = l_drive->a_position & 0x1ff;
+    size_t l_sector = p_offset >> 9;
+    size_t l_sectorOffset = p_offset & 0x1ff;
     size_t l_bytesRead = 0;
 
     while(l_bytesRead < p_size) {
@@ -561,10 +542,12 @@ static ssize_t ataReadPata(
 
 static ssize_t ataWritePata(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 ) {
     M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_offset);
     M_UNUSED_PARAMETER(p_buffer);
     M_UNUSED_PARAMETER(p_size);
 

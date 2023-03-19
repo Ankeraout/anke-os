@@ -57,6 +57,7 @@ static int cmosInit(const char *p_args);
 static void cmosQuit(void);
 static ssize_t cmosRtcRead(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     void *p_buffer,
     size_t p_size
 );
@@ -122,10 +123,12 @@ static void cmosQuit(void) {
 
 static ssize_t cmosRtcRead(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     void *p_buffer,
     size_t p_size
 ) {
     M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_offset);
     M_UNUSED_PARAMETER(p_buffer);
     M_UNUSED_PARAMETER(p_size);
 

@@ -353,27 +353,6 @@ int vfsOperationLookup(
     return p_node->a_operations->a_lookup(p_node, p_name, p_output);
 }
 
-off_t tf_vfsOperationLseek(
-    struct ts_vfsNode *p_node,
-    off_t p_offset,
-    int p_whence
-) {
-
-    if(p_node == NULL) {
-        return -EINVAL;
-    }
-
-    if(p_node->a_operations == NULL) {
-        return -EOPNOTSUPP;
-    }
-
-    if(p_node->a_operations->a_lseek == NULL) {
-        return -EOPNOTSUPP;
-    }
-
-    return p_node->a_operations->a_lseek(p_node, p_offset, p_whence);
-}
-
 int vfsOperationMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
@@ -424,8 +403,30 @@ int vfsOperationMknod(
     return p_node->a_operations->a_mknod(p_node, p_name, p_type, p_deviceNumber);
 }
 
+ssize_t vfsOperationRead(
+    struct ts_vfsNode *p_node,
+    off_t p_offset,
+    void *p_buffer,
+    size_t p_size
+) {
+    if(p_node == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_node->a_operations == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    if(p_node->a_operations->a_read == NULL) {
+        return -EOPNOTSUPP;
+    }
+
+    return p_node->a_operations->a_read(p_node, p_offset, p_buffer, p_size);
+}
+
 ssize_t vfsOperationWrite(
     struct ts_vfsNode *p_node,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 ) {
@@ -441,7 +442,7 @@ ssize_t vfsOperationWrite(
         return -EOPNOTSUPP;
     }
 
-    return p_node->a_operations->a_write(p_node, p_buffer, p_size);
+    return p_node->a_operations->a_write(p_node, p_offset, p_buffer, p_size);
 }
 
 static int vfsCanonicalizePath(

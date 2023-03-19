@@ -42,6 +42,7 @@ static int ttyInit(const char *p_arg);
 static void ttyQuit(void);
 static ssize_t ttyWriteDevice(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 );
@@ -163,10 +164,12 @@ static void ttyQuit(void) {
 
 static ssize_t ttyWriteDevice(
     struct ts_vfsNode *p_file,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 ) {
     M_UNUSED_PARAMETER(p_file);
+    M_UNUSED_PARAMETER(p_offset);
 
     const char *l_str = (const char *)p_buffer;
 

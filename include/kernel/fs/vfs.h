@@ -48,6 +48,7 @@ typedef int tf_vfsMknod(
 typedef int tf_vfsOpen(struct ts_vfsNode *p_node, int p_flags);
 typedef ssize_t tf_vfsRead(
     struct ts_vfsNode *p_node,
+    off_t p_offset,
     void *p_buffer,
     size_t p_size
 );
@@ -55,6 +56,7 @@ typedef int tf_vfsRemove(struct ts_vfsNode *p_node, const char *p_name);
 typedef int tf_vfsRmdir(struct ts_vfsNode *p_node, const char *p_name);
 typedef ssize_t tf_vfsWrite(
     struct ts_vfsNode *p_node,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 );
@@ -64,7 +66,6 @@ struct ts_vfsNodeOperations {
     tf_vfsCreate *a_create;
     tf_vfsIoctl *a_ioctl;
     tf_vfsLookup *a_lookup;
-    tf_vfsLseek *a_lseek;
     tf_vfsMkdir *a_mkdir;
     tf_vfsMknod *a_mknod;
     tf_vfsOpen *a_open;
@@ -198,15 +199,6 @@ int vfsOperationLookup(
 );
 
 /**
- * @brief Sets the position in a given file.
- */
-off_t tf_vfsOperationLseek(
-    struct ts_vfsNode *p_node,
-    off_t p_offset,
-    int p_whence
-);
-
-/**
  * @brief Creates a directory.
  *
  * @param[in] p_node The node to create the directory in. This node must be a
@@ -245,9 +237,29 @@ int vfsOperationMknod(
 );
 
 /**
+ * @brief Reads data from the given file.
+ *
+ * @param[in] p_node The file to read the data from.
+ * @param[in] p_offset The offset in the data stream.
+ * @param[in] p_buffer The buffer that will receive the data.
+ * @param[in] p_size The maximum number of bytes to read.
+ *
+ * @returns An integer that indicates the result of the operation. If it is
+ * negative, then it is an error code. If it is positive or null, then it
+ * contains the number of bytes read.
+ */
+ssize_t vfsOperationRead(
+    struct ts_vfsNode *p_node,
+    off_t p_offset,
+    void *p_buffer,
+    size_t p_size
+);
+
+/**
  * @brief Writes the given data to the given file.
  *
  * @param[in] p_node The file to write the data to.
+ * @param[in] p_offset The offset in the data stream.
  * @param[in] p_buffer The data to write.
  * @param[in] p_size The number of bytes to write.
  *
@@ -257,6 +269,7 @@ int vfsOperationMknod(
  */
 ssize_t vfsOperationWrite(
     struct ts_vfsNode *p_node,
+    off_t p_offset,
     const void *p_buffer,
     size_t p_size
 );
