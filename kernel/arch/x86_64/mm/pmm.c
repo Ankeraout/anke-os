@@ -89,7 +89,7 @@ void *pmmAlloc(size_t p_size) {
     size_t l_consecutiveFreePageCount = 0;
     uintptr_t l_firstFreePage = (uintptr_t)NULL;
     size_t l_entryIndex = l_currentAddress >> 18;
-    uint64_t l_entryMask = 1 << ((l_currentAddress >> 12) & 0x3f);
+    uint64_t l_entryMask = 1ul << ((l_currentAddress >> 12) & 0x3f);
 
     while(
         (l_consecutiveFreePageCount < l_pageCount)
@@ -128,7 +128,7 @@ void *pmmAlloc(size_t p_size) {
 void pmmFree(void *p_ptr, size_t p_size) {
     const size_t l_pageNumber = ((size_t)p_ptr) >> 12;
     size_t l_entryIndex = l_pageNumber >> 6;
-    uint64_t l_entryMask = 1 << (l_pageNumber & 0x3f);
+    uint64_t l_entryMask = 1ul << (l_pageNumber & 0x3f);
     size_t l_pageCount = (p_size + 4095) >> 12;
 
     while(l_pageCount > 0) {
@@ -220,7 +220,7 @@ static void pmmMarkAsUsed(
 ) {
     const size_t l_pageNumber = ((size_t)p_ptr) >> 12;
     size_t l_entryIndex = l_pageNumber >> 6;
-    uint64_t l_entryMask = 1 << (l_pageNumber & 0x3f);
+    uint64_t l_entryMask = 1ul << (l_pageNumber & 0x3f);
     size_t l_pageCount = (p_size + 4095) >> 12;
 
     while(l_pageCount > 0) {

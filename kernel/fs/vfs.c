@@ -21,9 +21,14 @@ static int vfsCanonicalizePath(
 );
 static int vfsCheckPath(const char *p_path);
 static void vfsDisposeNode(struct ts_vfsNode *p_node);
+static const struct ts_vfsFileSystem *vfsFindFileSystem(
+    const char *p_fileSystem
+);
 
 static struct ts_treeNode s_vfsRoot;
 static bool s_vfsRootMounted;
+static struct ts_linkedList s_vfsFileSystems;
+static t_spinlock s_vfsFileSystemsLock;
 
 int vfsCreateNode(
     struct ts_vfsNode *p_parent,
@@ -72,7 +77,7 @@ static void vfsDebug2(struct ts_treeNode *p_node, int p_depth) {
     debug("vfs: ");
 
     for(int l_i = 0; l_i < p_depth; l_i++) {
-        debug("    ");
+        debug("  ");
     }
 
     struct ts_vfsTreeNode *l_node = p_node->a_data;
@@ -123,6 +128,15 @@ int vfsInit(void) {
     // remain true until root is mounted.
     s_vfsRootMounted = false;
     l_vfsTreeNode->a_file.a_vfs = &s_vfsRoot;
+
+    // Create the file system list
+    l_returnValue = linkedListInit(&s_vfsFileSystems);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    spinlockInit(&s_vfsFileSystemsLock);
 
     // No error code
     return 0;
@@ -242,19 +256,28 @@ int vfsLookup(
     return 0;
 }
 
-int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs) {
+int vfsMount(struct ts_vfsNode *p_node, const char *p_fileSystem) {
     // Make sure that the node is a directory
     if(p_node->a_type != E_VFSNODETYPE_DIRECTORY) {
         return -ENOTDIR;
     }
 
-    // Make sure that the node is not busy and is not already mounted.
+    // Make sure that we can find the file system.
+    const struct ts_vfsFileSystem *l_fileSystem =
+        vfsFindFileSystem(p_fileSystem);
+
+    if(l_fileSystem == NULL) {
+        return -EINVAL;
+    }
+
     spinlockAcquire(&p_node->a_lock);
 
+    // Make sure that the node is not busy and is not already mounted.
     if(p_node->a_referenceCount != 1) {
         // Special case: root node
         if(p_node->a_vfs == &s_vfsRoot) {
             if(s_vfsRootMounted) {
+                spinlockRelease(&p_node->a_lock);
                 return -EBUSY;
             }
         } else {
@@ -269,7 +292,7 @@ int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs) {
 
     spinlockRelease(&p_node->a_lock);
 
-    int l_returnValue = p_fs->a_onMount(p_node, 0);
+    int l_returnValue = l_fileSystem->a_onMount(p_node, 0);
 
     if(l_returnValue != 0) {
         // If an error occurred, restore the reference count.
@@ -277,7 +300,7 @@ int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs) {
     }
 
     // Copy the file system operations on the mount node.
-    p_node->a_operations = p_fs->a_operations;
+    p_node->a_operations = l_fileSystem->a_operations;
 
     return l_returnValue;
 }
@@ -443,6 +466,16 @@ ssize_t vfsOperationWrite(
     }
 
     return p_node->a_operations->a_write(p_node, p_offset, p_buffer, p_size);
+}
+
+int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
+    spinlockAcquire(&s_vfsFileSystemsLock);
+
+    int l_returnValue = linkedListAdd(&s_vfsFileSystems, (void *)p_fileSystem);
+
+    spinlockRelease(&s_vfsFileSystemsLock);
+
+    return l_returnValue;
 }
 
 static int vfsCanonicalizePath(
@@ -612,4 +645,33 @@ static void vfsDisposeNode(struct ts_vfsNode *p_node) {
 
     // Call close on the parent
     vfsOperationClose(&l_vfsTreeNode->a_file);
+}
+
+static const struct ts_vfsFileSystem *vfsFindFileSystem(
+    const char *p_fileSystem
+) {
+    spinlockAcquire(&s_vfsFileSystemsLock);
+
+    struct ts_linkedListNode *l_node = s_vfsFileSystems.a_first;
+
+    while(l_node != NULL) {
+        const struct ts_vfsFileSystem *l_fileSystem = l_node->a_data;
+
+        if(strcmp(l_fileSystem->a_name, p_fileSystem) == 0) {
+            break;
+        }
+
+        l_node = l_node->a_next;
+    }
+
+    if(l_node == NULL) {
+        spinlockRelease(&s_vfsFileSystemsLock);
+        return NULL;
+    }
+
+    const struct ts_vfsFileSystem *l_fileSystem = l_node->a_data;
+
+    spinlockRelease(&s_vfsFileSystemsLock);
+
+    return l_fileSystem;
 }

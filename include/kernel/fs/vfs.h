@@ -30,11 +30,6 @@ typedef int tf_vfsLookup(
     const char *p_name,
     struct ts_vfsNode **p_output
 );
-typedef off_t tf_vfsLseek(
-    struct ts_vfsNode *p_node,
-    off_t p_offset,
-    int p_whence
-);
 typedef int tf_vfsMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
@@ -148,13 +143,13 @@ int vfsLookup(
  * @brief Mounts a file system.
  *
  * @param[in] p_node The node to mount the file system in.
- * @param[in] p_fs The file system to mount.
+ * @param[in] p_fileSystem The file system to mount.
  *
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success
  * @retval Any other value on error.
  */
-int vfsMount(struct ts_vfsNode *p_node, const struct ts_vfsFileSystem *p_fs);
+int vfsMount(struct ts_vfsNode *p_node, const char *p_fileSystem);
 
 /**
  * @brief Closes the given node.
@@ -273,5 +268,16 @@ ssize_t vfsOperationWrite(
     const void *p_buffer,
     size_t p_size
 );
+
+/**
+ * @brief Registers a file system in the file system list.
+ *
+ * @param[in] p_fileSystem The file system to register.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+ */
+int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem);
 
 #endif

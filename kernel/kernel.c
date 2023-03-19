@@ -16,10 +16,11 @@
 #include <modules/tty.h>
 
 static int kernelCreateRootDirectories(void);
+static void kernelDebugWrite(void *p_parameter, const char *p_value);
 static int kernelInitFramebuffer(void);
 static int kernelInitTty(void);
 static int kernelMountRootfs(void);
-static void kernelDebugWrite(void *p_parameter, const char *p_value);
+static int kernelRegisterFileSystems(void);
 
 void main(struct ts_boot *p_boot) {
     debug("kernel: Starting AnkeKernel...\n");
@@ -34,6 +35,11 @@ void main(struct ts_boot *p_boot) {
     // Initialize VFS
     if(vfsInit() != 0) {
         debug("kernel: Failed to initialize VFS subsystem.\n");
+        archHaltAndCatchFire();
+    }
+
+    if(kernelRegisterFileSystems() != 0) {
+        debug("kernel: Failed to register file systems.\n");
         archHaltAndCatchFire();
     }
 
@@ -187,7 +193,7 @@ static int kernelMountRootfs(void) {
     }
 
     // Mount a ramfs instance
-    l_returnValue = vfsMount(l_root, &g_ramfsFileSystem);
+    l_returnValue = vfsMount(l_root, "ramfs");
 
     if(l_returnValue != 0) {
         debug("kernel: Failed to mount root as ramfs.\n");
@@ -201,6 +207,30 @@ static int kernelMountRootfs(void) {
     if(l_returnValue != 0) {
         debug("kernel: Failed to close root node.\n");
         return l_returnValue;
+    }
+
+    return 0;
+}
+
+static int kernelRegisterFileSystems(void) {
+    static const struct ts_vfsFileSystem *l_fileSystems[] = {
+        &g_ramfsFileSystem
+    };
+
+    size_t l_elementCount = M_ARRAY_ELEMENT_COUNT(l_fileSystems);
+
+    for(size_t l_index = 0; l_index < l_elementCount; l_index++) {
+        int l_returnValue = vfsRegisterFileSystem(l_fileSystems[l_index]);
+
+        if(l_returnValue != 0) {
+            debug(
+                "kernel: Failed to register %s file system: %d.\n",
+                l_fileSystems[l_index]->a_name,
+                l_returnValue
+            );
+
+            return l_returnValue;
+        }
     }
 
     return 0;
