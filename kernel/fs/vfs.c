@@ -256,13 +256,12 @@ int vfsLookup(
     return 0;
 }
 
-int vfsMount(struct ts_vfsNode *p_node, const char *p_fileSystem) {
-    // Make sure that the node is a directory
-    if(p_node->a_type != E_VFSNODETYPE_DIRECTORY) {
-        return -ENOTDIR;
-    }
-
-    // Make sure that we can find the file system.
+int vfsMount(
+    const char *p_file,
+    const char *p_mountPoint,
+    const char *p_fileSystem
+) {
+    // Find the file system.
     const struct ts_vfsFileSystem *l_fileSystem =
         vfsFindFileSystem(p_fileSystem);
 
@@ -270,39 +269,8 @@ int vfsMount(struct ts_vfsNode *p_node, const char *p_fileSystem) {
         return -EINVAL;
     }
 
-    spinlockAcquire(&p_node->a_lock);
-
-    // Make sure that the node is not busy and is not already mounted.
-    if(p_node->a_referenceCount != 1) {
-        // Special case: root node
-        if(p_node->a_vfs == &s_vfsRoot) {
-            if(s_vfsRootMounted) {
-                spinlockRelease(&p_node->a_lock);
-                return -EBUSY;
-            }
-        } else {
-            // The node is busy or already mounted.
-            spinlockRelease(&p_node->a_lock);
-            return -EBUSY;
-        }
-    }
-
-    // We set the reference count to -1 so that the VFS never frees this node.
-    p_node->a_referenceCount = -1;
-
-    spinlockRelease(&p_node->a_lock);
-
-    int l_returnValue = l_fileSystem->a_onMount(p_node, 0);
-
-    if(l_returnValue != 0) {
-        // If an error occurred, restore the reference count.
-        p_node->a_referenceCount = 1;
-    }
-
-    // Copy the file system operations on the mount node.
-    p_node->a_operations = l_fileSystem->a_operations;
-
-    return l_returnValue;
+    // Call the filesystem's mount function
+    return l_fileSystem->a_onMount(p_file, p_mountPoint);
 }
 
 int vfsOperationClose(struct ts_vfsNode *p_node) {

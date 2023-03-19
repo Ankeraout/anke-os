@@ -183,29 +183,11 @@ static int kernelInitTty(void) {
 }
 
 static int kernelMountRootfs(void) {
-    // Get the VFS node for "/".
-    struct ts_vfsNode *l_root;
-    int l_returnValue = vfsLookup(NULL, "/", &l_root);
-
-    if(l_returnValue != 0) {
-        debug("kernel: VFS root node was not found.\n");
-        return l_returnValue;
-    }
-
     // Mount a ramfs instance
-    l_returnValue = vfsMount(l_root, "ramfs");
+    int l_returnValue = vfsMount(NULL, "/", "ramfs");
 
     if(l_returnValue != 0) {
         debug("kernel: Failed to mount root as ramfs.\n");
-        return l_returnValue;
-    }
-
-    // Close the root node (should have no effect, but let's follow best
-    // practices!)
-    l_returnValue = vfsOperationClose(l_root);
-
-    if(l_returnValue != 0) {
-        debug("kernel: Failed to close root node.\n");
         return l_returnValue;
     }
 

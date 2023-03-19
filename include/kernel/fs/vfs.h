@@ -85,7 +85,7 @@ struct ts_vfsNode {
 struct ts_vfsFileSystem {
     const char *a_name;
     const struct ts_vfsNodeOperations *a_operations;
-    int (*a_onMount)(struct ts_vfsNode *p_node, dev_t p_device);
+    int (*a_onMount)(const char *p_file, const char *p_mountPoint);
 };
 
 /**
@@ -142,14 +142,19 @@ int vfsLookup(
 /**
  * @brief Mounts a file system.
  *
- * @param[in] p_node The node to mount the file system in.
+ * @param[in] p_file The file to mount.
+ * @param[in] p_mountPoint The mount point.
  * @param[in] p_fileSystem The file system to mount.
  *
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success
  * @retval Any other value on error.
  */
-int vfsMount(struct ts_vfsNode *p_node, const char *p_fileSystem);
+int vfsMount(
+    const char *p_file,
+    const char *p_mountPoint,
+    const char *p_fileSystem
+);
 
 /**
  * @brief Closes the given node.

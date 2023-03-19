@@ -26,7 +26,7 @@ static int ramfsOperationLookup(
     const char *p_name,
     struct ts_vfsNode **p_output
 );
-static int ramfsOnMount(struct ts_vfsNode *p_node, dev_t p_device);
+static int ramfsOnMount(const char *p_file, const char *p_mountPoint);
 static int ramfsOperationMkdir(
     struct ts_vfsNode *p_node,
     const char *p_name
@@ -141,14 +141,22 @@ static int ramfsOperationLookup(
     return 0;
 }
 
-static int ramfsOnMount(struct ts_vfsNode *p_node, dev_t p_device) {
-    // The p_device parameter is not used. Ramfs is always empty when mounted.
-    M_UNUSED_PARAMETER(p_device);
+static int ramfsOnMount(const char *p_file, const char *p_mountPoint) {
+    // The p_file parameter is not used. Ramfs is always empty when mounted.
+    M_UNUSED_PARAMETER(p_file);
+
+    // Get the mount point node
+    struct ts_vfsNode *l_mountPoint;
+    int l_returnValue = vfsLookup(NULL, p_mountPoint, &l_mountPoint);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
 
     // Allocate memory for the file system tree.
-    p_node->a_fsData = kmalloc(sizeof(struct ts_treeNode));
+    l_mountPoint->a_fsData = kmalloc(sizeof(struct ts_treeNode));
 
-    if(p_node->a_fsData == NULL) {
+    if(l_mountPoint->a_fsData == NULL) {
         return -ENOMEM;
     }
 
@@ -156,18 +164,21 @@ static int ramfsOnMount(struct ts_vfsNode *p_node, dev_t p_device) {
     struct ts_ramfsFile *l_file = kmalloc(sizeof(struct ts_ramfsFile));
 
     if(l_file == NULL) {
-        kfree(p_node->a_fsData);
+        kfree(l_mountPoint->a_fsData);
         return -ENOMEM;
     }
 
     // Initialize the root file system tree node.
-    struct ts_treeNode *l_node = p_node->a_fsData;
+    struct ts_treeNode *l_node = l_mountPoint->a_fsData;
 
     if(treeInit(l_node, l_file) != 0) {
-        kfree(p_node->a_fsData);
+        kfree(l_mountPoint->a_fsData);
         kfree(l_file);
         return -ENOMEM;
     }
+
+    // Set the mount point's operations.
+    l_mountPoint->a_operations = &s_ramfsOperations;
 
     return 0;
 }
