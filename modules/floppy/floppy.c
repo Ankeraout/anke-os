@@ -58,7 +58,7 @@ static int floppyInit(const char *p_args) {
     s_floppyDeviceNumber = deviceMake(0, 0);
 
     int l_returnValue =
-        deviceRegister(E_DEVICETYPE_CHARACTER, "fd", &s_floppyDeviceNumber, 4);
+        deviceRegister(E_DEVICETYPE_BLOCK, "fd", &s_floppyDeviceNumber, 4);
 
     if(l_returnValue != 0) {
         debug("floppy: Failed to register device.\n");

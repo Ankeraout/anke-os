@@ -124,6 +124,7 @@ static int ramfsOperationLookup(
             break;
 
         case E_VFSNODETYPE_CHARACTERDEVICE:
+        case E_VFSNODETYPE_BLOCKDEVICE:
             l_returnValue = deviceGetOperations(
                 l_childFile->a_deviceNumber,
                 &l_childNode->a_operations
@@ -230,8 +231,11 @@ static int ramfsOperationMknod(
     enum te_vfsNodeType p_type,
     dev_t p_deviceNumber
 ) {
-    // Ramfs only supports character devices.
-    if(p_type != E_VFSNODETYPE_CHARACTERDEVICE) {
+    // Ramfs only supports devices.
+    if(
+        (p_type != E_VFSNODETYPE_CHARACTERDEVICE)
+        && (p_type != E_VFSNODETYPE_BLOCKDEVICE)
+    ) {
         return -EINVAL;
     }
 

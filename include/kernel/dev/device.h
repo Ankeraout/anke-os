@@ -53,7 +53,7 @@ static inline enum te_vfsNodeType deviceTypeToFileType(
     enum te_deviceType p_type
 ) {
     switch(p_type) {
-        case E_DEVICETYPE_BLOCK: return E_VFSNODETYPE_CHARACTERDEVICE; // TODO
+        case E_DEVICETYPE_BLOCK: return E_VFSNODETYPE_BLOCKDEVICE; // TODO
         case E_DEVICETYPE_CHARACTER: return E_VFSNODETYPE_CHARACTERDEVICE;
         default: return E_VFSNODETYPE_CHARACTERDEVICE; // ?
     }
@@ -150,5 +150,55 @@ int deviceCreateFile2(
     dev_t p_deviceNumber,
     const char *p_name
 );
+
+/**
+ * @brief Retrieves the data for the given device driver.
+ *
+ * @param[in] p_device The device.
+ * @param[out] p_data A pointer to a pointer variable that will contain the
+ * returned data.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int deviceDriverGetData(dev_t p_device, void **p_data);
+
+/**
+ * @brief Sets the data for the given device driver.
+ *
+ * @param[in] p_device The device.
+ * @param[in] p_data The data to store for the given device.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int deviceDriverSetData(dev_t p_device, void *p_data);
+
+/**
+ * @brief Retrieves the data for the given device.
+ *
+ * @param[in] p_device The device.
+ * @param[out] p_data A pointer to a pointer variable that will contain the
+ * returned data.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int deviceGetData(dev_t p_device, void **p_data);
+
+/**
+ * @brief Sets the data for the given device.
+ *
+ * @param[in] p_device The device.
+ * @param[in] p_data The data to store for the given device.
+ *
+ * @returns An integer value that indicates the result of the operation.
+ * @retval 0 on success
+ * @retval Any other value on error.
+*/
+int deviceSetData(dev_t p_device, void *p_data);
 
 #endif

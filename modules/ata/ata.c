@@ -139,7 +139,7 @@ static int ataInit(const char *p_args) {
     s_ataDeviceNumber = deviceMake(0, 0);
 
     int l_returnValue =
-        deviceRegister(E_DEVICETYPE_CHARACTER, "ata", &s_ataDeviceNumber, 7);
+        deviceRegister(E_DEVICETYPE_BLOCK, "ata", &s_ataDeviceNumber, 7);
 
     if(l_returnValue != 0) {
         debug("ata: Failed to register device: %d.\n", l_returnValue);
@@ -417,6 +417,24 @@ static void ataDriveScan(int p_channelNumber, int p_driveNumber) {
             );
 
             return;
+        }
+
+        // Invalidate current drive
+        l_channel->a_selectedDrive = -1;
+
+        char l_deviceFileName[PATH_MAX];
+
+        snprintf(
+            l_deviceFileName,
+            PATH_MAX - 1,
+            "/dev/ata%d",
+            deviceGetMinor(l_deviceNumber)
+        );
+
+        l_returnValue = vfsMount(l_deviceFileName, NULL, "mbrfs");
+
+        if(l_returnValue != 0) {
+            debug("ata: Failed to mount %s as mbrfs.\n", l_deviceFileName);
         }
     } else if(l_driveType == 0xeb14) {
         debug("ata: Detected PATAPI drive.\n");

@@ -16,12 +16,14 @@
 struct ts_deviceMinorEntry {
     bool a_taken;
     const struct ts_vfsNodeOperations *a_operations;
+    void *a_data;
 };
 
 struct ts_deviceMajorEntry {
     enum te_deviceType a_type;
     const char *a_name;
     struct ts_deviceMinorEntry a_entries[C_DEVICE_MAX_MINOR + 1];
+    void *a_data;
 };
 
 /**
@@ -276,6 +278,67 @@ int deviceCreateFile2(
 
     // And indeed we close the /dev node.
     vfsOperationClose(l_dev);
+
+    return 0;
+}
+
+int deviceDriverGetData(dev_t p_device, void **p_data) {
+    int l_major = deviceGetMajor(p_device);
+
+    if(s_deviceTable[l_major] == NULL) {
+        return -ENODEV;
+    }
+
+    *p_data = s_deviceTable[l_major]->a_data;
+
+    return 0;
+}
+
+int deviceDriverSetData(dev_t p_device, void *p_data) {
+    int l_major = deviceGetMajor(p_device);
+
+    if(s_deviceTable[l_major] == NULL) {
+        return -ENODEV;
+    }
+
+    s_deviceTable[l_major]->a_data = p_data;
+
+    return 0;
+}
+
+int deviceGetData(dev_t p_device, void **p_data) {
+    int l_major = deviceGetMajor(p_device);
+
+    if(s_deviceTable[l_major] == NULL) {
+        return -ENODEV;
+    }
+
+    int l_minor = deviceGetMinor(p_device);
+
+    if(!s_deviceTable[l_major]->a_entries[l_minor].a_taken) {
+        return -ENODEV;
+    }
+
+    *p_data = s_deviceTable[l_major]->a_entries[l_minor].a_data;
+
+    return 0;
+}
+
+int deviceSetData(dev_t p_device, void *p_data) {
+
+    int l_major = deviceGetMajor(p_device);
+
+    if(s_deviceTable[l_major] == NULL) {
+        return -ENODEV;
+    }
+
+    int l_minor = deviceGetMinor(p_device);
+
+    if(!s_deviceTable[l_major]->a_entries[l_minor].a_taken) {
+        return -ENODEV;
+    }
+
+    s_deviceTable[l_major]->a_entries[l_minor].a_data = p_data;
 
     return 0;
 }

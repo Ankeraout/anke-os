@@ -12,6 +12,7 @@
 #include <kernel/module.h>
 
 const char *s_moduleList[] = {
+    "mbrfs",
     "pci",
     "pciide",
     "cmos"
