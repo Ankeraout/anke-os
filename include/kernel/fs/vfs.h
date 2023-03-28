@@ -85,7 +85,6 @@ struct ts_vfsNode {
 
 struct ts_vfsFileSystem {
     const char *a_name;
-    const struct ts_vfsNodeOperations *a_operations;
     int (*a_onMount)(const char *p_file, const char *p_mountPoint);
 };
 

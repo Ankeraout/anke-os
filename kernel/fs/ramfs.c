@@ -46,8 +46,7 @@ static const struct ts_vfsNodeOperations s_ramfsOperations = {
 
 const struct ts_vfsFileSystem g_ramfsFileSystem = {
     .a_name = "ramfs",
-    .a_onMount = ramfsOnMount,
-    .a_operations = &s_ramfsOperations
+    .a_onMount = ramfsOnMount
 };
 
 static void ramfsInitFile(struct ts_ramfsFile *p_file) {

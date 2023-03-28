@@ -65,8 +65,7 @@ static const struct ts_vfsNodeOperations s_mbrfsOperations = {
 
 static const struct ts_vfsFileSystem s_mbrfsFileSystem = {
     .a_name = "mbrfs",
-    .a_onMount = mbrfsOnMount,
-    .a_operations = &s_mbrfsOperations
+    .a_onMount = mbrfsOnMount
 };
 
 static int mbrfsInit(const char *p_args) {
@@ -84,7 +83,7 @@ static int mbrfsOnMount(const char *p_file, const char *p_mountPoint) {
     M_UNUSED_PARAMETER(p_mountPoint);
 
     dev_t l_deviceNumber = deviceMake(0, 0);
-    const char *l_fileName = strchr(p_file, '/') + 1;
+    const char *l_fileName = strrchr(p_file, '/') + 1;
     char *l_driverName = kmalloc(NAME_MAX + 1);
 
     if(l_driverName == NULL) {

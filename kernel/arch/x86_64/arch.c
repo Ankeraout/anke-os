@@ -5,6 +5,7 @@
 #include <kernel/arch/x86_64/gdt.h>
 #include <kernel/arch/x86_64/idt.h>
 #include <kernel/arch/x86_64/inline.h>
+#include <kernel/fs/vfs.h>
 #include <kernel/klibc/stdlib.h>
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
@@ -12,6 +13,7 @@
 #include <kernel/module.h>
 
 const char *s_moduleList[] = {
+    "fatfs",
     "mbrfs",
     "pci",
     "pciide",
@@ -20,6 +22,7 @@ const char *s_moduleList[] = {
 
 static void archLoadModules(void);
 static int archLoadModule(const char *p_moduleName);
+static int archMountHdd(void);
 
 int archPreinit(struct ts_boot *p_boot) {
     gdtInit();
@@ -35,6 +38,12 @@ int archPreinit(struct ts_boot *p_boot) {
 
 int archInit(void) {
     archLoadModules();
+    archMountHdd();
+
+    struct ts_vfsNode *l_file;
+
+    int l_returnValue = vfsLookup(NULL, "/mnt/COMMAND.COM", &l_file);
+
     return 0;
 }
 
@@ -84,4 +93,8 @@ static int archLoadModule(const char *p_moduleName) {
     }
 
     return 0;
+}
+
+static int archMountHdd(void) {
+    return vfsMount("/dev/ata3-0", "/mnt", "fatfs");
 }

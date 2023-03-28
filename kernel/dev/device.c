@@ -279,6 +279,8 @@ int deviceCreateFile2(
     // And indeed we close the /dev node.
     vfsOperationClose(l_dev);
 
+    debug("device: Created %s.\n", p_name);
+
     return 0;
 }
 

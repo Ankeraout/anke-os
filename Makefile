@@ -11,7 +11,7 @@ TARGET_LIBC := bin/libc/libc.a
 TARGET_CDROM := bin/iso/anke-os.iso
 DEPS_CDROM := obj/iso/limine.cfg obj/iso/boot/kernel.elf
 
-MODULES_KERNEL := ata cmos floppy framebuffer mbrfs pci pciide tty
+MODULES_KERNEL := ata cmos fatfs floppy framebuffer mbrfs pci pciide tty
 MODULES_KERNEL_EXECUTABLES := $(foreach module,$(MODULES_KERNEL),bin/modules/$(module).elf)
 MODULES_ISO :=
 MODULES_ISO_EXECUTABLES := $(foreach module,$(MODULES_ISO),bin/modules/$(module).elf)

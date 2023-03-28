@@ -90,7 +90,8 @@ void main(struct ts_boot *p_boot) {
 
 static int kernelCreateRootDirectories(void) {
     static const char *l_rootDirectories[] = {
-        "dev"
+        "dev",
+        "mnt"
     };
 
     struct ts_vfsNode *l_root;
