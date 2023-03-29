@@ -103,12 +103,28 @@ struct ts_fatfsDirectoryEntry {
     uint32_t a_fileSize;
 } __attribute__((packed));
 
-static void fatfsGetName(
+static char *fatfsGetName(
     const struct ts_fatfsDirectoryEntry *p_directoryEntry,
     char *p_output
 );
 static int fatfsInit(const char *p_args);
-static int fatfsLookup(
+static int fatfsOperationLookupDirectory(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
+);
+static int fatfsOperationLookupFile(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
+);
+static int fatfsOperationLookupFound(
+    struct ts_vfsNode *p_node,
+    const char *p_fileName,
+    const struct ts_fatfsDirectoryEntry *p_entry,
+    struct ts_vfsNode **p_output
+);
+static int fatfsOperationLookupRoot(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_output
@@ -136,8 +152,16 @@ M_DECLARE_MODULE const struct ts_module g_moduleFatfs = {
     .a_quit = fatfsQuit
 };
 
-static const struct ts_vfsNodeOperations s_fatfsOperations = {
-    .a_lookup = fatfsLookup
+static const struct ts_vfsNodeOperations s_fatfsOperationsRoot = {
+    .a_lookup = fatfsOperationLookupRoot
+};
+
+static const struct ts_vfsNodeOperations s_fatfsOperationsDirectory = {
+    .a_lookup = fatfsOperationLookupDirectory
+};
+
+static const struct ts_vfsNodeOperations s_fatfsOperationsFile = {
+    .a_lookup = fatfsOperationLookupFile
 };
 
 static const struct ts_vfsFileSystem s_fatfsFileSystem = {
@@ -145,7 +169,7 @@ static const struct ts_vfsFileSystem s_fatfsFileSystem = {
     .a_onMount = fatfsOnMount
 };
 
-static void fatfsGetName(
+static char *fatfsGetName(
     const struct ts_fatfsDirectoryEntry *p_directoryEntry,
     char *p_output
 ) {
@@ -178,6 +202,8 @@ static void fatfsGetName(
     } else {
         p_output[l_fileNameLength] = '\0';
     }
+
+    return p_output;
 }
 
 static int fatfsInit(const char *p_args) {
@@ -186,115 +212,178 @@ static int fatfsInit(const char *p_args) {
     return vfsRegisterFileSystem(&s_fatfsFileSystem);
 }
 
-static int fatfsLookup(
+static int fatfsOperationLookupDirectory(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_output
 ) {
-    // Make sure that the current node is a directory.
-    if(p_node->a_type != E_VFSNODETYPE_DIRECTORY) {
-        return -ENOTDIR;
-    }
-
     // Get the node data
     struct ts_fatfsFileInfo *l_info = p_node->a_fsData;
 
-    // Compute the first sector to read.
-    size_t l_firstSector;
+    // Create a buffer for the cluster data.
+    size_t l_entriesPerCluster = l_info->a_info->a_bytesPerCluster /
+        sizeof(struct ts_fatfsDirectoryEntry);
+    struct ts_fatfsDirectoryEntry l_buffer[l_entriesPerCluster];
 
-    if(l_info->a_cluster == 0) {
-        // If the directory is the root directory
-        l_firstSector = l_info->a_info->a_rootFirstSector;
-    } else {
-        // The directory is a normal directory
-        l_firstSector =
-            l_info->a_info->a_clusterFirstSector
-            + l_info->a_cluster * l_info->a_info->a_sectorsPerCluster;
+    // Compute entry count
+    size_t l_entryCount = l_info->a_size /
+        sizeof(struct ts_fatfsDirectoryEntry);
+
+    // Iterate through the directory entries
+    size_t l_entryIndex = 0;
+    uint32_t l_currentCluster = l_info->a_cluster;
+
+    while(l_entryIndex < l_entryCount) {
+        // Read the current cluster
+        int l_returnValue = fatfsReadCluster(
+            l_info->a_info,
+            l_currentCluster,
+            l_buffer,
+            l_info->a_info->a_bytesPerCluster
+        );
+
+        if(l_returnValue < 0) {
+            return l_returnValue;
+        }
+
+        // Iterate through the cluster entries
+        size_t l_clusterEntryIndex = 0;
+
+        do {
+            // Get the file name
+            char l_fileName[13];
+
+            fatfsGetName(&l_buffer[l_clusterEntryIndex], l_fileName);
+
+            // If the file name corresponds
+            if(strcmp(l_fileName, p_name) == 0) {
+                return fatfsOperationLookupFound(
+                    p_node,
+                    l_fileName,
+                    &l_buffer[l_clusterEntryIndex],
+                    p_output
+                );
+            }
+
+
+            l_clusterEntryIndex++;
+        } while(l_clusterEntryIndex < l_entriesPerCluster);
+
+        // Get the next cluster number
+        l_currentCluster = fatfsReadFatEntry(l_info->a_info, l_currentCluster);
     }
 
-    size_t l_bufferEntryCount = l_info->a_info->a_bytesPerSector
-        / sizeof(struct ts_fatfsDirectoryEntry);
-    struct ts_fatfsDirectoryEntry l_buffer[l_bufferEntryCount];
-    size_t l_offset = l_info->a_info->a_bytesPerSector * l_firstSector;
-    size_t l_entryCount =
-        l_info->a_size / sizeof(struct ts_fatfsDirectoryEntry);
-    size_t l_bufferIndex = 0;
-    size_t l_entryIndex = 0;
-    bool l_found = false;
+    return -ENOENT;
+}
 
-    while((!l_found) && (l_entryIndex < l_entryCount)) {
-        // Read one sector into the buffer
+static int fatfsOperationLookupFile(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
+) {
+    M_UNUSED_PARAMETER(p_node);
+    M_UNUSED_PARAMETER(p_name);
+    M_UNUSED_PARAMETER(p_output);
+
+    // We cannot lookup in a file.
+
+    return -ENOTDIR;
+}
+
+static int fatfsOperationLookupFound(
+    struct ts_vfsNode *p_node,
+    const char *p_fileName,
+    const struct ts_fatfsDirectoryEntry *p_entry,
+    struct ts_vfsNode **p_output
+) {
+    // Get the node data
+    struct ts_fatfsFileInfo *l_info = p_node->a_fsData;
+
+    // Allocate memory for the information structure
+    struct ts_fatfsFileInfo *l_fileInfo =
+        kmalloc(sizeof(struct ts_fatfsFileInfo));
+
+    if(l_fileInfo == NULL) {
+        return -ENOMEM;
+    }
+
+    // Create a new VFS node
+    struct ts_vfsNode *l_file;
+    int l_returnValue =
+        vfsCreateNode(p_node, p_fileName, true, &l_file);
+
+    if(l_returnValue != 0) {
+        kfree(l_fileInfo);
+        return l_returnValue;
+    }
+
+    // Prepare the file information structure
+    l_fileInfo->a_info = l_info->a_info;
+    l_fileInfo->a_cluster =
+        (p_entry->a_clusterHigh << 16) | p_entry->a_clusterLow;
+    l_fileInfo->a_size = p_entry->a_fileSize;
+
+    // Prepare the VFS node
+    l_file->a_fsData = l_fileInfo;
+
+    if((p_entry->a_attributes & C_FATFS_ATTRIBUTE_DIRECTORY) != 0) {
+        l_file->a_type = E_VFSNODETYPE_DIRECTORY;
+        l_file->a_operations = &s_fatfsOperationsDirectory;
+    } else {
+        l_file->a_type = E_VFSNODETYPE_FILE;
+        l_file->a_operations = &s_fatfsOperationsFile;
+    }
+
+    // Return the new node
+    *p_output = l_file;
+
+    return 0;
+}
+
+static int fatfsOperationLookupRoot(
+    struct ts_vfsNode *p_node,
+    const char *p_name,
+    struct ts_vfsNode **p_output
+) {
+    // Get the node data
+    struct ts_fatfsFileInfo *l_info = p_node->a_fsData;
+
+    // Compute the disk offset
+    off_t l_offset = l_info->a_info->a_rootFirstByte;
+    off_t l_rootEnd = l_offset + l_info->a_info->a_rootByteCount;
+
+    while(l_offset < l_rootEnd) {
+        struct ts_fatfsDirectoryEntry l_entry;
+
+        // Read entry from the disk
         ssize_t l_bytesRead = vfsOperationRead(
             l_info->a_info->a_drive,
             l_offset,
-            &l_buffer,
-            l_info->a_info->a_bytesPerSector
+            &l_entry,
+            sizeof(struct ts_fatfsDirectoryEntry)
         );
 
+        // If an error occurred, return the error.
         if(l_bytesRead < 0) {
             return l_bytesRead;
         }
 
-        l_bufferIndex = 0;
+        // Get the file name
+        char l_fileName[13];
 
-        // Iterate through buffer entries
-        while(l_entryIndex < l_entryCount) {
-            char l_fileName[12];
+        fatfsGetName(&l_entry, l_fileName);
 
-            // Get file name
-            fatfsGetName(&l_buffer[l_bufferIndex], l_fileName);
-
-            // Compare file name
-            if(strcmp(l_fileName, p_name) == 0) {
-                struct ts_vfsNode *l_file;
-
-                // Create file structure
-                struct ts_fatfsFileInfo *l_fileInfo =
-                    kcalloc(sizeof(struct ts_fatfsFileInfo));
-
-                if(l_fileInfo == NULL) {
-                    return -ENOMEM;
-                }
-
-                l_fileInfo->a_cluster =
-                    (l_buffer[l_bufferIndex].a_clusterHigh << 16)
-                    | l_buffer[l_bufferIndex].a_clusterLow;
-                l_fileInfo->a_size = l_buffer[l_bufferIndex].a_fileSize;
-                l_fileInfo->a_info = l_info->a_info;
-
-                // Create file node
-                int l_returnValue = vfsCreateNode(
-                    p_node,
-                    l_fileName,
-                    true,
-                    &l_file
-                );
-
-                if(l_returnValue != 0) {
-                    kfree(l_fileInfo);
-                    return l_returnValue;
-                }
-
-                l_file->a_fsData = l_fileInfo;
-                l_file->a_operations = &s_fatfsOperations;
-
-                if(
-                    (l_buffer[l_bufferIndex].a_attributes
-                        & C_FATFS_ATTRIBUTE_DIRECTORY) != 0) {
-                    l_file->a_type = E_VFSNODETYPE_DIRECTORY;
-                } else {
-                    l_file->a_type = E_VFSNODETYPE_FILE;
-                }
-
-                *p_output = l_file;
-
-                // Return 0 because the file was found.
-                return 0;
-            }
-
-            l_entryIndex++;
-            l_bufferIndex++;
+        // If the file name corresponds
+        if(strcmp(l_fileName, p_name) == 0) {
+            return fatfsOperationLookupFound(
+                p_node,
+                l_fileName,
+                &l_entry,
+                p_output
+            );
         }
+
+        l_offset += sizeof(struct ts_fatfsDirectoryEntry);
     }
 
     return -ENOENT;
@@ -438,7 +527,7 @@ static int fatfsOnMount(const char *p_file, const char *p_mountPoint) {
         debug("fatfs: Detected FAT16 filesystem.\n");
         l_info->a_type = E_FATFSTYPE_FAT16;
         l_mountPoint->a_fsData = l_rootInfo;
-        l_mountPoint->a_operations = &s_fatfsOperations;
+        l_mountPoint->a_operations = &s_fatfsOperationsRoot;
     } else {
         debug("fatfs: Unsupported FAT32 filesystem.\n");
         vfsOperationClose(l_mountPoint);
