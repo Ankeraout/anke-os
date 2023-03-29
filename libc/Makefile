@@ -24,7 +24,7 @@ DEPENDENCIES := $(patsubst ./%.c, ../obj/libc/%.c.d, $(SOURCES))
 all: $(TARGET)
 
 dirs:
-	$(MKDIR) ../bin/libc ../obj/libc
+	$(MKDIR) ../bin/libc ../obj/libc/sys
 
 $(TARGET): dirs $(OBJECTS)
 	$(AR) -crs $@ $(OBJECTS)
