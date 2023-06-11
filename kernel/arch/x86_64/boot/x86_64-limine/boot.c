@@ -26,7 +26,7 @@ void _start(void) {
 
     kernelMain(&l_kernelBootInfo);
 
-    panic("kmain() returned");
+    panic("kernelMain() returned");
 
     while(1);
 }
