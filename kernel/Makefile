@@ -14,6 +14,7 @@ CFLAGS += -std=gnu99 -pedantic-errors
 CFLAGS += -g3 -O0
 CFLAGS += -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64
 CFLAGS += -I../include -I../limine-bootloader
+CFLAGS += -D_KERNEL_TARGET_ARCH_X86_64 -D_KERNEL_TARGET_BOOTLOADER_LIMINE
 LDFLAGS += -nostdlib -static -m elf_x86_64
 LDFLAGS += -z max-page-size=0x1000
 LDFLAGS += -T kernel.ld
@@ -39,7 +40,7 @@ all: dirs $(EXECUTABLE)
 ../obj/kernel/%.asm.o: ./%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
-$(EXECUTABLE): $(OBJECTS) ../bin/libc/libc.a $(MODULES_KERNEL_EXECUTABLES)
+$(EXECUTABLE): $(OBJECTS) ../bin/klibc/klibc.a $(MODULES_KERNEL_EXECUTABLES)
 	$(LD) $(LDFLAGS) $^ -o $@
 
 clean:

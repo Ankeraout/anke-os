@@ -7,11 +7,11 @@ RM := rm -rf
 CP := cp
 
 TARGET_KERNEL := bin/kernel/kernel.elf
-TARGET_LIBC := bin/libc/libc.a
+TARGET_KLIBC := bin/klibc/klibc.a
 TARGET_CDROM := bin/iso/anke-os.iso
 DEPS_CDROM := obj/iso/limine.cfg obj/iso/boot/kernel.elf
 
-MODULES_KERNEL := ata cmos fatfs floppy framebuffer mbrfs pci pciide tty
+MODULES_KERNEL :=
 MODULES_KERNEL_EXECUTABLES := $(foreach module,$(MODULES_KERNEL),bin/modules/$(module).elf)
 MODULES_ISO :=
 MODULES_ISO_EXECUTABLES := $(foreach module,$(MODULES_ISO),bin/modules/$(module).elf)
@@ -24,14 +24,14 @@ export MODULES_KERNEL
 all: cdrom
 
 kernel: $(TARGET_KERNEL)
-libc: $(TARGET_LIBC)
+klibc: $(TARGET_KLIBC)
 cdrom: $(TARGET_CDROM)
-modules: libc $(MODULES_EXECUTABLES)
+modules: klibc $(MODULES_EXECUTABLES)
 
-$(TARGET_LIBC): dirs libc/Makefile
-	$(MAKE) -C libc
+$(TARGET_KLIBC): dirs klibc/Makefile
+	$(MAKE) -C klibc
 
-$(TARGET_KERNEL): modules dirs $(TARGET_LIBC) kernel/Makefile
+$(TARGET_KERNEL): modules dirs $(TARGET_KLIBC) kernel/Makefile
 	$(MAKE) -C kernel
 
 $(TARGET_CDROM): dirs obj/iso/limine-cd-efi.bin obj/iso/limine-cd.bin obj/iso/limine.sys obj/iso/limine.cfg limine-bootloader/limine-deploy obj/iso/kernel.elf $(MODULES_ISO_TARGET)
@@ -62,4 +62,4 @@ clean:
 dirs:
 	$(MKDIR) obj/iso bin/iso obj/iso/modules bin/modules obj/modules
 
-.PHONY: all clean dirs cdrom libc kernel modules
+.PHONY: all clean dirs cdrom klibc kernel modules
