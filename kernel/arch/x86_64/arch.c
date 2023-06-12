@@ -2,10 +2,16 @@
 
 #include "kernel/arch/x86_64/gdt.h"
 #include "kernel/arch/x86_64/idt.h"
+#include "kernel/arch/x86_64/inline.h"
+#include "kernel/arch/x86_64/pic.h"
 
 int archPreinit(void) {
     gdtInit();
     idtInit();
+    picInit();
+
+    cli();
+
     return 0;
 }
 
