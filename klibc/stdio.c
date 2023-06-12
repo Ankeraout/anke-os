@@ -207,7 +207,7 @@ static void kvsprintf_generic_checkAction(
         bool l_negative = l_value < 0;
 
         if(l_negative) {
-        kvsprintf_generic_out(p_context, '-');
+            kvsprintf_generic_out(p_context, '-');
             l_value = -l_value;
             p_context->a_minimumLength--;
         }
@@ -308,8 +308,8 @@ static void kvsprintf_generic_checkAction(
         }
 
         do {
-            l_buffer[--l_index] = "0123456789abcdef"[l_value & 0xf];
-            l_value >>= 4;
+            l_buffer[--l_index] = '0' + (l_value % 10);
+            l_value /= 10;
             l_length++;
         } while(l_value != 0);
 

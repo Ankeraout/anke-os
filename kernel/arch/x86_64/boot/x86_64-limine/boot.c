@@ -38,10 +38,10 @@ static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
     }
 
     // Compute the size of the memory map.
-    size_t l_memoryMapSize = sizeof(struct limine_memmap_entry) * (s_memmapRequest.response->entry_count + 1);
+    size_t l_memoryMapSize = sizeof(struct limine_memmap_entry) * (s_memmapRequest.response->entry_count + 1lu);
 
     // Page align the size of the memory map
-    l_memoryMapSize = (l_memoryMapSize + 0xfff) & ~(0xfff);
+    l_memoryMapSize = (l_memoryMapSize + 0xffflu) & ~(0xffflu);
 
     // Find a free memory space to contain the memory map
     int l_freeEntryIndex = -1;
@@ -50,6 +50,7 @@ static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
         if(s_memmapRequest.response->entries[l_entryIndex]->type == LIMINE_MEMMAP_USABLE) {
             if(s_memmapRequest.response->entries[l_entryIndex]->length >= l_memoryMapSize) {
                 l_freeEntryIndex = (int)l_entryIndex;
+                break;
             }
         }
     }
