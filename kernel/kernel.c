@@ -3,6 +3,7 @@
 #include "kernel/arch/x86_64/inline.h"
 #include "kernel/arch.h"
 #include "kernel/boot.h"
+#include "kernel/mm/pmm.h"
 #include "klibc/debug.h"
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo);
@@ -36,6 +37,10 @@ void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
         kernelDebug("kernelInit() failed with code %d.\n", l_returnValue);
         return;
     }
+
+    size_t l_allocatedBuddy = (size_t)pmmAlloc(8192);
+
+    kernelDebug("Allocated 8192-byte buddy at 0x%016lx.\n", l_allocatedBuddy);
 }
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
@@ -59,6 +64,11 @@ static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
     }
 
     kernelDebug("\n");
+
+    if(pmmInit(p_bootInfo) != 0) {
+        kernelDebug("PMM initialization failed.\n");
+        return -1;
+    }
 
     return 0;
 }
