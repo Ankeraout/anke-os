@@ -8,13 +8,15 @@
 
 #define C_PMM_BUDDY_COUNT 8
 
-static struct ts_linkedListNode *s_pmmBuddies[C_PMM_BUDDY_COUNT] = {
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-};
+static struct ts_linkedListNode *s_pmmBuddies[C_PMM_BUDDY_COUNT];
 
 static void *pmmAllocBuddy(int l_buddyIndex);
 
 int pmmInit(const struct ts_kernelBootInfo *p_bootInfo) {
+    for(int l_index = 0; l_index < C_PMM_BUDDY_COUNT; l_index++) {
+        s_pmmBuddies[l_index] = NULL;
+    }
+
     for(size_t l_entryIndex = 0; l_entryIndex < p_bootInfo->memoryMapEntryCount; l_entryIndex++) {
         const struct ts_kernelMemoryMapEntry *l_memoryMapEntry = &p_bootInfo->memoryMap[l_entryIndex];
 
