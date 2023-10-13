@@ -5,6 +5,7 @@
 #include "kernel/boot.h"
 #include "kernel/fs/vfs.h"
 #include "kernel/mm/pmm.h"
+#include "kernel/module.h"
 #include "klibc/debug.h"
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo);
@@ -77,6 +78,27 @@ static int kernelInit(void) {
 
     if(l_returnValue != 0) {
         kernelDebug("Failed to initialize VFS.\n");
+        return l_returnValue;
+    }
+
+    l_returnValue = modulesInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug("Failed to initialize modules.\n");
+        return l_returnValue;
+    }
+
+    const struct ts_module *l_moduleHello = moduleGetKernelModule("hello");
+
+    if(l_moduleHello == NULL) {
+        kernelDebug("kernel: hello module not found.\n");
+        return 0;
+    }
+
+    l_returnValue = moduleInit(l_moduleHello);
+
+    if(l_returnValue != 0) {
+        kernelDebug("Failed to initialize hello module.\n");
         return l_returnValue;
     }
 

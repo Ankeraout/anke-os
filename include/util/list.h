@@ -1,6 +1,8 @@
 #ifndef __INCLUDE_KERNEL_UTIL_LIST_H__
 #define __INCLUDE_KERNEL_UTIL_LIST_H__
 
+#include <stdbool.h>
+
 #include "klibc/errno.h"
 #include "klibc/stdlib.h"
 
@@ -72,6 +74,18 @@ static inline int listRemove(struct ts_list **p_list, void *p_element) {
     }
 
     return -1;
+}
+
+static inline bool listContains(struct ts_list *p_list, void *p_element) {
+    while(p_list != NULL) {
+        if(p_list->m_data == p_element) {
+            return true;
+        }
+
+        p_list = p_list->m_next;
+    }
+
+    return false;
 }
 
 #endif

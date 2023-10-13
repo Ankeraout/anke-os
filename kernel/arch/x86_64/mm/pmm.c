@@ -31,7 +31,7 @@ int pmmInit(const struct ts_kernelBootInfo *p_bootInfo) {
 }
 
 void *pmmAlloc(size_t p_size) {
-    const size_t l_sizePages = p_size >> 12;
+    const size_t l_sizePages = (p_size + 0xfff) >> 12;
     const size_t l_biggestBuddySize = 4096 << (C_PMM_BUDDY_COUNT - 1);
 
     if(p_size > l_biggestBuddySize) {

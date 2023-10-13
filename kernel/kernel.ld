@@ -25,6 +25,16 @@ SECTIONS {
 
     . = ALIGN(CONSTANT(MAXPAGESIZE));
 
+    g_kernelModules = .;
+
+    .modules : {
+        *(.modules)
+    } : rodata
+
+    g_kernelModulesEnd = .;
+
+    . = ALIGN(CONSTANT(MAXPAGESIZE));
+
     .data : {
         *(.data)
     } : data
@@ -35,16 +45,6 @@ SECTIONS {
         *(COMMON)
         *(.bss)
     } : data
-
-    . = ALIGN(CONSTANT(MAXPAGESIZE));
-
-    g_kernelModules = .;
-
-    .modules : {
-        *(.modules)
-    } : rodata
-
-    g_kernelModulesEnd = .;
 
     /*
     /DISCARD/ : {
