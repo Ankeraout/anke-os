@@ -5,11 +5,13 @@
 #include "klibc/debug.h"
 #include "klibc/limits.h"
 #include "klibc/string.h"
-#include "util/stack.h"
+#include "util/list.h"
 
 static struct ts_vfsNode s_vfsRootNode;
+static struct ts_list *s_vfsFileSystemList;
 
 static int vfsCanonicalizePath(const char *p_path, char *p_buffer);
+static bool vfsIsPathValid(const char *p_path);
 
 int vfsInit(void) {
     s_vfsRootNode.m_referenceCount = -1;
@@ -21,6 +23,8 @@ int vfsInit(void) {
     s_vfsRootNode.m_gid = 0;
     s_vfsRootNode.m_mod = 0755;
     s_vfsRootNode.m_operations = NULL;
+
+    s_vfsFileSystemList = NULL;
 
     kernelDebug("vfs: VFS initialized.\n");
 
@@ -122,6 +126,36 @@ int vfsLookup(const char *p_path, struct ts_vfsNode **p_result) {
     }
 }
 
+int vfsLookupParent(const char *p_path, struct ts_vfsNode **p_result) {
+    if(p_path[0] != '/') {
+        return -EINVAL;
+    }
+    
+    if(p_path[1] == '\0') {
+        return vfsLookup("/", p_result);
+    }
+
+    char *l_lastPathSeparator = kstrrchr(p_path, '/');
+    
+    if(l_lastPathSeparator == p_path) {
+        return vfsLookup("/", p_result);
+    }
+
+    size_t l_parentPathLength = l_lastPathSeparator - p_path;
+
+    if(l_parentPathLength > PATH_MAX) {
+        return -EINVAL;
+    }
+
+    char l_parentPath[l_parentPathLength + 1];
+
+    kmemcpy(l_parentPath, p_path, l_parentPathLength);
+
+    l_parentPath[l_parentPathLength] = '\0';
+
+    return vfsLookup(l_parentPath, p_result);
+}
+
 int vfsRelease(struct ts_vfsNode *p_node) {
     // If the node cannot be released, don't decrement the reference count.
     if(p_node->m_referenceCount == -1) {
@@ -167,6 +201,10 @@ int vfsOpen(
 ) {
     struct ts_vfsFile *l_file;
 
+    if(p_node->m_operations == NULL || p_node->m_operations->m_open == NULL) {
+        return -ENOTSUP;
+    }
+
     // TODO: checks
 
     l_file = kmalloc(sizeof(struct ts_vfsFile));
@@ -176,33 +214,193 @@ int vfsOpen(
     }
 
     l_file->m_vfsNode = p_node;
-    l_file->m_offset = 0;
     l_file->m_flags = p_flags;
 
-    if(
-        p_node->m_operations != NULL
-        && p_node->m_operations->m_open != NULL
-    ) {
-        int l_returnValue = p_node->m_operations->m_open(
-            p_node,
-            p_flags,
-            l_file
-        );
+    int l_returnValue = p_node->m_operations->m_open(
+        p_node,
+        p_flags,
+        l_file
+    );
 
-        if(l_returnValue != 0) {
-            kfree(l_file);
-            return l_returnValue;
-        }
+    if(l_returnValue != 0) {
+        kfree(l_file);
+        return l_returnValue;
     }
 
     if(p_node->m_referenceCount != -1) {
         p_node->m_referenceCount++;
     }
 
+    *p_file = l_file;
+
     return 0;
 }
 
-int vfsClose(struct ts_vfsFile *p_file) {
+int vfsMkdir(const char *p_path) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    const char *l_name = kstrrchr(p_path, '/') + 1;
+    
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookupParent(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_mkdir == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_mkdir(l_node, l_name);
+
+    vfsRelease(l_node);
+
+    return l_returnValue;
+}
+
+int vfsCreate(const char *p_path) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    const char *l_name = kstrrchr(p_path, '/') + 1;
+    
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookupParent(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_create == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_create(l_node, l_name);
+
+    vfsRelease(l_node);
+
+    return l_returnValue;
+}
+
+int vfsChmod(const char *p_path, mode_t p_mode) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookup(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_chmod == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_chmod(l_node, p_mode);
+
+    vfsRelease(l_node);
+
+    if(l_returnValue == 0) {
+        l_node->m_mod = p_mode;
+    }
+
+    return l_returnValue;
+}
+
+int vfsChown(const char *p_path, uid_t p_owner) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookup(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_chown == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_chown(l_node, p_owner);
+
+    vfsRelease(l_node);
+
+    if(l_returnValue == 0) {
+        l_node->m_uid = p_owner;
+    }
+
+    return l_returnValue;
+}
+
+int vfsChgrp(const char *p_path, gid_t p_group) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookup(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_chgrp == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_chgrp(l_node, p_group);
+
+    vfsRelease(l_node);
+
+    if(l_returnValue == 0) {
+        l_node->m_gid = p_group;
+    }
+
+    return l_returnValue;
+}
+
+int vfsRename(const char *p_path, const char *p_name) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookup(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_rename == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_rename(l_node, p_name);
+
+    vfsRelease(l_node);
+
+    if(l_returnValue == 0) {
+        kstrcpy(l_node->m_name, p_name);
+    }
+
+    return l_returnValue;
+}
+
+int vfsFileClose(struct ts_vfsFile *p_file) {
     if(
         p_file->m_operations != NULL
         && p_file->m_operations->m_close != NULL
@@ -221,16 +419,76 @@ int vfsClose(struct ts_vfsFile *p_file) {
     return 0;
 }
 
-ssize_t vfsRead(struct ts_vfsFile *p_file, void *p_buffer, size_t p_size) {
-    
+int vfsFileLlseek(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence) {
+    if(p_whence < 0 || p_whence > 2) {
+        return -EINVAL;
+    }
+
+    if(p_file->m_operations == NULL || p_file->m_operations->m_llseek == NULL) {
+        return -ENOTSUP;
+    }
+
+    return p_file->m_operations->m_llseek(p_file, p_offset, p_whence);
 }
 
-ssize_t vfsWrite(
+ssize_t vfsFileRead(struct ts_vfsFile *p_file, void *p_buffer, size_t p_size) {
+    if(p_buffer == NULL) {
+        return -EINVAL;
+    }
+
+    if(p_file->m_operations == NULL || p_file->m_operations->m_read == NULL) {
+        return -ENOTSUP;
+    }
+
+    return p_file->m_operations->m_read(p_file, p_buffer, p_size);
+}
+
+ssize_t vfsFileWrite(
     struct ts_vfsFile *p_file,
     const void *p_buffer,
     size_t p_size
 ) {
+    if(p_buffer == NULL) {
+        return -EINVAL;
+    }
 
+    if(p_file->m_operations == NULL || p_file->m_operations->m_write == NULL) {
+        return -ENOTSUP;
+    }
+
+    return p_file->m_operations->m_write(p_file, p_buffer, p_size);
+}
+
+int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
+    if(vfsGetFileSystem(p_fileSystem->m_name) != NULL) {
+        return -EBUSY;
+    }
+
+    return listAdd(&s_vfsFileSystemList, (void *)p_fileSystem);
+}
+
+int vfsUnregisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
+    if(vfsGetFileSystem(p_fileSystem->m_name) == NULL) {
+        return -EINVAL;
+    }
+
+    return listRemove(&s_vfsFileSystemList, (void *)p_fileSystem);
+}
+
+const struct ts_vfsFileSystem *vfsGetFileSystem(const char *p_name) {
+    struct ts_list *l_listElement = s_vfsFileSystemList;
+
+    while(l_listElement != NULL) {
+        const struct ts_vfsFileSystem *l_fileSystem = l_listElement->m_data;
+
+        if(kstrcmp(l_fileSystem->m_name, p_name) == 0) {
+            return l_fileSystem;
+        }
+
+        l_listElement = l_listElement->m_next;
+    }
+
+    return NULL;
 }
 
 static int vfsCanonicalizePath(const char *p_path, char *p_buffer) {
@@ -317,4 +575,22 @@ static int vfsCanonicalizePath(const char *p_path, char *p_buffer) {
     p_buffer[l_bufferIndex] = '\0';
 
     return 0;
+}
+
+static bool vfsIsPathValid(const char *p_path) {
+    size_t l_pathLength = kstrlen(p_path);
+
+    if(l_pathLength > PATH_MAX) {
+        return false;
+    }
+
+    if(p_path[0] != '/') {
+        return false;
+    }
+
+    if(p_path[l_pathLength - 1] == '/') {
+        return false;
+    }
+
+    return true;
 }

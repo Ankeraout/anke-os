@@ -5,6 +5,9 @@
 
 typedef long ssize_t;
 typedef long loff_t;
+typedef int mode_t;
+typedef int gid_t;
+typedef int uid_t;
 
 typedef struct {
     uint8_t major;

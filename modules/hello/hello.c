@@ -3,6 +3,7 @@
 
 int init(void) {
     kernelDebug("hello: Hello world!\n");
+    return 0;
 }
 
 void exit(void) {

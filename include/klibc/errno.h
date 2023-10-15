@@ -5,7 +5,8 @@ enum {
     ENOMEM = 1,
     EINVAL,
     ENOTDIR,
-    ENOTSUP
+    ENOTSUP,
+    EBUSY
 };
 
 #endif
