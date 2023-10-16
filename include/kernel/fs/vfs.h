@@ -38,6 +38,7 @@ struct ts_vfsFileOperations {
     );
     int (*m_close)(struct ts_vfsFile *p_file);
     int (*m_llseek)(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence);
+    int (*m_ioctl)(struct ts_vfsFile *p_file, int p_request, void *p_arg);
 };
 
 struct ts_vfsNodeOperations;
@@ -74,14 +75,6 @@ struct ts_vfsNodeOperations {
         int p_flags,
         struct ts_vfsFile *p_file
     );
-    int (*m_mkdir)(
-        struct ts_vfsNode *p_node,
-        const char *p_name
-    );
-    int (*m_create)(
-        struct ts_vfsNode *p_node,
-        const char *p_name
-    );
     int (*m_chmod)(
         struct ts_vfsNode *p_node,
         mode_t p_mode
@@ -97,6 +90,20 @@ struct ts_vfsNodeOperations {
     int (*m_rename)(
         struct ts_vfsNode *p_node,
         const char *p_name
+    );
+    int (*m_link)(
+        struct ts_vfsNode *p_node,
+        struct ts_vfsNode *p_newParent,
+        const char *p_name
+    );
+    int (*m_unlink)(
+        struct ts_vfsNode *p_node
+    );
+    int (*m_mknod)(
+        struct ts_vfsNode *p_node,
+        const char *p_name,
+        mode_t p_mode,
+        dev_t p_device
     );
 };
 
@@ -245,6 +252,19 @@ ssize_t vfsFileWrite(
 int vfsFileLlseek(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence);
 
 /**
+ * @brief Controls a device file.
+ * 
+ * @param[in] p_file The file to control.
+ * @param[in] p_request The request number.
+ * @param[in] p_arg The request arg.
+ * 
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval Any other value if an error occurred.
+*/
+int vfsFileIoctl(struct ts_vfsFile *p_file, int p_request, void *p_arg);
+
+/**
  * @brief Registers the given file system.
  * 
  * @param[in] p_fileSystem The file system to register.
@@ -276,28 +296,6 @@ int vfsUnregisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem);
  * file system.
 */
 const struct ts_vfsFileSystem *vfsGetFileSystem(const char *p_name);
-
-/**
- * @brief Creates the given directory.
- * 
- * @param[in] p_path The path to the new directory.
- * 
- * @returns An integer that indicates the result of the operation.
- * @retval 0 on success.
- * @retval Any other value if an error occurred.
-*/
-int vfsMkdir(const char *p_path);
-
-/**
- * @brief Creates the given file.
- * 
- * @param[in] p_path The path to the new file.
- * 
- * @returns An integer that indicates the result of the operation.
- * @retval 0 on success.
- * @retval Any other value if an error occurred.
-*/
-int vfsCreate(const char *p_path);
 
 /**
  * @brief Changes the mode of the given file.
@@ -336,15 +334,40 @@ int vfsChown(const char *p_path, uid_t p_owner);
 int vfsChgrp(const char *p_path, gid_t p_group);
 
 /**
- * @brief Renames the given file.
+ * @brief Creates a new file (p_path2) linked to another file (p_path1).
  * 
- * @param[in] p_path The path to the file.
- * @param[in] p_name The new name of the file.
+ * @param[in] p_path1 The path to the file to link.
+ * @param[in] p_path2 The path to the new link.
  * 
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
  * @retval Any other value if an error occurred.
 */
-int vfsRename(const char *p_path, const char *p_name);
+int vfsLink(const char *p_path1, const char *p_path2);
+
+/**
+ * @brief Removes a link to a file.
+ * 
+ * @param[in] p_path The file to unlink.
+ * 
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval Any other value if an error occurred.
+*/
+int vfsUnlink(const char *p_path);
+
+/**
+ * Creates a new file.
+ * 
+ * @param[in] p_path The path to the new file.
+ * @param[in] p_mode The mode of the new file.
+ * @param[in] p_device The device of the new file (if the created file is a 
+ * character or block device file).
+ * 
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval Any other value if an error occurred.
+*/
+int vfsMknod(const char *p_path, mode_t p_mode, dev_t p_device);
 
 #endif

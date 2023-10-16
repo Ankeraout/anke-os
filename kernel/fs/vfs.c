@@ -236,58 +236,6 @@ int vfsOpen(
     return 0;
 }
 
-int vfsMkdir(const char *p_path) {
-    if(!vfsIsPathValid(p_path)) {
-        return -EINVAL;
-    }
-
-    const char *l_name = kstrrchr(p_path, '/') + 1;
-    
-    struct ts_vfsNode *l_node;
-    int l_returnValue = vfsLookupParent(p_path, &l_node);
-
-    if(l_returnValue != 0) {
-        return l_returnValue;
-    }
-
-    if(l_node->m_operations == NULL || l_node->m_operations->m_mkdir == NULL) {
-        vfsRelease(l_node);
-        return -ENOTSUP;
-    }
-
-    l_returnValue = l_node->m_operations->m_mkdir(l_node, l_name);
-
-    vfsRelease(l_node);
-
-    return l_returnValue;
-}
-
-int vfsCreate(const char *p_path) {
-    if(!vfsIsPathValid(p_path)) {
-        return -EINVAL;
-    }
-
-    const char *l_name = kstrrchr(p_path, '/') + 1;
-    
-    struct ts_vfsNode *l_node;
-    int l_returnValue = vfsLookupParent(p_path, &l_node);
-
-    if(l_returnValue != 0) {
-        return l_returnValue;
-    }
-
-    if(l_node->m_operations == NULL || l_node->m_operations->m_create == NULL) {
-        vfsRelease(l_node);
-        return -ENOTSUP;
-    }
-
-    l_returnValue = l_node->m_operations->m_create(l_node, l_name);
-
-    vfsRelease(l_node);
-
-    return l_returnValue;
-}
-
 int vfsChmod(const char *p_path, mode_t p_mode) {
     if(!vfsIsPathValid(p_path)) {
         return -EINVAL;
@@ -372,7 +320,43 @@ int vfsChgrp(const char *p_path, gid_t p_group) {
     return l_returnValue;
 }
 
-int vfsRename(const char *p_path, const char *p_name) {
+int vfsLink(const char *p_path1, const char *p_path2) {
+    if(!vfsIsPathValid(p_path1) || !vfsIsPathValid(p_path2)) {
+        return -EINVAL;
+    }
+
+    const char *l_name = kstrrchr(p_path2, '/') + 1;
+    
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookup(p_path1, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    struct ts_vfsNode *l_parentNode;
+    l_returnValue = vfsLookupParent(p_path2, &l_parentNode);
+
+    if(l_returnValue != 0) {
+        vfsRelease(l_node);
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_link == NULL) {
+        vfsRelease(l_node);
+        vfsRelease(l_parentNode);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_link(l_node, l_parentNode, l_name);
+
+    vfsRelease(l_node);
+    vfsRelease(l_parentNode);
+
+    return l_returnValue;
+}
+
+int vfsUnlink(const char *p_path) {
     if(!vfsIsPathValid(p_path)) {
         return -EINVAL;
     }
@@ -384,18 +368,45 @@ int vfsRename(const char *p_path, const char *p_name) {
         return l_returnValue;
     }
 
-    if(l_node->m_operations == NULL || l_node->m_operations->m_rename == NULL) {
+    if(l_node->m_operations == NULL || l_node->m_operations->m_unlink == NULL) {
         vfsRelease(l_node);
         return -ENOTSUP;
     }
 
-    l_returnValue = l_node->m_operations->m_rename(l_node, p_name);
+    l_returnValue = l_node->m_operations->m_unlink(l_node);
 
     vfsRelease(l_node);
 
-    if(l_returnValue == 0) {
-        kstrcpy(l_node->m_name, p_name);
+    return l_returnValue;
+}
+
+int vfsMknod(const char *p_path, mode_t p_mode, dev_t p_device) {
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
     }
+
+    const char *l_name = kstrrchr(p_path, '/') + 1;
+    
+    struct ts_vfsNode *l_node;
+    int l_returnValue = vfsLookupParent(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    if(l_node->m_operations == NULL || l_node->m_operations->m_mknod == NULL) {
+        vfsRelease(l_node);
+        return -ENOTSUP;
+    }
+
+    l_returnValue = l_node->m_operations->m_mknod(
+        l_node,
+        l_name,
+        p_mode,
+        p_device
+    );
+
+    vfsRelease(l_node);
 
     return l_returnValue;
 }
@@ -429,6 +440,14 @@ int vfsFileLlseek(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence) {
     }
 
     return p_file->m_operations->m_llseek(p_file, p_offset, p_whence);
+}
+
+int vfsFileIoctl(struct ts_vfsFile *p_file, int p_request, void *p_arg) {
+    if(p_file->m_operations == NULL || p_file->m_operations->m_ioctl == NULL) {
+        return -ENOTSUP;
+    }
+
+    return p_file->m_operations->m_ioctl(p_file, p_request, p_arg);
 }
 
 ssize_t vfsFileRead(struct ts_vfsFile *p_file, void *p_buffer, size_t p_size) {
