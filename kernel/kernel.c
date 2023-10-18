@@ -7,9 +7,15 @@
 #include "kernel/mm/pmm.h"
 #include "kernel/module.h"
 #include "klibc/debug.h"
+#include "sys/stat.h"
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo);
 static int kernelInit(void);
+
+static const char *s_moduleList[] = {
+    "hello",
+    "ramfs"
+};
 
 void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
     int l_returnValue = archPreinit(p_bootInfo);
@@ -74,6 +80,7 @@ static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
 static int kernelInit(void) {
     kernelDebug("kernelInit() called.\n");
 
+    // Initialize VFS
     int l_returnValue = vfsInit();
 
     if(l_returnValue != 0) {
@@ -81,6 +88,7 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
+    // Initialize modules
     l_returnValue = modulesInit();
 
     if(l_returnValue != 0) {
@@ -88,19 +96,60 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
-    const struct ts_module *l_moduleHello = moduleGetKernelModule("hello");
+    for(int l_i = 0; l_i < sizeof(s_moduleList) / sizeof(const char *); l_i++) {
+        kernelDebug("kernel: Initializing %s module...\n", s_moduleList[l_i]);
 
-    if(l_moduleHello == NULL) {
-        kernelDebug("kernel: hello module not found.\n");
-        return 0;
+        const struct ts_module *l_module =
+            moduleGetKernelModule(s_moduleList[l_i]);
+
+        if(l_module == NULL) {
+            kernelDebug("kernel: %s module not found!\n", s_moduleList[l_i]);
+            continue;
+        }
+
+        l_returnValue = l_module->m_init();
+
+        if(l_returnValue != 0) {
+            kernelDebug(
+                "kernel: Initialization of module %s failed with code %d.\n",
+                l_module->m_name,
+                l_returnValue
+            );
+
+            continue;
+        }
     }
 
-    l_returnValue = moduleInit(l_moduleHello);
+    // Mount ramfs at /
+    kernelDebug("kernel: Mounting ramfs at root...\n");
+
+    l_returnValue = vfsMount("/", "ramfs", NULL);
 
     if(l_returnValue != 0) {
-        kernelDebug("Failed to initialize hello module.\n");
+        kernelDebug(
+            "kernel: Failed to mount ramfs at root with code %d.\n",
+            l_returnValue
+        );
+
         return l_returnValue;
     }
+
+    kernelDebug("kernel: root mounted successfully!\n");
+
+    // Test stuff
+    kernelDebug("kernel: Creating /dev...\n");
+
+    l_returnValue = vfsMknod("/dev", S_IFDIR, 0);
+
+    kernelDebug("kernel: Return value: %d\n", l_returnValue);
+
+    kernelDebug("kernel: Looking up /dev...\n");
+
+    struct ts_vfsNode *l_node;
+
+    l_returnValue = vfsLookup("/dev", &l_node);
+
+    kernelDebug("kernel: Return value: %d\n", l_returnValue);
 
     return 0;
 }

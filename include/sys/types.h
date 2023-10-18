@@ -9,9 +9,6 @@ typedef int mode_t;
 typedef int gid_t;
 typedef int uid_t;
 
-typedef struct {
-    uint8_t major;
-    uint8_t minor;
-} dev_t;
+typedef uint16_t dev_t;
 
 #endif

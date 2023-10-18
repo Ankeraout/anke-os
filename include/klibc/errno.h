@@ -6,7 +6,9 @@ enum {
     EINVAL,
     ENOTDIR,
     ENOTSUP,
-    EBUSY
+    EBUSY,
+    ENOENT,
+    EEXIST
 };
 
 #endif

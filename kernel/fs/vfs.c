@@ -12,6 +12,9 @@ static struct ts_list *s_vfsFileSystemList;
 
 static int vfsCanonicalizePath(const char *p_path, char *p_buffer);
 static bool vfsIsPathValid(const char *p_path);
+static const struct ts_vfsFileSystem *vfsFindFileSystem(
+    const char *p_fileSystemName
+);
 
 int vfsInit(void) {
     s_vfsRootNode.m_referenceCount = -1;
@@ -104,8 +107,12 @@ int vfsLookup(const char *p_path, struct ts_vfsNode **p_result) {
                     return l_returnValue;
                 } else {
                     listAdd(&l_currentNode->m_specific.m_children, l_nextNode);
+                    l_nextNode->m_parent = l_currentNode;
                     l_currentNode = l_nextNode;
                     l_currentNode->m_referenceCount = 1;
+
+                    // TODO: block and character devices: retrieve the
+                    // operations here
                 }
             } else {
                 l_currentNode = l_node->m_data;
@@ -478,8 +485,109 @@ ssize_t vfsFileWrite(
     return p_file->m_operations->m_write(p_file, p_buffer, p_size);
 }
 
+int vfsMount(
+    const char *p_path,
+    const char *p_fileSystem,
+    struct ts_vfsMountParameters *p_mountParameters
+) {
+    int l_returnValue;
+
+    // Find the file system
+    struct ts_vfsFileSystem *l_fileSystem;
+
+    {
+        struct ts_list *l_currentListNode = s_vfsFileSystemList;
+        bool l_found = false;
+
+        while(l_currentListNode != NULL) {
+            l_fileSystem = l_currentListNode->m_data;
+
+            if(kstrcmp(p_fileSystem, l_fileSystem->m_name) == 0) {
+                l_found = true;
+                break;
+            }
+        }
+
+        if(!l_found) {
+            return -EINVAL;
+        }
+    }
+
+    // Special case: mounting root
+    if(kstrcmp(p_path, "/") == 0) {
+        return l_fileSystem->m_mount(&s_vfsRootNode, p_mountParameters);
+    }
+
+    if(!vfsIsPathValid(p_path)) {
+        return -EINVAL;
+    }
+
+    const char *l_name = kstrrchr(p_path, '/') + 1;
+    
+    struct ts_vfsNode *l_node;
+    l_returnValue = vfsLookupParent(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
+    // Check if there is a node with the same name already cached. If so, it
+    // means that one of these options is true:
+    // - There is already a mount point at this location.
+    // - There is an opened file/directory at this location.
+    struct ts_list *l_childNode = l_node->m_specific.m_children;
+
+    while(l_childNode != NULL) {
+        struct ts_vfsNode *l_currentNode = l_childNode->m_data;
+
+        if(kstrcmp(l_currentNode->m_name, l_name) == 0) {
+            vfsRelease(l_node);
+            return -EBUSY;
+        }
+
+        l_childNode = l_childNode->m_next;
+    }
+
+    // Create the mount point node
+    struct ts_vfsNode *l_mountNode = kmalloc(sizeof(struct ts_vfsNode));
+
+    if(l_mountNode == NULL) {
+        vfsRelease(l_node);
+        return -ENOMEM;
+    }
+
+    l_returnValue = listAdd(&l_node->m_specific.m_children, l_mountNode);
+
+    if(l_returnValue != 0) {
+        vfsRelease(l_node);
+        kfree(l_mountNode);
+        return l_returnValue;
+    }
+
+    l_mountNode->m_referenceCount = -1;
+    l_mountNode->m_parent = l_node;
+    kstrncpy(l_mountNode->m_name, l_name, C_MAX_FILE_NAME_SIZE);
+    l_mountNode->m_type = E_VFSNODETYPE_MOUNT;
+    l_mountNode->m_size = 0;
+    l_mountNode->m_specific.m_children = NULL;
+    l_mountNode->m_uid = l_node->m_uid;
+    l_mountNode->m_gid = l_node->m_gid;
+    l_mountNode->m_mod = l_node->m_mod;
+
+    l_returnValue = l_fileSystem->m_mount(l_mountNode, p_mountParameters);
+
+    if(l_returnValue != 0) {
+        listRemove(&l_node->m_specific.m_children, l_mountNode);
+        vfsRelease(l_node);
+        kfree(l_mountNode);
+        return l_returnValue;
+    }
+    
+    return 0;
+}
+
 int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
-    if(vfsGetFileSystem(p_fileSystem->m_name) != NULL) {
+    if(vfsFindFileSystem(p_fileSystem->m_name) != NULL) {
         return -EBUSY;
     }
 
@@ -487,27 +595,7 @@ int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
 }
 
 int vfsUnregisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem) {
-    if(vfsGetFileSystem(p_fileSystem->m_name) == NULL) {
-        return -EINVAL;
-    }
-
     return listRemove(&s_vfsFileSystemList, (void *)p_fileSystem);
-}
-
-const struct ts_vfsFileSystem *vfsGetFileSystem(const char *p_name) {
-    struct ts_list *l_listElement = s_vfsFileSystemList;
-
-    while(l_listElement != NULL) {
-        const struct ts_vfsFileSystem *l_fileSystem = l_listElement->m_data;
-
-        if(kstrcmp(l_fileSystem->m_name, p_name) == 0) {
-            return l_fileSystem;
-        }
-
-        l_listElement = l_listElement->m_next;
-    }
-
-    return NULL;
 }
 
 static int vfsCanonicalizePath(const char *p_path, char *p_buffer) {
@@ -612,4 +700,21 @@ static bool vfsIsPathValid(const char *p_path) {
     }
 
     return true;
+}
+
+static const struct ts_vfsFileSystem *vfsFindFileSystem(
+    const char *p_fileSystemName
+) {
+    struct ts_list *l_currentListNode = s_vfsFileSystemList;
+
+    while(l_currentListNode != NULL) {
+        const struct ts_vfsFileSystem * l_fileSystem =
+            l_currentListNode->m_data;
+
+        if(kstrcmp(p_fileSystemName, l_fileSystem->m_name) == 0) {
+            return l_fileSystem;
+        }
+    }
+
+    return NULL;
 }

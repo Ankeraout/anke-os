@@ -26,6 +26,7 @@ struct ts_vfsFile {
 };
 
 struct ts_vfsFileOperations {
+    int (*m_open)(struct ts_vfsFile *p_file, int p_flags);
     ssize_t (*m_read)(
         struct ts_vfsFile *p_file,
         void *p_buffer,
@@ -48,6 +49,7 @@ struct ts_vfsNode {
     struct ts_vfsNode *m_parent;
     char m_name[C_MAX_FILE_NAME_SIZE + 1];
     enum te_vfsNodeType m_type;
+    size_t m_size;
 
     union {
         dev_t m_device;
@@ -75,30 +77,15 @@ struct ts_vfsNodeOperations {
         int p_flags,
         struct ts_vfsFile *p_file
     );
-    int (*m_chmod)(
-        struct ts_vfsNode *p_node,
-        mode_t p_mode
-    );
-    int (*m_chown)(
-        struct ts_vfsNode *p_node,
-        uid_t p_owner
-    );
-    int (*m_chgrp)(
-        struct ts_vfsNode *p_node,
-        gid_t p_group
-    );
-    int (*m_rename)(
-        struct ts_vfsNode *p_node,
-        const char *p_name
-    );
+    int (*m_chmod)(struct ts_vfsNode *p_node, mode_t p_mode);
+    int (*m_chown)(struct ts_vfsNode *p_node, uid_t p_owner);
+    int (*m_chgrp)(struct ts_vfsNode *p_node, gid_t p_group);
     int (*m_link)(
         struct ts_vfsNode *p_node,
         struct ts_vfsNode *p_newParent,
         const char *p_name
     );
-    int (*m_unlink)(
-        struct ts_vfsNode *p_node
-    );
+    int (*m_unlink)(struct ts_vfsNode *p_node);
     int (*m_mknod)(
         struct ts_vfsNode *p_node,
         const char *p_name,
@@ -115,9 +102,8 @@ struct ts_vfsFileSystem {
     const char *m_name;
     int (*m_mount)(
         struct ts_vfsNode *p_mountPoint,
-        struct ts_vfsMountParameters *p_mountParameters
+        const struct ts_vfsMountParameters *p_mountParameters
     );
-    const struct ts_vfsNodeOperations *m_operations;
 };
 
 /**
@@ -369,5 +355,46 @@ int vfsUnlink(const char *p_path);
  * @retval Any other value if an error occurred.
 */
 int vfsMknod(const char *p_path, mode_t p_mode, dev_t p_device);
+
+/**
+ * @brief Mounts the given file system at the given path.
+ * 
+ * @param[in] p_path The path of the mount point.
+ * @param[in] p_fileSystem The name of the file system to mount.
+ * @param[in] p_mountParameter The mount parameters.
+ * 
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval Any other value if an error occurred.
+*/
+int vfsMount(
+    const char *p_path,
+    const char *p_fileSystem,
+    struct ts_vfsMountParameters *p_mountParameters
+);
+
+/**
+ * @brief Registers the given file system.
+ * 
+ * @param[in] p_fileSystem The file system to register.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval -EBUSY if a file system with the same name is already registered.
+ * @retval -ENOMEM if a memory allocation error occurred while registering the
+ * file system.
+*/
+int vfsRegisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem);
+
+/**
+ * @brief Unregisters the given file system.
+ * 
+ * @param[in] p_fileSystem The file system to unregister.
+ *
+ * @returns An integer that indicates the result of the operation.
+ * @retval 0 on success.
+ * @retval -EINVAL if the given file system is not registered.
+*/
+int vfsUnregisterFileSystem(const struct ts_vfsFileSystem *p_fileSystem);
 
 #endif
