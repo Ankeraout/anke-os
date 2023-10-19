@@ -5,7 +5,7 @@
 
 #define M_DECLARE_MODULE(p_name, p_init, p_exit) \
     __attribute__((section(".modules"))) __attribute((unused)) \
-    static struct ts_module _s_module = { \
+    static const struct ts_module _s_module = { \
         .m_name = p_name, \
         .m_init = p_init, \
         .m_exit = p_exit \

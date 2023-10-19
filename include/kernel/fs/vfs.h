@@ -21,8 +21,9 @@ struct ts_vfsFileOperations;
 
 struct ts_vfsFile {
     struct ts_vfsNode *m_vfsNode;
-    struct ts_vfsFileOperations *m_operations;
+    const struct ts_vfsFileOperations *m_operations;
     int m_flags;
+    void *m_fileSystemData;
 };
 
 struct ts_vfsFileOperations {
@@ -167,7 +168,7 @@ int vfsRelease(struct ts_vfsNode *p_node);
 /**
  * @brief Opens the given node.
  * 
- * @param[in] p_node The node to open.
+ * @param[in] p_path The path to the file to open.
  * @param[in] p_flags The open flags.
  * @param[out] p_file The opened file.
  * 
@@ -178,7 +179,7 @@ int vfsRelease(struct ts_vfsNode *p_node);
  * @note This operation will increase the number of references to the VFS node.
 */
 int vfsOpen(
-    struct ts_vfsNode *p_node,
+    const char *p_path,
     int p_flags,
     struct ts_vfsFile **p_file
 );

@@ -3,6 +3,8 @@
 #include "kernel/arch/x86_64/inline.h"
 #include "kernel/arch.h"
 #include "kernel/boot.h"
+#include "kernel/device.h"
+#include "kernel/device/system.h"
 #include "kernel/fs/vfs.h"
 #include "kernel/mm/pmm.h"
 #include "kernel/module.h"
@@ -21,28 +23,40 @@ void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
     int l_returnValue = archPreinit(p_bootInfo);
 
     if(l_returnValue != 0) {
-        kernelDebug("archPreinit() failed with code %d.\n", l_returnValue);
+        kernelDebug(
+            "kernel: archPreinit() failed with code %d.\n",
+            l_returnValue
+        );
+
         return;
     }
 
     l_returnValue = kernelPreinit(p_bootInfo);
 
     if(l_returnValue != 0) {
-        kernelDebug("kernelPreinit() failed with code %d.\n", l_returnValue);
+        kernelDebug(
+            "kernel: kernelPreinit() failed with code %d.\n",
+            l_returnValue
+        );
+
         return;
     }
 
     l_returnValue = archInit();
 
     if(l_returnValue != 0) {
-        kernelDebug("archInit() failed with code %d.\n", l_returnValue);
+        kernelDebug("kernel: archInit() failed with code %d.\n", l_returnValue);
         return;
     }
 
     l_returnValue = kernelInit();
 
     if(l_returnValue != 0) {
-        kernelDebug("kernelInit() failed with code %d.\n", l_returnValue);
+        kernelDebug(
+            "kernel: kernelInit() failed with code %d.\n",
+            l_returnValue
+        );
+        
         return;
     }
 }
@@ -78,13 +92,27 @@ static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
 }
 
 static int kernelInit(void) {
-    kernelDebug("kernelInit() called.\n");
-
     // Initialize VFS
     int l_returnValue = vfsInit();
 
     if(l_returnValue != 0) {
-        kernelDebug("Failed to initialize VFS.\n");
+        kernelDebug("kernel: Failed to initialize VFS.\n");
+        return l_returnValue;
+    }
+
+    // Initialize the device system
+    l_returnValue = deviceInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize the device system.\n");
+        return l_returnValue;
+    }
+
+    // Initialize kernel devices
+    l_returnValue = deviceSystemInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize system devices.\n");
         return l_returnValue;
     }
 
@@ -92,7 +120,7 @@ static int kernelInit(void) {
     l_returnValue = modulesInit();
 
     if(l_returnValue != 0) {
-        kernelDebug("Failed to initialize modules.\n");
+        kernelDebug("kernel: Failed to initialize modules.\n");
         return l_returnValue;
     }
 
@@ -139,17 +167,56 @@ static int kernelInit(void) {
     // Test stuff
     kernelDebug("kernel: Creating /dev...\n");
 
-    l_returnValue = vfsMknod("/dev", S_IFDIR, 0);
+    l_returnValue = vfsMknod("/dev", S_IFDIR | 0755, 0);
 
-    kernelDebug("kernel: Return value: %d\n", l_returnValue);
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: Failed to mkdir /dev: %d.\n",
+            l_returnValue
+        );
 
-    kernelDebug("kernel: Looking up /dev...\n");
+        return l_returnValue;
+    }
 
-    struct ts_vfsNode *l_node;
+    kernelDebug("kernel: Creating /dev/zero...\n");
 
-    l_returnValue = vfsLookup("/dev", &l_node);
+    l_returnValue = vfsMknod("/dev/zero", S_IFCHR | 0755, M_DEVICE_MAKE(1, 5));
 
-    kernelDebug("kernel: Return value: %d\n", l_returnValue);
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: Failed to create /dev/zero: %d.\n",
+            l_returnValue
+        );
+
+        return l_returnValue;
+    }
+
+    kernelDebug("kernel: Opening /dev/zero...\n");
+
+    struct ts_vfsFile *l_file;
+
+    l_returnValue = vfsOpen("/dev/zero", 0, &l_file);
+
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: Failed to open /dev/zero: %d.\n",
+            l_returnValue
+        );
+
+        return l_returnValue;
+    }
+
+    kernelDebug("kernel: Reading 1024 bytes from /dev/zero...\n");
+
+    uint8_t l_buffer[1024];
+
+    l_returnValue = vfsFileRead(l_file, l_buffer, 1024);
+
+    kernelDebug("kernel: %d bytes read.\n", l_returnValue);
+
+    kernelDebug("kernel: Closing /dev/zero...\n");
+
+    l_returnValue = vfsFileClose(l_file);
 
     return 0;
 }

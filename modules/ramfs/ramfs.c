@@ -30,49 +30,63 @@ static int ramfsMount(
     struct ts_vfsNode *p_mountNode,
     const struct ts_vfsMountParameters *p_mountParameters
 );
-static int ramfsDirectoryLookup(
+static int ramfsNodeDirectoryLookup(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_result
 );
-static int ramfsRelease(struct ts_vfsNode *p_node);
-static int ramfsDirectoryMknod(
+static int ramfsNodeRelease(struct ts_vfsNode *p_node);
+static int ramfsNodeDirectoryMknod(
     struct ts_vfsNode *p_node,
     const char *p_name,
     mode_t p_mode,
     dev_t p_device
 );
-static int ramfsChmod(struct ts_vfsNode *p_node, mode_t p_mode);
-static int ramfsChown(struct ts_vfsNode *p_node, uid_t p_owner);
-static int ramfsChgrp(struct ts_vfsNode *p_node, gid_t p_group);
+static int ramfsNodeChmod(struct ts_vfsNode *p_node, mode_t p_mode);
+static int ramfsNodeChown(struct ts_vfsNode *p_node, uid_t p_owner);
+static int ramfsNodeChgrp(struct ts_vfsNode *p_node, gid_t p_group);
+static int ramfsNodeFileOpen(
+    struct ts_vfsNode *p_node,
+    int p_flags,
+    struct ts_vfsFile *p_file
+);
 
 static const struct ts_vfsFileSystem s_ramfsFileSystem = {
     .m_name = "ramfs",
     .m_mount = ramfsMount
 };
 
-static const struct ts_vfsNodeOperations s_ramfsOperationsDirectory = {
-    .m_lookup = ramfsDirectoryLookup,
-    .m_release = ramfsRelease,
+static const struct ts_vfsNodeOperations s_ramfsNodeOperationsDirectory = {
+    .m_lookup = ramfsNodeDirectoryLookup,
+    .m_release = ramfsNodeRelease,
     .m_open = NULL,
-    .m_chmod = ramfsChmod,
-    .m_chown = ramfsChown,
-    .m_chgrp = ramfsChgrp,
+    .m_chmod = ramfsNodeChmod,
+    .m_chown = ramfsNodeChown,
+    .m_chgrp = ramfsNodeChgrp,
     .m_link = NULL,
     .m_unlink = NULL,
-    .m_mknod = ramfsDirectoryMknod
+    .m_mknod = ramfsNodeDirectoryMknod
 };
 
-static const struct ts_vfsNodeOperations s_ramfsOperationsFile = {
+static const struct ts_vfsNodeOperations s_ramfsNodeOperationsFile = {
     .m_lookup = NULL,
-    .m_release = ramfsRelease,
-    .m_open = NULL,
-    .m_chmod = ramfsChmod,
-    .m_chown = ramfsChown,
-    .m_chgrp = ramfsChgrp,
+    .m_release = ramfsNodeRelease,
+    .m_open = ramfsNodeFileOpen,
+    .m_chmod = ramfsNodeChmod,
+    .m_chown = ramfsNodeChown,
+    .m_chgrp = ramfsNodeChgrp,
     .m_link = NULL,
     .m_unlink = NULL,
     .m_mknod = NULL
+};
+
+static const struct ts_vfsFileOperations s_ramfsFileOperationsFile = {
+    .m_open = NULL,
+    .m_read = NULL,
+    .m_write = NULL,
+    .m_close = NULL,
+    .m_llseek = NULL,
+    .m_ioctl = NULL
 };
 
 static int ramfsMount(
@@ -94,7 +108,7 @@ static int ramfsMount(
     l_directory->m_header.m_mod = 0755;
     l_directory->m_fileList = NULL;
 
-    p_mountNode->m_operations = &s_ramfsOperationsDirectory;
+    p_mountNode->m_operations = &s_ramfsNodeOperationsDirectory;
 
     return 0;
 }
@@ -133,7 +147,7 @@ static void ramfsExit(void) {
     }
 }
 
-static int ramfsDirectoryLookup(
+static int ramfsNodeDirectoryLookup(
     struct ts_vfsNode *p_node,
     const char *p_name,
     struct ts_vfsNode **p_result
@@ -180,13 +194,13 @@ static int ramfsDirectoryLookup(
 
     if(l_header->m_type == E_VFSNODETYPE_DIRECTORY) {
         l_node->m_size = 0;
-        l_node->m_operations = &s_ramfsOperationsDirectory;
+        l_node->m_operations = &s_ramfsNodeOperationsDirectory;
     } else {
         struct ts_ramfsFile *l_file = (struct ts_ramfsFile *)l_header;
 
         l_node->m_size = l_file->m_size;
         l_node->m_specific.m_device = l_file->m_device;
-        l_node->m_operations = &s_ramfsOperationsFile;
+        l_node->m_operations = &s_ramfsNodeOperationsFile;
     }
 
     *p_result = l_node;
@@ -194,7 +208,7 @@ static int ramfsDirectoryLookup(
     return 0;
 }
 
-static int ramfsChmod(struct ts_vfsNode *p_node, mode_t p_mode) {
+static int ramfsNodeChmod(struct ts_vfsNode *p_node, mode_t p_mode) {
     struct ts_ramfsHeader *l_header =
         (struct ts_ramfsHeader *)p_node->m_fileSystemData;
 
@@ -204,7 +218,7 @@ static int ramfsChmod(struct ts_vfsNode *p_node, mode_t p_mode) {
     return 0;
 }
 
-static int ramfsChown(struct ts_vfsNode *p_node, uid_t p_owner) {
+static int ramfsNodeChown(struct ts_vfsNode *p_node, uid_t p_owner) {
     struct ts_ramfsHeader *l_header =
         (struct ts_ramfsHeader *)p_node->m_fileSystemData;
     
@@ -213,7 +227,7 @@ static int ramfsChown(struct ts_vfsNode *p_node, uid_t p_owner) {
     return 0;
 }
 
-static int ramfsChgrp(struct ts_vfsNode *p_node, gid_t p_group) {
+static int ramfsNodeChgrp(struct ts_vfsNode *p_node, gid_t p_group) {
     struct ts_ramfsHeader *l_header =
         (struct ts_ramfsHeader *)p_node->m_fileSystemData;
 
@@ -222,11 +236,11 @@ static int ramfsChgrp(struct ts_vfsNode *p_node, gid_t p_group) {
     return 0;
 }
 
-static int ramfsRelease(struct ts_vfsNode *p_node) {
+static int ramfsNodeRelease(struct ts_vfsNode *p_node) {
     return 0;
 }
 
-static int ramfsDirectoryMknod(
+static int ramfsNodeDirectoryMknod(
     struct ts_vfsNode *p_node,
     const char *p_name,
     mode_t p_mode,
@@ -305,6 +319,16 @@ static int ramfsDirectoryMknod(
         kfree(l_header);
         return l_returnValue;
     }
+
+    return 0;
+}
+
+static int ramfsNodeFileOpen(
+    struct ts_vfsNode *p_node,
+    int p_flags,
+    struct ts_vfsFile *p_file
+) {
+    p_file->m_operations = &s_ramfsFileOperationsFile;
 
     return 0;
 }

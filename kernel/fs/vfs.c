@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "kernel/device.h"
 #include "kernel/fs/vfs.h"
 
 #include "klibc/debug.h"
@@ -110,9 +111,6 @@ int vfsLookup(const char *p_path, struct ts_vfsNode **p_result) {
                     l_nextNode->m_parent = l_currentNode;
                     l_currentNode = l_nextNode;
                     l_currentNode->m_referenceCount = 1;
-
-                    // TODO: block and character devices: retrieve the
-                    // operations here
                 }
             } else {
                 l_currentNode = l_node->m_data;
@@ -127,6 +125,8 @@ int vfsLookup(const char *p_path, struct ts_vfsNode **p_result) {
                 *p_result = l_currentNode;
                 return 0;
             }
+
+            l_nameStartIndex = l_index + 1;
         }
 
         l_index++;
@@ -202,13 +202,22 @@ int vfsRelease(struct ts_vfsNode *p_node) {
 }
 
 int vfsOpen(
-    struct ts_vfsNode *p_node,
+    const char *p_path,
     int p_flags,
     struct ts_vfsFile **p_file
 ) {
+    struct ts_vfsNode *l_node;
+
+    int l_returnValue = vfsLookup(p_path, &l_node);
+
+    if(l_returnValue != 0) {
+        return l_returnValue;
+    }
+
     struct ts_vfsFile *l_file;
 
-    if(p_node->m_operations == NULL || p_node->m_operations->m_open == NULL) {
+    if(l_node->m_operations == NULL || l_node->m_operations->m_open == NULL) {
+        vfsRelease(l_node);
         return -ENOTSUP;
     }
 
@@ -217,25 +226,53 @@ int vfsOpen(
     l_file = kmalloc(sizeof(struct ts_vfsFile));
 
     if(l_file == NULL) {
+        vfsRelease(l_node);
         return -ENOMEM;
     }
 
-    l_file->m_vfsNode = p_node;
+    l_file->m_vfsNode = l_node;
     l_file->m_flags = p_flags;
 
-    int l_returnValue = p_node->m_operations->m_open(
-        p_node,
-        p_flags,
-        l_file
-    );
+    l_returnValue = l_node->m_operations->m_open(l_node, p_flags, l_file);
 
     if(l_returnValue != 0) {
+        vfsRelease(l_node);
         kfree(l_file);
         return l_returnValue;
     }
 
-    if(p_node->m_referenceCount != -1) {
-        p_node->m_referenceCount++;
+    if(l_node->m_type == E_VFSNODETYPE_CHAR) {
+        const struct ts_deviceInformation *l_deviceInformation =
+            deviceCharacterGetInformation(
+                M_DEVICE_MAJOR(l_node->m_specific.m_device)
+            );
+        
+        if(l_deviceInformation != NULL) {
+            l_file->m_operations = l_deviceInformation->m_fileOperations;
+        } else {
+            l_file->m_operations = NULL;
+        }
+    }
+
+    if(
+        (l_file->m_operations == NULL)
+        || (l_file->m_operations->m_open == NULL)
+    ) {
+        vfsRelease(l_node);
+        kfree(l_file);
+        return -ENOTSUP;
+    }
+    
+    l_returnValue = l_file->m_operations->m_open(l_file, p_flags);
+
+    if(l_returnValue != 0) {
+        if(l_file->m_operations->m_close != NULL) {
+            l_file->m_operations->m_close(l_file);
+        }
+
+        vfsRelease(l_node);
+        kfree(l_file);
+        return l_returnValue;
     }
 
     *p_file = l_file;

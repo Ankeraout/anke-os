@@ -14,11 +14,12 @@ void *kmalloc(size_t p_size) {
 
     *(size_t *)l_ptr = l_finalSize;
 
-    return l_ptr;
+    return (void *)((size_t)l_ptr + sizeof(size_t));
 }
 
 void kfree(void *p_ptr) {
-    const size_t l_finalSize = *(size_t *)p_ptr;
+    void *l_finalPtr = (void *)((size_t)p_ptr - sizeof(size_t));
+    const size_t l_finalSize = *(size_t *)l_finalPtr;
 
-    pmmFree(p_ptr, l_finalSize);
+    pmmFree(l_finalPtr, l_finalSize);
 }

@@ -49,7 +49,11 @@ static inline int listRemove(struct ts_list **p_list, void *p_element) {
     if((*p_list)->m_data == p_element) {
         struct ts_list *l_currentElement = *p_list;
         *p_list = l_currentElement->m_next;
-        (*p_list)->m_previous = NULL;
+
+        if(*p_list != NULL) {
+            (*p_list)->m_previous = NULL;
+        }
+        
         kfree(l_currentElement);
         return 0;
     }
