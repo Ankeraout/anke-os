@@ -34,9 +34,9 @@ $(TARGET_KLIBC): dirs klibc/Makefile
 $(TARGET_KERNEL): modules dirs $(TARGET_KLIBC) kernel/Makefile
 	$(MAKE) -C kernel
 
-$(TARGET_CDROM): dirs obj/iso/limine-cd-efi.bin obj/iso/limine-cd.bin obj/iso/limine.sys obj/iso/limine.cfg limine-bootloader/limine-deploy obj/iso/kernel.elf $(MODULES_ISO_TARGET)
-	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label obj/iso -o $@
-	limine-bootloader/limine-deploy $@
+$(TARGET_CDROM): dirs obj/iso/limine-uefi-cd.bin obj/iso/limine-bios-cd.bin obj/iso/limine-bios.sys obj/iso/limine.cfg limine-bootloader/limine obj/iso/kernel.elf $(MODULES_ISO_TARGET)
+	xorriso -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label obj/iso -o $@
+	limine-bootloader/limine bios-install $@
 
 obj/iso/%: limine-bootloader/%
 	cp $< $@
