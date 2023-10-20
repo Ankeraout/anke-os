@@ -5,6 +5,7 @@
 #include "kernel/boot.h"
 #include "kernel/device.h"
 #include "kernel/device/system.h"
+#include "kernel/fs/ramfs.h"
 #include "kernel/fs/vfs.h"
 #include "kernel/mm/pmm.h"
 #include "kernel/module.h"
@@ -13,10 +14,15 @@
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo);
 static int kernelInit(void);
+static int kernelLoadModules(void);
+static int kernelMountRoot(void);
+static int kernelCreateRootDirectories(void);
+static int kernelCreateStandardDeviceFiles(void);
+static int kernelTest(void);
+static int kernelInitFileSystems(void);
 
 static const char *s_moduleList[] = {
-    "hello",
-    "ramfs"
+    "hello"
 };
 
 void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
@@ -59,6 +65,15 @@ void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
         
         return;
     }
+
+    l_returnValue = kernelTest();
+
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: kernelTest() exited with code %d.\n",
+            l_returnValue
+        );
+    }
 }
 
 static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
@@ -100,6 +115,14 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
+    // Initialize file systems
+    l_returnValue = kernelInitFileSystems();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize file systems.\n");
+        return l_returnValue;
+    }
+
     // Initialize the device system
     l_returnValue = deviceInit();
 
@@ -116,8 +139,43 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
-    // Initialize modules
-    l_returnValue = modulesInit();
+    // Mount root
+    l_returnValue = kernelMountRoot();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to mount root.\n");
+        return l_returnValue;
+    }
+
+    // Create root directories
+    l_returnValue = kernelCreateRootDirectories();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to create root directories.\n");
+        return l_returnValue;
+    }
+
+    // Create standard device files
+    l_returnValue = kernelCreateStandardDeviceFiles();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to create standard device files.\n");
+        return l_returnValue;
+    }
+
+    // Load kernel modules
+    l_returnValue = kernelLoadModules();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize modules.\n");
+        return l_returnValue;
+    }
+
+    return 0;
+}
+
+static int kernelLoadModules(void) {
+    int l_returnValue = modulesInit();
 
     if(l_returnValue != 0) {
         kernelDebug("kernel: Failed to initialize modules.\n");
@@ -148,10 +206,13 @@ static int kernelInit(void) {
         }
     }
 
-    // Mount ramfs at /
+    return 0;
+}
+
+static int kernelMountRoot(void) {
     kernelDebug("kernel: Mounting ramfs at root...\n");
 
-    l_returnValue = vfsMount("/", "ramfs", NULL);
+    int l_returnValue = vfsMount("/", "ramfs", NULL);
 
     if(l_returnValue != 0) {
         kernelDebug(
@@ -164,10 +225,14 @@ static int kernelInit(void) {
 
     kernelDebug("kernel: root mounted successfully!\n");
 
-    // Test stuff
+    return 0;
+}
+
+static int kernelCreateRootDirectories(void) {
+    // Create /dev
     kernelDebug("kernel: Creating /dev...\n");
 
-    l_returnValue = vfsMknod("/dev", S_IFDIR | 0755, 0);
+    int l_returnValue = vfsMknod("/dev", S_IFDIR | 0755, 0);
 
     if(l_returnValue != 0) {
         kernelDebug(
@@ -178,9 +243,13 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
+    return 0;
+}
+
+static int kernelCreateStandardDeviceFiles(void) {
     kernelDebug("kernel: Creating /dev/zero...\n");
 
-    l_returnValue = vfsMknod("/dev/zero", S_IFCHR | 0755, M_DEVICE_MAKE(1, 5));
+    int l_returnValue = vfsMknod("/dev/zero", S_IFCHR | 0755, M_DEVICE_MAKE(1, 5));
 
     if(l_returnValue != 0) {
         kernelDebug(
@@ -191,11 +260,15 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
+    return 0;
+}
+
+static int kernelTest(void) {
     kernelDebug("kernel: Opening /dev/zero...\n");
 
     struct ts_vfsFile *l_file;
 
-    l_returnValue = vfsOpen("/dev/zero", 0, &l_file);
+    int l_returnValue = vfsOpen("/dev/zero", 0, &l_file);
 
     if(l_returnValue != 0) {
         kernelDebug(
@@ -217,6 +290,18 @@ static int kernelInit(void) {
     kernelDebug("kernel: Closing /dev/zero...\n");
 
     l_returnValue = vfsFileClose(l_file);
+
+    return l_returnValue;
+}
+
+static int kernelInitFileSystems(void) {
+    // Initialize ramfs
+    int l_returnValue = ramfsInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize ramfs.\n");
+        return l_returnValue;
+    }
 
     return 0;
 }

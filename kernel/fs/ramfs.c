@@ -1,5 +1,4 @@
 #include "kernel/fs/vfs.h"
-#include "kernel/module.h"
 #include "klibc/debug.h"
 #include "klibc/string.h"
 #include "util/list.h"
@@ -24,8 +23,7 @@ struct ts_ramfsFile {
     size_t m_size;
 };
 
-static int ramfsInit(void);
-static void ramfsExit(void);
+int ramfsInit(void);
 static int ramfsMount(
     struct ts_vfsNode *p_mountNode,
     const struct ts_vfsMountParameters *p_mountParameters
@@ -113,8 +111,8 @@ static int ramfsMount(
     return 0;
 }
 
-static int ramfsInit(void) {
-    kernelDebug("ramfs: Registering ramfs...\n");
+int ramfsInit(void) {
+    kernelDebug("ramfs: Registering ramfs file system...\n");
     
     int l_returnValue = vfsRegisterFileSystem(&s_ramfsFileSystem);
 
@@ -130,21 +128,6 @@ static int ramfsInit(void) {
     kernelDebug("ramfs: ramfs file system registered successfully.\n");
 
     return 0;
-}
-
-static void ramfsExit(void) {
-    kernelDebug("ramfs: Unregistering ramfs...\n");
-    
-    int l_returnValue = vfsUnregisterFileSystem(&s_ramfsFileSystem);
-
-    if(l_returnValue != 0) {
-        kernelDebug(
-            "ramfs: Error while unregistering ramfs file system: code %d.\n",
-            l_returnValue
-        );
-    } else {
-        kernelDebug("ramfs: ramfs file system unregistered successfully.\n");
-    }
 }
 
 static int ramfsNodeDirectoryLookup(
@@ -332,5 +315,3 @@ static int ramfsNodeFileOpen(
 
     return 0;
 }
-
-M_DECLARE_MODULE("ramfs", ramfsInit, ramfsExit);
