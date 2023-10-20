@@ -135,8 +135,6 @@ static int ramfsNodeDirectoryLookup(
     const char *p_name,
     struct ts_vfsNode **p_result
 ) {
-    kernelDebug("ramfs: lookup \"%s\"\n", p_name);
-
     struct ts_ramfsDirectory *l_directory = p_node->m_fileSystemData;
     struct ts_vfsNode *l_node;
 

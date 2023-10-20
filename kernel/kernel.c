@@ -249,11 +249,32 @@ static int kernelCreateRootDirectories(void) {
 static int kernelCreateStandardDeviceFiles(void) {
     kernelDebug("kernel: Creating /dev/zero...\n");
 
-    int l_returnValue = vfsMknod("/dev/zero", S_IFCHR | 0755, M_DEVICE_MAKE(1, 5));
+    int l_returnValue = vfsMknod(
+        "/dev/zero",
+        S_IFCHR | 0755,
+        M_DEVICE_MAKE(1, 5)
+    );
 
     if(l_returnValue != 0) {
         kernelDebug(
             "kernel: Failed to create /dev/zero: %d.\n",
+            l_returnValue
+        );
+
+        return l_returnValue;
+    }
+
+    kernelDebug("kernel: Creating /dev/null...\n");
+
+    l_returnValue = vfsMknod(
+        "/dev/null",
+        S_IFCHR | 0755,
+        M_DEVICE_MAKE(1, 3)
+    );
+
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: Failed to create /dev/null: %d.\n",
             l_returnValue
         );
 

@@ -8,9 +8,16 @@
 
 #define C_PMM_BUDDY_COUNT 8
 
+#ifdef C_PMM_DEBUG
+#define pmmDebug kernelDebug
+#else
+#define pmmDebug pmmDebugNull
+#endif
+
 static struct ts_linkedListNode *s_pmmBuddies[C_PMM_BUDDY_COUNT];
 
 static void *pmmAllocBuddy(int l_buddyIndex);
+static int pmmDebugNull();
 
 int pmmInit(const struct ts_kernelBootInfo *p_bootInfo) {
     for(int l_index = 0; l_index < C_PMM_BUDDY_COUNT; l_index++) {
@@ -54,24 +61,24 @@ void *pmmAlloc(size_t p_size) {
         l_buddySizePages = 1;
     }
 
-    kernelDebug("pmmAlloc: allocating %lu-byte buddy.\n", l_buddySizeBytes);
+    pmmDebug("pmmAlloc: allocating %lu-byte buddy.\n", l_buddySizeBytes);
 
     void *l_ptr = pmmAllocBuddy(l_buddyIndex);
 
     if(l_ptr == NULL) {
-        kernelDebug("pmmAlloc: allocation failed.\n");
+        pmmDebug("pmmAlloc: allocation failed.\n");
         return NULL;
     }
 
     const size_t l_address = (size_t)l_ptr;
 
-    kernelDebug("pmmAlloc: obtained 0x%016lx.\n", l_address);
+    pmmDebug("pmmAlloc: obtained 0x%016lx.\n", l_address);
 
     const size_t l_pagesToFree = l_sizePages - l_buddySizePages;
     const size_t l_bytesToFree = l_pagesToFree << 12;
 
     if(l_bytesToFree > 0) {
-        kernelDebug("pmmAlloc: Freeing %lu bytes.\n", l_bytesToFree);
+        pmmDebug("pmmAlloc: Freeing %lu bytes.\n", l_bytesToFree);
         pmmFree((void *)(l_address + p_size), l_bytesToFree);
     }
 
@@ -94,7 +101,7 @@ void pmmFree(void *p_ptr, size_t p_size) {
 
             s_pmmBuddies[l_buddyIndex] = l_linkedListNode;
 
-            kernelDebug("pmmFree: Freed %lu-byte buddy at 0x%016lx.\n", l_buddySizeBytes, l_ptr);
+            pmmDebug("pmmFree: Freed %lu-byte buddy at 0x%016lx.\n", l_buddySizeBytes, l_ptr);
 
             l_nbPages -= l_buddySizePages;
             l_ptr += l_buddySizeBytes;
@@ -107,18 +114,18 @@ void pmmFree(void *p_ptr, size_t p_size) {
 }
 
 static void *pmmAllocBuddy(int l_buddyIndex) {
-    kernelDebug("pmmAllocBuddy: requested %lu bytes.\n", 4096 << l_buddyIndex);
+    pmmDebug("pmmAllocBuddy: requested %lu bytes.\n", 4096 << l_buddyIndex);
 
     if(s_pmmBuddies[l_buddyIndex] != NULL) {
-        kernelDebug("pmmAllocBuddy: found buddy of this size.\n");
+        pmmDebug("pmmAllocBuddy: found buddy of this size.\n");
         struct ts_linkedListNode *l_buddy = s_pmmBuddies[l_buddyIndex];
         s_pmmBuddies[l_buddyIndex] = l_buddy->next;
         return l_buddy;
     } else if(l_buddyIndex >= (C_PMM_BUDDY_COUNT - 1)) {
-        kernelDebug("pmmAllocBuddy: out of memory.\n");
+        pmmDebug("pmmAllocBuddy: out of memory.\n");
         return NULL;
     } else {
-        kernelDebug("pmmAllocBuddy: splitting larger block.\n");
+        pmmDebug("pmmAllocBuddy: splitting larger block.\n");
         size_t l_buddySizeBytes = (4096 << l_buddyIndex);
         void *l_buddy = pmmAllocBuddy(l_buddyIndex + 1);
 
@@ -133,4 +140,8 @@ static void *pmmAllocBuddy(int l_buddyIndex) {
 
         return (void *)l_buddyAddress;
     }
+}
+
+static int pmmDebugNull() {
+    return 0;
 }
