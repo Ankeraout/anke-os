@@ -4,6 +4,7 @@
 #include "kernel/arch.h"
 #include "kernel/boot.h"
 #include "kernel/device.h"
+#include "kernel/device/framebuffer.h"
 #include "kernel/device/system.h"
 #include "kernel/fs/ramfs.h"
 #include "kernel/fs/vfs.h"
@@ -155,6 +156,14 @@ static int kernelInit(void) {
         return l_returnValue;
     }
 
+    // Initialize framebuffer
+    l_returnValue = framebufferInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug("kernel: Failed to initialize framebuffer.\n");
+        return l_returnValue;
+    }
+
     // Create standard device files
     l_returnValue = kernelCreateStandardDeviceFiles();
 
@@ -285,34 +294,18 @@ static int kernelCreateStandardDeviceFiles(void) {
 }
 
 static int kernelTest(void) {
-    kernelDebug("kernel: Opening /dev/zero...\n");
-
     struct ts_vfsFile *l_file;
-
-    int l_returnValue = vfsOpen("/dev/zero", 0, &l_file);
+    int l_returnValue = vfsOpen("/dev/fb0", 0, &l_file);
 
     if(l_returnValue != 0) {
-        kernelDebug(
-            "kernel: Failed to open /dev/zero: %d.\n",
-            l_returnValue
-        );
-
+        kernelDebug("kernel: Failed to open /dev/fb0: %d.\n", l_returnValue);
         return l_returnValue;
     }
 
-    kernelDebug("kernel: Reading 1024 bytes from /dev/zero...\n");
+    vfsFileWrite(l_file, "\xff\xaa\x55\x00", 4);
+    vfsFileClose(l_file);
 
-    uint8_t l_buffer[1024];
-
-    l_returnValue = vfsFileRead(l_file, l_buffer, 1024);
-
-    kernelDebug("kernel: %d bytes read.\n", l_returnValue);
-
-    kernelDebug("kernel: Closing /dev/zero...\n");
-
-    l_returnValue = vfsFileClose(l_file);
-
-    return l_returnValue;
+    return 0;
 }
 
 static int kernelInitFileSystems(void) {

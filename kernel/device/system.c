@@ -13,12 +13,14 @@ static int deviceSystemClose(struct ts_vfsFile *p_file);
 static ssize_t deviceSystemRead(
     struct ts_vfsFile *p_file,
     void *p_buffer,
-    size_t p_size
+    size_t p_size,
+    loff_t p_offset
 );
 static ssize_t deviceSystemWrite(
     struct ts_vfsFile *p_file,
     const void *p_buffer,
-    size_t p_size
+    size_t p_size,
+    loff_t p_offset
 );
 static int deviceSystemLlseek(
     struct ts_vfsFile *p_file,
@@ -72,8 +74,11 @@ static int deviceSystemClose(struct ts_vfsFile *p_file) {
 static ssize_t deviceSystemRead(
     struct ts_vfsFile *p_file,
     void *p_buffer,
-    size_t p_size
+    size_t p_size,
+    loff_t p_offset
 ) {
+    M_UNUSED_PARAMETER(p_offset);
+
     const int l_minor = M_DEVICE_MINOR(p_file->m_vfsNode->m_specific.m_device);
 
     if(l_minor == C_SYSTEM_DEVICE_MINOR_NULL) {
@@ -89,9 +94,11 @@ static ssize_t deviceSystemRead(
 static ssize_t deviceSystemWrite(
     struct ts_vfsFile *p_file,
     const void *p_buffer,
-    size_t p_size
+    size_t p_size,
+    loff_t p_offset
 ) {
     M_UNUSED_PARAMETER(p_buffer);
+    M_UNUSED_PARAMETER(p_offset);
 
     const int l_minor = M_DEVICE_MINOR(p_file->m_vfsNode->m_specific.m_device);
 

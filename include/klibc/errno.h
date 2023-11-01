@@ -8,7 +8,9 @@ enum {
     ENOTSUP,
     EBUSY,
     ENOENT,
-    EEXIST
+    EEXIST,
+    ENOSYS,
+    ENODEV,
 };
 
 #endif

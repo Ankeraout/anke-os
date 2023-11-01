@@ -14,21 +14,33 @@ static struct limine_memmap_request s_memmapRequest = {
     .response = NULL
 };
 
+static struct limine_framebuffer_request s_framebufferRequest = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .revision = 0,
+    .response = NULL
+};
+
 static struct ts_kernelBootInfo l_kernelBootInfo;
 
 static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo);
+static void initializeFramebuffer(struct ts_kernelBootInfo *p_bootInfo);
 static void panic(const char *p_message);
 
 void _start(void) {
     kernelDebug("AnkeOS kernel - x86_64-limine bootstrap\n");
 
     initializeMemoryMap(&l_kernelBootInfo);
+    initializeFramebuffer(&l_kernelBootInfo);
 
     kernelMain(&l_kernelBootInfo);
 
     panic("kernelMain() returned");
 
     while(1);
+}
+
+const struct ts_kernelBootInfo *kernelGetBootInfo(void) {
+    return &l_kernelBootInfo;
 }
 
 static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
@@ -97,6 +109,36 @@ static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
 
     p_bootInfo->memoryMap = l_kernelMemoryMap;
     p_bootInfo->memoryMapEntryCount = s_memmapRequest.response->entry_count + 1;
+}
+
+static void initializeFramebuffer(struct ts_kernelBootInfo *p_bootInfo) {
+    if(
+        (s_framebufferRequest.response == NULL)
+        || (s_framebufferRequest.response->framebuffer_count == 0)
+    ) {
+        p_bootInfo->m_framebufferInfo.m_address = NULL;
+        return;
+    }
+
+    struct limine_framebuffer *l_framebuffer =
+        s_framebufferRequest.response->framebuffers[0];
+
+    p_bootInfo->m_framebufferInfo.m_address = l_framebuffer->address;
+    p_bootInfo->m_framebufferInfo.m_width = l_framebuffer->width;
+    p_bootInfo->m_framebufferInfo.m_height = l_framebuffer->height;
+    p_bootInfo->m_framebufferInfo.m_pitch = l_framebuffer->pitch;
+    p_bootInfo->m_framebufferInfo.m_bitsPerPixel = l_framebuffer->bpp;
+    p_bootInfo->m_framebufferInfo.m_redMaskSize = l_framebuffer->red_mask_size;
+    p_bootInfo->m_framebufferInfo.m_redMaskShift =
+        l_framebuffer->red_mask_shift;
+    p_bootInfo->m_framebufferInfo.m_greenMaskSize =
+        l_framebuffer->green_mask_size;
+    p_bootInfo->m_framebufferInfo.m_greenMaskShift = 
+        l_framebuffer->green_mask_shift;
+    p_bootInfo->m_framebufferInfo.m_blueMaskSize =
+        l_framebuffer->blue_mask_size;
+    p_bootInfo->m_framebufferInfo.m_blueMaskShift =
+        l_framebuffer->blue_mask_shift;
 }
 
 static void panic(const char *p_message) {

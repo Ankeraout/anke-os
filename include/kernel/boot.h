@@ -16,9 +16,26 @@ struct ts_kernelMemoryMapEntry {
     enum te_kernelMemoryMapEntryType type;
 };
 
+struct ts_bootFramebufferInfo {
+    void *m_address;
+    unsigned int m_width;
+    unsigned int m_height;
+    unsigned int m_pitch;
+    unsigned int m_bitsPerPixel;
+    unsigned int m_redMaskSize;
+    unsigned int m_redMaskShift;
+    unsigned int m_greenMaskSize;
+    unsigned int m_greenMaskShift;
+    unsigned int m_blueMaskSize;
+    unsigned int m_blueMaskShift;
+};
+
 struct ts_kernelBootInfo {
     struct ts_kernelMemoryMapEntry *memoryMap;
     size_t memoryMapEntryCount;
+    struct ts_bootFramebufferInfo m_framebufferInfo;
 };
+
+const struct ts_kernelBootInfo *kernelGetBootInfo(void);
 
 #endif

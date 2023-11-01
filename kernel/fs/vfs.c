@@ -232,6 +232,7 @@ int vfsOpen(
 
     l_file->m_vfsNode = l_node;
     l_file->m_flags = p_flags;
+    l_file->m_offset = 0;
 
     l_returnValue = l_node->m_operations->m_open(l_node, p_flags, l_file);
 
@@ -503,7 +504,18 @@ ssize_t vfsFileRead(struct ts_vfsFile *p_file, void *p_buffer, size_t p_size) {
         return -ENOTSUP;
     }
 
-    return p_file->m_operations->m_read(p_file, p_buffer, p_size);
+    ssize_t l_result = p_file->m_operations->m_read(
+        p_file,
+        p_buffer,
+        p_size,
+        p_file->m_offset
+    );
+
+    if(l_result >= 0) {
+        p_file->m_offset += l_result;
+    }
+
+    return l_result;
 }
 
 ssize_t vfsFileWrite(
@@ -519,7 +531,18 @@ ssize_t vfsFileWrite(
         return -ENOTSUP;
     }
 
-    return p_file->m_operations->m_write(p_file, p_buffer, p_size);
+    ssize_t l_result = p_file->m_operations->m_write(
+        p_file,
+        p_buffer,
+        p_size,
+        p_file->m_offset
+    );
+
+    if(l_result >= 0) {
+        p_file->m_offset += l_result;
+    }
+
+    return l_result;
 }
 
 int vfsMount(

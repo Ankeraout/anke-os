@@ -24,6 +24,7 @@ struct ts_vfsFile {
     const struct ts_vfsFileOperations *m_operations;
     int m_flags;
     void *m_fileSystemData;
+    loff_t m_offset;
 };
 
 struct ts_vfsFileOperations {
@@ -31,12 +32,14 @@ struct ts_vfsFileOperations {
     ssize_t (*m_read)(
         struct ts_vfsFile *p_file,
         void *p_buffer,
-        size_t p_size
+        size_t p_size,
+        loff_t p_offset
     );
     ssize_t (*m_write)(
         struct ts_vfsFile *p_file,
         const void *p_buffer,
-        size_t p_size
+        size_t p_size,
+        loff_t p_offset
     );
     int (*m_close)(struct ts_vfsFile *p_file);
     int (*m_llseek)(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence);
