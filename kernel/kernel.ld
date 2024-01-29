@@ -13,6 +13,8 @@ SECTIONS {
      **************************************************************************/
     . = 0xffffffff80000000;
 
+    __kernelStart = .;
+
     .text : {
         *(.text)
     } : text
@@ -45,6 +47,8 @@ SECTIONS {
         *(COMMON)
         *(.bss)
     } : data
+
+    __kernelEnd = .;
 
     /*
     /DISCARD/ : {

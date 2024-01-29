@@ -11,9 +11,9 @@ enum te_kernelMemoryMapEntryType {
 };
 
 struct ts_kernelMemoryMapEntry {
-    uint64_t base;
-    uint64_t length;
-    enum te_kernelMemoryMapEntryType type;
+    uint64_t m_base;
+    uint64_t m_size;
+    enum te_kernelMemoryMapEntryType m_type;
 };
 
 struct ts_bootFramebufferInfo {

@@ -15,6 +15,18 @@ static inline void outl(uint16_t p_port, uint32_t p_value) {
     asm volatile("outl %0, %1" :: "a"(p_value), "Nd"(p_port));
 }
 
+static inline uint64_t readCr3(void) {
+    uint64_t l_returnValue;
+
+    asm volatile("movq %%cr3, %0": "=a"(l_returnValue));
+
+    return l_returnValue;
+}
+
+static inline void writeCr3(uint64_t p_value) {
+    asm volatile("movq %0, %%cr3" :: "a"(p_value));
+}
+
 static inline uint8_t inb(uint16_t p_port) {
     uint8_t l_returnValue;
 

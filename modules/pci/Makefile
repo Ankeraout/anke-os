@@ -26,19 +26,19 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 SOURCES_C := $(call rwildcard, ., *.c)
 SOURCES_ASM := $(call rwildcard, ., *.asm)
 SOURCES := $(SOURCES_C) $(SOURCES_ASM)
-OBJECTS_C := $(patsubst ./%.c, ../../obj/modules/hello/%.c.o, $(SOURCES_C))
-OBJECTS_ASM := $(patsubst ./%.asm, ../../obj/modules/hello/%.asm.o, $(SOURCES_ASM))
+OBJECTS_C := $(patsubst ./%.c, ../../obj/modules/pci/%.c.o, $(SOURCES_C))
+OBJECTS_ASM := $(patsubst ./%.asm, ../../obj/modules/pci/%.asm.o, $(SOURCES_ASM))
 OBJECTS := $(OBJECTS_C) $(OBJECTS_ASM)
-DIRECTORIES := $(patsubst ./%, ../../obj/modules/hello/%, $(dir $(SOURCES)))
-EXECUTABLE := ../../bin/modules/hello.elf
-DEPENDENCIES := $(patsubst ./%.c, ../../obj/modules/hello/%.c.d, $(SOURCES_C))
+DIRECTORIES := $(patsubst ./%, ../../obj/modules/pci/%, $(dir $(SOURCES)))
+EXECUTABLE := ../../bin/modules/pci.elf
+DEPENDENCIES := $(patsubst ./%.c, ../../obj/modules/pci/%.c.d, $(SOURCES_C))
 
 all: dirs $(EXECUTABLE)
 
-../../obj/modules/hello/%.c.o: ./%.c
+../../obj/modules/pci/%.c.o: ./%.c
 	$(CC) $(CFLAGS) $< -o $@
 
-../../obj/modules/hello/%.asm.o: ./%.asm
+../../obj/modules/pci/%.asm.o: ./%.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
 $(EXECUTABLE): $(OBJECTS)

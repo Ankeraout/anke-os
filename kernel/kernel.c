@@ -23,7 +23,8 @@ static int kernelTest(void);
 static int kernelInitFileSystems(void);
 
 static const char *s_moduleList[] = {
-    "hello"
+    "hello",
+    "pci"
 };
 
 void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
@@ -87,19 +88,19 @@ static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
     for(size_t l_index = 0; l_index < p_bootInfo->memoryMapEntryCount; l_index++) {
         const struct ts_kernelMemoryMapEntry *l_memoryMapEntry = &p_bootInfo->memoryMap[l_index];
 
-        switch(l_memoryMapEntry->type) {
+        switch(l_memoryMapEntry->m_type) {
             case E_KERNELMEMORYMAPENTRYTYPE_FREE: l_type = "Free"; break;
             case E_KERNELMEMORYMAPENTRYTYPE_RECLAIMABLE: l_type = "Reclaimable"; break;
             case E_KERNELMEMORYMAPENTRYTYPE_RESERVED: l_type = "Reserved"; break;
             default: l_type = "Unknown"; break;
         }
 
-        kernelDebug("0x%016lx | 0x%016lx | %s\n", l_memoryMapEntry->base, l_memoryMapEntry->length, l_type);
+        kernelDebug("0x%016lx | 0x%016lx | %s\n", l_memoryMapEntry->m_base, l_memoryMapEntry->m_size, l_type);
     }
 
     kernelDebug("\n");
 
-    if(pmmInit(p_bootInfo) != 0) {
+    if(pmmInit(p_bootInfo->memoryMap, p_bootInfo->memoryMapEntryCount) != 0) {
         kernelDebug("PMM initialization failed.\n");
         return -1;
     }

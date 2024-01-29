@@ -78,29 +78,29 @@ static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
     for(uint64_t l_entryReadIndex = 0; l_entryReadIndex < s_memmapRequest.response->entry_count; l_entryReadIndex++) {
         if(l_entryReadIndex == (uint64_t)l_freeEntryIndex) {
             // Create a reclaimable entry
-            l_kernelMemoryMap[l_entryWriteIndex].base = s_memmapRequest.response->entries[l_entryReadIndex]->base;
-            l_kernelMemoryMap[l_entryWriteIndex].length = l_memoryMapSize;
-            l_kernelMemoryMap[l_entryWriteIndex].type = E_KERNELMEMORYMAPENTRYTYPE_RECLAIMABLE;
+            l_kernelMemoryMap[l_entryWriteIndex].m_base = s_memmapRequest.response->entries[l_entryReadIndex]->base;
+            l_kernelMemoryMap[l_entryWriteIndex].m_size = l_memoryMapSize;
+            l_kernelMemoryMap[l_entryWriteIndex].m_type = E_KERNELMEMORYMAPENTRYTYPE_RECLAIMABLE;
             l_entryWriteIndex++;
 
-            l_kernelMemoryMap[l_entryWriteIndex].base = s_memmapRequest.response->entries[l_entryReadIndex]->base + l_memoryMapSize;
-            l_kernelMemoryMap[l_entryWriteIndex].length = s_memmapRequest.response->entries[l_entryReadIndex]->length - l_memoryMapSize;
+            l_kernelMemoryMap[l_entryWriteIndex].m_base = s_memmapRequest.response->entries[l_entryReadIndex]->base + l_memoryMapSize;
+            l_kernelMemoryMap[l_entryWriteIndex].m_size = s_memmapRequest.response->entries[l_entryReadIndex]->length - l_memoryMapSize;
         } else {
-            l_kernelMemoryMap[l_entryWriteIndex].base = s_memmapRequest.response->entries[l_entryReadIndex]->base;
-            l_kernelMemoryMap[l_entryWriteIndex].length = s_memmapRequest.response->entries[l_entryReadIndex]->length;
+            l_kernelMemoryMap[l_entryWriteIndex].m_base = s_memmapRequest.response->entries[l_entryReadIndex]->base;
+            l_kernelMemoryMap[l_entryWriteIndex].m_size = s_memmapRequest.response->entries[l_entryReadIndex]->length;
         }
 
         switch(s_memmapRequest.response->entries[l_entryReadIndex]->type) {
             case LIMINE_MEMMAP_USABLE:
-                l_kernelMemoryMap[l_entryWriteIndex].type = E_KERNELMEMORYMAPENTRYTYPE_FREE;
+                l_kernelMemoryMap[l_entryWriteIndex].m_type = E_KERNELMEMORYMAPENTRYTYPE_FREE;
                 break;
 
             case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
-                l_kernelMemoryMap[l_entryWriteIndex].type = E_KERNELMEMORYMAPENTRYTYPE_RECLAIMABLE;
+                l_kernelMemoryMap[l_entryWriteIndex].m_type = E_KERNELMEMORYMAPENTRYTYPE_RECLAIMABLE;
                 break;
 
             default:
-                l_kernelMemoryMap[l_entryWriteIndex].type = E_KERNELMEMORYMAPENTRYTYPE_RESERVED;
+                l_kernelMemoryMap[l_entryWriteIndex].m_type = E_KERNELMEMORYMAPENTRYTYPE_RESERVED;
                 break;
         }
 
