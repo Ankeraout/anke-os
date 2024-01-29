@@ -11,6 +11,10 @@ int pmmInit(
     s_freeMemoryEntryList = NULL;
 
     for(int l_index = p_memoryMapEntryCount - 1; l_index >= 0; l_index--) {
+        if(p_memoryMap[l_index].m_type != E_KERNELMEMORYMAPENTRYTYPE_FREE) {
+            continue;
+        }
+        
         if(p_memoryMap[l_index].m_size < C_MM_PAGE_SIZE) {
             // We cannot use free memory sections that are smaller than a page.
             continue;
