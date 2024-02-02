@@ -26,10 +26,6 @@ static int vmmRefillContextEntryPool(struct ts_vmmContext *p_context);
 static struct ts_mmMemoryMapEntryListNode *vmmAllocateEntryPoolEntry(
     struct ts_vmmContext *p_context
 );
-static void *vmmGetPhysicalAddress(
-    struct ts_vmmContext *p_context,
-    void *p_vptr
-);
 static void vmmFreeNode(
     void *p_context,
     struct ts_mmMemoryMapEntryListNode *p_node
@@ -62,39 +58,20 @@ int vmmInit(void) {
         l_entryValue += 0x0000000040000000;
     }
 
+    // 2.3. Add the PDPT entry to the PML4
+    uint64_t *l_pml4 = (uint64_t *)s_vmmKernelContext.m_pagingContext;
+
+    l_pml4[0] = (uint64_t)l_identityPdpt
+        | C_VMM_PAGING_FLAG_PRESENT
+        | C_VMM_PAGING_FLAG_READ_WRITE;
+
     // 3. Map kernel to 0xffffffff80000000
-    // 3.1. Create the PDPT
-    uint64_t *l_kernelPdpt = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_kernelPdpt == NULL) {
-        return -1;
-    }
-
-    // 3.2. Create the page directory
-    uint64_t *l_kernelPageDirectory = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_kernelPageDirectory == NULL) {
-        return -1;
-    }
-
-    // 3.3. Initialize the PDPT entry
-    l_kernelPdpt[0x1ff] = (uintptr_t)l_kernelPageDirectory
-        | C_VMM_PAGING_FLAG_READ_WRITE
-        | C_VMM_PAGING_FLAG_PRESENT;
-
-    // 3.4. Get the physical address of the kernel from the current paging
+    // 3.1. Get the physical address of the kernel from the current paging
     // structure
-    struct ts_vmmContext l_temporaryKernelContext = {
-        .m_pagingContext = readCr3()
-    };
-
     void *l_kernelPhysicalAddress =
-        vmmGetPhysicalAddress(
-            &l_temporaryKernelContext,
-            (void *)0xffffffff80000000
-        );
+        vmmGetPhysicalAddress((void *)0xffffffff80000000);
 
-    // 3.5. Map the kernel
+    // 3.2. Map the kernel
     if(
         vmmMap(
             &s_vmmKernelContext,
@@ -186,6 +163,8 @@ int vmmMap(
                 return -1;
             }
 
+            kmemset(l_pdpt, 0, C_MM_PAGE_SIZE);
+
             l_pml4[l_pml4Index] = (uint64_t)l_pdpt
                 | C_VMM_PAGING_FLAG_USER_SUPERVISOR
                 | C_VMM_PAGING_FLAG_READ_WRITE
@@ -203,6 +182,8 @@ int vmmMap(
                     return -1;
                 }
 
+                kmemset(l_pd, 0, C_MM_PAGE_SIZE);
+
                 l_pdpt[l_pdptIndex] = (uint64_t)l_pd
                     | C_VMM_PAGING_FLAG_USER_SUPERVISOR
                     | C_VMM_PAGING_FLAG_READ_WRITE
@@ -219,6 +200,8 @@ int vmmMap(
                     if(l_pt == NULL) {
                         return -1;
                     }
+
+                    kmemset(l_pt, 0, C_MM_PAGE_SIZE);
 
                     l_pd[l_pdIndex] = (uint64_t)l_pt
                         | C_VMM_PAGING_FLAG_USER_SUPERVISOR
@@ -319,76 +302,15 @@ int vmmUnmap(
     return 0;
 }
 
-static int vmmInitKernelContext(void) {
-    s_vmmKernelContext.m_mapEntryPool = NULL;
+void *vmmGetPhysicalAddress(void *p_vptr) {
+    struct ts_vmmContext l_context = {
+        .m_pagingContext = readCr3()
+    };
 
-    // Allocate a PML4 for the kernel.
-    s_vmmKernelContext.m_pagingContext = (uintptr_t)pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(s_vmmKernelContext.m_pagingContext == 0) {
-        return -1;
-    }
-
-    kmemset((void *)s_vmmKernelContext.m_pagingContext, 0, C_MM_PAGE_SIZE);
-
-    // Allocate one entry from the pool to map usable kernel space between
-    // [0xffff800000000000-0xffffffff7fffffff] (last PML4 entry - last 2 GiB)
-    // The last 2 GiB are reserved for the kernel.
-    struct ts_mmMemoryMapEntryListNode *l_kernelSpaceEntry =
-        vmmAllocateEntryPoolEntry(&s_vmmKernelContext);
-
-    if(l_kernelSpaceEntry == NULL) {
-        return -1;
-    }
-
-    l_kernelSpaceEntry->m_next = NULL;
-    l_kernelSpaceEntry->m_data.m_base = (void *)0xffffff8000000000;
-    l_kernelSpaceEntry->m_data.m_size = 0x0000008000000000;
-
-    mmAddNodeToMap(
-        &s_vmmKernelContext.m_map,
-        l_kernelSpaceEntry,
-        vmmFreeNode,
-        NULL
-    );
-
-    return 0;
+    return vmmGetPhysicalAddress2(&l_context, p_vptr);
 }
 
-static int vmmRefillContextEntryPool(struct ts_vmmContext *p_context) {
-    struct ts_mmMemoryMapEntryListNode *l_nodePool = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_nodePool == NULL) {
-        return -1;
-    }
-
-    // Prepare entries [0, C_VMM_ENTRIES_PER_PAGE - 1]
-    for(int l_index = 0; l_index < (int)C_VMM_ENTRIES_PER_PAGE - 1; l_index++) {
-        l_nodePool[l_index].m_next = &l_nodePool[l_index + 1];
-    }
-
-    // Last entry points to the current entry pool
-    l_nodePool[C_VMM_ENTRIES_PER_PAGE - 1].m_next = p_context->m_mapEntryPool;
-    p_context->m_mapEntryPool = &l_nodePool[0];
-
-    return 0;
-}
-
-static struct ts_mmMemoryMapEntryListNode *vmmAllocateEntryPoolEntry(
-    struct ts_vmmContext *p_context
-) {
-    if(vmmEnsurePoolNotEmpty(p_context) != 0) {
-        return NULL;
-    }
-
-    struct ts_mmMemoryMapEntryListNode *l_entry = p_context->m_mapEntryPool;
-
-    p_context->m_mapEntryPool = l_entry->m_next;
-
-    return l_entry;
-}
-
-static void *vmmGetPhysicalAddress(
+void *vmmGetPhysicalAddress2(
     struct ts_vmmContext *p_context,
     void *p_vptr
 ) {
@@ -437,6 +359,79 @@ static void *vmmGetPhysicalAddress(
     }
 
     return (void *)l_pageTableAddress;
+}
+
+struct ts_vmmContext *vmmGetKernelContext(void) {
+    return &s_vmmKernelContext;
+}
+
+static int vmmInitKernelContext(void) {
+    s_vmmKernelContext.m_mapEntryPool = NULL;
+
+    // Allocate a PML4 for the kernel.
+    s_vmmKernelContext.m_pagingContext = (uintptr_t)pmmAlloc(C_MM_PAGE_SIZE);
+
+    if(s_vmmKernelContext.m_pagingContext == 0) {
+        return -1;
+    }
+
+    kmemset((void *)s_vmmKernelContext.m_pagingContext, 0, C_MM_PAGE_SIZE);
+
+    // Allocate one entry from the pool to map usable kernel space between
+    // [0xffff800000000000-0xffffffff7fffffff] (last PML4 entry - last 2 GiB)
+    // The last 2 GiB are reserved for the kernel.
+    struct ts_mmMemoryMapEntryListNode *l_kernelSpaceEntry =
+        vmmAllocateEntryPoolEntry(&s_vmmKernelContext);
+
+    if(l_kernelSpaceEntry == NULL) {
+        return -1;
+    }
+
+    l_kernelSpaceEntry->m_next = NULL;
+    l_kernelSpaceEntry->m_data.m_base = (void *)0xffffff8000000000;
+    l_kernelSpaceEntry->m_data.m_size = 0x0000007f80000000;
+
+    mmAddNodeToMap(
+        &s_vmmKernelContext.m_map,
+        l_kernelSpaceEntry,
+        vmmFreeNode,
+        NULL
+    );
+
+    return 0;
+}
+
+static int vmmRefillContextEntryPool(struct ts_vmmContext *p_context) {
+    struct ts_mmMemoryMapEntryListNode *l_nodePool = pmmAlloc(C_MM_PAGE_SIZE);
+
+    if(l_nodePool == NULL) {
+        return -1;
+    }
+
+    // Prepare entries [0, C_VMM_ENTRIES_PER_PAGE - 1]
+    for(int l_index = 0; l_index < (int)C_VMM_ENTRIES_PER_PAGE - 1; l_index++) {
+        l_nodePool[l_index].m_next = &l_nodePool[l_index + 1];
+    }
+
+    // Last entry points to the current entry pool
+    l_nodePool[C_VMM_ENTRIES_PER_PAGE - 1].m_next = p_context->m_mapEntryPool;
+    p_context->m_mapEntryPool = &l_nodePool[0];
+
+    return 0;
+}
+
+static struct ts_mmMemoryMapEntryListNode *vmmAllocateEntryPoolEntry(
+    struct ts_vmmContext *p_context
+) {
+    if(vmmEnsurePoolNotEmpty(p_context) != 0) {
+        return NULL;
+    }
+
+    struct ts_mmMemoryMapEntryListNode *l_entry = p_context->m_mapEntryPool;
+
+    p_context->m_mapEntryPool = l_entry->m_next;
+
+    return l_entry;
 }
 
 static void vmmFreeNode(

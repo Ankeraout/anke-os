@@ -50,8 +50,10 @@ obj/iso/kernel.elf: bin/kernel/kernel.elf
 obj/iso/modules/%: bin/modules/%
 	cp $< $@
 
-bin/modules/%.elf: modules/%/Makefile
+bin/modules/%.elf: modules/%/Makefile FORCE
 	$(MAKE) -C $(dir $<)
+
+FORCE:
 
 limine-bootloader/limine-deploy:
 	make -C limine-bootloader

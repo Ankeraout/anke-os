@@ -9,6 +9,7 @@
 #include "kernel/fs/ramfs.h"
 #include "kernel/fs/vfs.h"
 #include "kernel/mm/pmm.h"
+#include "kernel/mm/vmm.h"
 #include "kernel/module.h"
 #include "klibc/debug.h"
 #include "sys/stat.h"
@@ -102,6 +103,11 @@ static int kernelPreinit(const struct ts_kernelBootInfo *p_bootInfo) {
 
     if(pmmInit(p_bootInfo->memoryMap, p_bootInfo->memoryMapEntryCount) != 0) {
         kernelDebug("PMM initialization failed.\n");
+        return -1;
+    }
+
+    if(vmmInit() != 0) {
+        kernelDebug("VMM initialization failed.\n");
         return -1;
     }
 

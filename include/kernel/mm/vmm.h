@@ -92,4 +92,27 @@ int vmmUnmap(
     size_t p_size
 );
 
+/**
+ * @brief Gets the physical address that corresponds to the given virtual
+ * address.
+ * 
+ * @param[in] p_vptr The virtual address.
+ * 
+ * @returns The physical address that corresponds to the given virtual address.
+*/
+void *vmmGetPhysicalAddress(void *p_vptr);
+
+/**
+ * @brief Gets the physical address that corresponds to the given virtual
+ * address.
+ * 
+ * @param[in] p_context The VMM context.
+ * @param[in] p_vptr The virtual address.
+ * 
+ * @returns The physical address that corresponds to the given virtual address.
+*/
+void *vmmGetPhysicalAddress2(struct ts_vmmContext *p_context, void *p_vptr);
+
+struct ts_vmmContext *vmmGetKernelContext(void);
+
 #endif

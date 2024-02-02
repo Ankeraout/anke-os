@@ -7,6 +7,7 @@
 #include "kernel/boot.h"
 #include "klibc/debug.h"
 #include "limine.h"
+#include "kernel/mm/vmm.h"
 
 static struct limine_memmap_request s_memmapRequest = {
     .id = LIMINE_MEMMAP_REQUEST,
@@ -20,19 +21,24 @@ static struct limine_framebuffer_request s_framebufferRequest = {
     .response = NULL
 };
 
-static struct ts_kernelBootInfo l_kernelBootInfo;
+static struct ts_kernelBootInfo s_kernelBootInfo;
 
 static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo);
 static void initializeFramebuffer(struct ts_kernelBootInfo *p_bootInfo);
 static void panic(const char *p_message);
 
+static uint8_t s_kernelStack[16384];
+
 void _start(void) {
     kernelDebug("AnkeOS kernel - x86_64-limine bootstrap\n");
 
-    initializeMemoryMap(&l_kernelBootInfo);
-    initializeFramebuffer(&l_kernelBootInfo);
+    // Initialize stack
+    asm volatile("movq %0, %%rsp" :: "a"(&s_kernelStack[sizeof(s_kernelStack)]));
 
-    kernelMain(&l_kernelBootInfo);
+    initializeMemoryMap(&s_kernelBootInfo);
+    initializeFramebuffer(&s_kernelBootInfo);
+
+    kernelMain(&s_kernelBootInfo);
 
     panic("kernelMain() returned");
 
@@ -40,7 +46,7 @@ void _start(void) {
 }
 
 const struct ts_kernelBootInfo *kernelGetBootInfo(void) {
-    return &l_kernelBootInfo;
+    return &s_kernelBootInfo;
 }
 
 static void initializeMemoryMap(struct ts_kernelBootInfo *p_bootInfo) {
@@ -123,7 +129,8 @@ static void initializeFramebuffer(struct ts_kernelBootInfo *p_bootInfo) {
     struct limine_framebuffer *l_framebuffer =
         s_framebufferRequest.response->framebuffers[0];
 
-    p_bootInfo->m_framebufferInfo.m_address = l_framebuffer->address;
+    p_bootInfo->m_framebufferInfo.m_address = 
+        vmmGetPhysicalAddress(l_framebuffer->address);
     p_bootInfo->m_framebufferInfo.m_width = l_framebuffer->width;
     p_bootInfo->m_framebufferInfo.m_height = l_framebuffer->height;
     p_bootInfo->m_framebufferInfo.m_pitch = l_framebuffer->pitch;
