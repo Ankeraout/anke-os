@@ -4,6 +4,8 @@
 #include "kernel/arch/x86_64/idt.h"
 #include "kernel/arch/x86_64/inline.h"
 #include "kernel/arch/x86_64/pic.h"
+#include "kernel/drivers/bus/pci.h"
+#include "klibc/debug.h"
 
 int archPreinit(void) {
     gdtInit();
@@ -16,6 +18,11 @@ int archPreinit(void) {
 }
 
 int archInit(void) {
+    if(pciInit() != 0) {
+        kernelDebug("Warning: PCI initialization failed.\n");
+        // TODO: consequences?
+    }
+
     return 0;
 }
 

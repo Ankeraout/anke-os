@@ -24,8 +24,7 @@ static int kernelTest(void);
 static int kernelInitFileSystems(void);
 
 static const char *s_moduleList[] = {
-    "hello",
-    "pci"
+    "hello"
 };
 
 void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
