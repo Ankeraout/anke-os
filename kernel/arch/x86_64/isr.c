@@ -111,12 +111,12 @@ static void panic(const struct ts_isrRegisters *p_registers) {
 
     kernelDebug(
         "panic: CS=0x%04x DS=0x%04x ES=0x%04x FS=0x%04x GS=0x%04x SS=0x%04x\n",
-        p_registers->a_cs,
-        p_registers->a_ds,
-        p_registers->a_es,
-        p_registers->a_fs,
-        p_registers->a_gs,
-        p_registers->a_ss
+        p_registers->a_cs & 0xffff,
+        p_registers->a_ds & 0xffff,
+        p_registers->a_es & 0xffff,
+        p_registers->a_fs & 0xffff,
+        p_registers->a_gs & 0xffff,
+        p_registers->a_ss & 0xffff
     );
 
     kernelDebug("panic: System halted.\n");

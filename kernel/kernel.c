@@ -1,7 +1,7 @@
 #include <stdbool.h>
 
+#include "kernel/arch/arch.h"
 #include "kernel/arch/x86_64/inline.h"
-#include "kernel/arch.h"
 #include "kernel/boot.h"
 #include "kernel/device.h"
 #include "kernel/device/framebuffer.h"
@@ -28,11 +28,11 @@ static const char *s_moduleList[] = {
 };
 
 void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
-    int l_returnValue = archPreinit(p_bootInfo);
+    int l_returnValue = archPreInit(p_bootInfo);
 
     if(l_returnValue != 0) {
         kernelDebug(
-            "kernel: archPreinit() failed with code %d.\n",
+            "kernel: archPreInit() failed with code %d.\n",
             l_returnValue
         );
 
@@ -65,6 +65,17 @@ void kernelMain(const struct ts_kernelBootInfo *p_bootInfo) {
             l_returnValue
         );
         
+        return;
+    }
+
+    l_returnValue = archPostInit();
+
+    if(l_returnValue != 0) {
+        kernelDebug(
+            "kernel: archPostInit() failed with code %d.\n",
+            l_returnValue
+        );
+
         return;
     }
 
