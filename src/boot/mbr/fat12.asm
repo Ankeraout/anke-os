@@ -30,7 +30,10 @@ main:
     mov ax, 0x7c0
     mov ds, ax
     mov es, ax
-    mov sp, 0x0000
+
+    mov ax, 0x9000
+    mov ss, ax
+    mov sp, 0xf000
 
     jmp 0x7c0:next
 
@@ -69,12 +72,15 @@ next:
     ; Read the root directory in memory
     mov ax, [first_root_sector]
     mov cx, [root_directory_size_sectors]
-    mov bx, file_buffer
+    mov bx, root_directory_buffer
+
+    push es
     call read_sectors
+    pop es
 
     ; Search for the entry of the BOOT.BIN file
     mov cx, [bpb.root_directory_entries]
-    mov si, file_buffer
+    mov si, root_directory_buffer
 
 search_file_loop:
     mov di, file_name
@@ -111,11 +117,16 @@ file_found:
     mov ax, [bpb.reserved_sectors]
     mov bx, fat_buffer
     mov cx, [bpb.sectors_per_fat]
+
+    push es
     call read_sectors
+    pop es
 
 read_file:
     ; Read BOOT.BIN
-    mov bx, file_buffer
+    mov ax, 0x1000
+    mov es, ax
+    xor bx, bx
     
     read_file_loop:
         call read_cluster
@@ -126,7 +137,7 @@ read_file:
 
 execute_file:
     ; Jump to the loaded file.
-    jmp file_buffer
+    jmp 0x1000:0x0000
 
 ; Input:
 ; AX = LBA
@@ -143,11 +154,18 @@ read_sectors:
     int 0x13
     
     jc error_io
-    
+
+    mov cx, [bpb.bytes_per_sector]
+    shr cx, 1
+    shr cx, 1
+    shr cx, 1
+    shr cx, 1
+    mov ax, es
+    add ax, cx
+    mov es, ax
+
     pop cx
     pop ax
-
-    add bx, [bpb.bytes_per_sector]
     inc ax
 
     loop read_sectors
@@ -266,9 +284,8 @@ first_root_sector resw 1
 first_cluster_sector resw 1
 current_cluster resw 1
 
-; File buffer at 0x08000
-times 0x200-($-$$) resb 1   ; 0x7c00 + 0x200 (BSS section offset) + 0x200
-file_buffer resb 32768
+; Align
+times 0x20-($-$$) resb 1
 
-; FAT buffer
 fat_buffer resb 6144 ; FAT12's FAT is max. 12 sectors (= 6 KiB) long.
+root_directory_buffer:

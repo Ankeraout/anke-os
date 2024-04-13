@@ -3,10 +3,13 @@ org 0x0000
 cpu 8086
 
 _start:
-    mov ax, 0x800
+    mov ax, 0x1000
     mov ds, ax
     mov es, ax
-    jmp 0x800:main
+    mov ax, 0x8f00
+    mov ss, ax
+    xor sp, sp
+    jmp 0x1000:main
 
 main:
     mov si, msg_hello
