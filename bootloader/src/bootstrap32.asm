@@ -3,9 +3,9 @@ bits 32
 
 extern main64
 
-%include "boot/stage2/bootstrap32/gdt.inc"
-%include "boot/stage2/bootstrap32/paging.inc"
-%include "boot/stage2/bootstrap32/stdio.inc"
+%include "bootstrap32/gdt.inc"
+%include "bootstrap32/paging.inc"
+%include "bootstrap32/stdio.inc"
 
 global main32
 main32:

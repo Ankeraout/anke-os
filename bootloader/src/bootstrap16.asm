@@ -14,12 +14,12 @@ _start:
     xor sp, sp
     jmp 0x1000:main16
 
-%include "boot/stage2/bootstrap16/cpu.inc"
-%include "boot/stage2/bootstrap16/stdio.inc"
-%include "boot/stage2/bootstrap16/strings.inc"
-%include "boot/stage2/bootstrap16/a20.inc"
-%include "boot/stage2/bootstrap16/nmi.inc"
-%include "boot/stage2/bootstrap16/gdt.inc"
+%include "bootstrap16/cpu.inc"
+%include "bootstrap16/stdio.inc"
+%include "bootstrap16/strings.inc"
+%include "bootstrap16/a20.inc"
+%include "bootstrap16/nmi.inc"
+%include "bootstrap16/gdt.inc"
 
 main16:
     mov ax, str_announce
