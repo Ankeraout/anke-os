@@ -2,6 +2,7 @@ section .text
 bits 64
 
 extern main
+extern puts
 
 global main64
 main64:

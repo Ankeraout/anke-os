@@ -17,10 +17,6 @@ main32:
 
     call gdt_init
 
-    push str_gdt
-    call puts
-    add esp, 4
-
     ; Initialize paging structures
     call paging_init
 
@@ -53,5 +49,4 @@ main32:
     mov ss, ax
     jmp dword 0x0018:main64
 
-str_announce    db "32-bit bootstrap procedure started.", 13, 10, 0
-str_gdt         db "GDT loaded.", 13, 10, 0
+str_announce db "AnkeOS bootloader 0.1.0 (protected mode bootstrap)", 10, 0

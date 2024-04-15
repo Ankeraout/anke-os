@@ -61,7 +61,7 @@ putc:
     jz .cr
 
     cmp byte [ebp + 8], 10
-    jz .new_line
+    jz .lf
 
     mov eax, 80
     mul dword [console_cursor_y]
@@ -85,6 +85,9 @@ putc:
     call update_cursor
     pop ebp
     ret
+
+.lf:
+    mov dword [console_cursor_x], 0
 
 .new_line:
     inc dword [console_cursor_y]

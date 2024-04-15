@@ -12,6 +12,7 @@ CFLAGS := -W -Wall -Wextra
 CFLAGS += -std=gnu99 -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=small -march=x86-64 -m64
 CFLAGS += -Os
 CFLAGS += -Iinclude
+CFLAGS += -MMD -MP
 LD := $(CROSS_COMPILER)ld
 LDFLAGS := -T bootloader.ld
 OBJCOPY := $(CROSS_COMPILER)objcopy
@@ -24,6 +25,9 @@ SOURCES_C := $(shell find src -name '*.c')
 OBJECTS_ASM := $(SOURCES_ASM:src/%.asm=obj/%.asm.o)
 OBJECTS_C := $(SOURCES_C:src/%.c=obj/%.c.o)
 OBJECTS := $(OBJECTS_ASM) $(OBJECTS_C)
+
+# Dependencies
+DEPENDENCIES := $(OBJECTS:obj/%.o=obj/%.d)
 
 all: bin/bootloader.bin
 
@@ -44,7 +48,7 @@ obj/%.asm.o: src/%.asm
 		$(MKDIR) -p $(dir $@); \
 	fi
 	@echo ASM $@
-	@$(ASM) $(ASMFLAGS) $< -o $@
+	@$(ASM) $(ASMFLAGS) $< -o $@ -MD $(@:obj/%.o=obj/%.d)
 
 obj/%.c.o: src/%.c
 	@if [ ! -d $(dir $@) ]; then \
@@ -56,3 +60,5 @@ obj/%.c.o: src/%.c
 
 clean:
 	$(RM) -rf bin obj
+
+-include $(DEPENDENCIES)

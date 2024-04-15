@@ -27,22 +27,13 @@ main16:
     call puts
     add sp, 2
 
-    mov ax, str_bootstrap16
-    push ax
-    call puts
-    add sp, 2
-
-    call check_cpu
+    call cpu_check
     call a20_init
 
     test ax, ax
-    jnz .a20_error    
+    jnz .a20_error
 
-    mov ax, str_a20_ok
-    push ax
-    call puts
-    add sp, 2
-
+    ; Disable interrupts (including NMI)
     cli
     call nmi_disable
 
@@ -55,7 +46,7 @@ main16:
     or al, 1
     mov cr0, eax
     
-    ; Start executing 32-bit code
+    ; Reload segment registers and jump to main32 in 32-bit mode
     mov ax, 0x0010
     mov ds, ax
     mov es, ax
