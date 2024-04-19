@@ -47,7 +47,8 @@ void putc(int p_c) {
 
 void puts(const char *p_str) {
     while(*p_str != 0) {
-        putc(*p_str++);
+        //putc(*p_str++);
+        outb(0xe9, *p_str++);
     }
 }
 

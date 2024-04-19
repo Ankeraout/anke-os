@@ -20,6 +20,9 @@ _start:
 %include "bootstrap16/a20.inc"
 %include "bootstrap16/nmi.inc"
 %include "bootstrap16/gdt.inc"
+%include "bootstrap16/mmap.inc"
+%include "bootstrap16/sysinfo.inc"
+%include "bootstrap16/vbe.inc"
 
 main16:
     mov ax, str_announce
@@ -28,10 +31,16 @@ main16:
     add sp, 2
 
     call cpu_check
+
+cpu x64
     call a20_init
 
     test ax, ax
     jnz .a20_error
+
+    call vbe_init
+    call mmap_init
+    call sysinfo_init
 
     ; Disable interrupts (including NMI)
     cli
@@ -54,11 +63,13 @@ main16:
     mov gs, ax
     mov ss, ax
     mov esp, 0x9f000
+
+    mov ebx, 0x1000
+
     jmp dword 0x0008:main32
 
 .a20_error:
-    mov ax, str_a20_nok
-    push ax
+    push word str_a20_nok
     call puts
     add sp, 2
 

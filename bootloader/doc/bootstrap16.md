@@ -65,7 +65,7 @@ struct ts_bootloader_info {
     uint8_t m_bootVolumeId[4];
     uint8_t m_framebufferPresent; // 0 = false, 1 = true
     uint8_t m_vgaConsolePresent;  // 0 = false, 1 = true
-    uint8_t m_unused2[2];
+    uint8_t m_unused2[6];
     uint64_t m_framebufferAddress;
     uint64_t m_framebufferWidth;
     uint64_t m_framebufferHeight;

@@ -1,28 +1,28 @@
 paging_init:
-    ; PML4 at 0x1000
-    ; PDPT at 0x2000
-    ; PD at 0x3000
-    ; PT at 0x4000
+    ; PML4 at 0xc000
+    ; PDPT at 0xd000
+    ; PD at 0xe000
+    ; PT at 0xf000
 
     ; Zero out paging structures
     push edi
-    mov edi, 0x1000
+    mov edi, 0xc000
     mov ecx, 0x1000
     xor eax, eax
     repz stosd
     pop edi
 
     ; Initialize PML4 entry
-    mov dword [0x1000], 0x00002003
+    mov dword [0xc000], 0x0000d003
     
     ; Initialize PDPT entry
-    mov dword [0x2000], 0x00003003
+    mov dword [0xd000], 0x0000e003
 
     ; Initialize PD entry
-    mov dword [0x3000], 0x00004003
+    mov dword [0xe000], 0x0000f003
 
     ; Initialize PT entries
-    mov edx, 0x4000
+    mov edx, 0xf000
     mov eax, 0x00000003
     mov ecx, 512
 

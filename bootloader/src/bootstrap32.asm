@@ -5,16 +5,9 @@ extern main64
 
 %include "bootstrap32/gdt.inc"
 %include "bootstrap32/paging.inc"
-%include "bootstrap32/stdio.inc"
 
 global main32
 main32:
-    call stdio_init
-
-    push str_announce
-    call puts
-    add esp, 4
-
     call gdt_init
 
     ; Initialize paging structures
@@ -26,7 +19,7 @@ main32:
     mov cr4, eax
 
     ; Load CR3
-    mov eax, 0x1000
+    mov eax, 0xc000
     mov cr3, eax
 
     ; Enable long mode
@@ -48,5 +41,3 @@ main32:
     mov gs, ax
     mov ss, ax
     jmp dword 0x0018:main64
-
-str_announce db "AnkeOS bootloader 0.1.0 (protected mode bootstrap)", 10, 0
