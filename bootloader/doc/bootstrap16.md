@@ -28,8 +28,8 @@ Here is the memory map after bootstrap16 is done:
 **NOTE:** bootstrap16's memory can be reclaimed after its execution is done,
 including its stack.
 
-**NOTE:** Note that the system information structure may be placed anywhere in the
-unused area 
+**NOTE:** Note that the system information structure may be placed anywhere in
+the unused area 
 
 ## System memory map
 The system memory map is an array of 24 bytes-long entries.
