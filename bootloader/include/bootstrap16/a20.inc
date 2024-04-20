@@ -1,17 +1,26 @@
-a20_init:
+; int a20_enable(void)
+;
+; Summary:
+; Enables the A20 gate.
+;
+; Returns:
+; An integer that indicates the result of the operation:
+; - 0 on success,
+; - Any other value on error.
+a20_enable:
     push bp
     mov bp, sp
 
     ; If the A20 gate is already enabled, then we have nothing to do.
-    call a20_check
+    call a20_is_enabled
     test ax, ax
     jnz .success
 
     ; Try to enable the A20 gate with the BIOS.
-    call a20_init_bios
+    call a20_enable_bios
 
     ; Check if the A20 gate was enabled.
-    call a20_check
+    call a20_is_enabled
     test ax, ax
     jnz .success
 
@@ -25,17 +34,25 @@ a20_init:
     pop bp
     ret
 
-a20_init_bios:
-    push bp
-    mov bp, sp
-
+; void a20_enable_bios(void)
+;
+; Summary:
+; Tries to enable the A20 gate using a BIOS call.
+a20_enable_bios:
     mov ax, 0x2401
     int 0x15
-
-    pop bp
     ret
 
-a20_check:
+; int a20_is_enabled(void)
+;
+; Summary:
+; Checks if the A20 gate is enabled.
+;
+; Returns:
+; An integer that indicates whether the A20 gate is enabled:
+; - 0 if the A20 gate is disabled,
+; - Any other value if the A20 gate is enabled.
+a20_is_enabled:
     push bp
     mov bp, sp
 

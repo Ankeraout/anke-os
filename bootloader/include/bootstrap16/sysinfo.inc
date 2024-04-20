@@ -17,7 +17,7 @@ sysinfo_init:
     repz stosw
     
     mov byte [es:0x1000], 0x01          ; Boot protocol version 1
-    mov dword [es:0x1008], sysinfo_bootloaderName + 0x10000
+    mov dword [es:0x1008], str_bootloader_version + 0x10000
     mov word [es:0x1010], 0x2000        ; Memory map at 0x0000000000002000
     mov di, [es:0x2ff0]                 ; Memory map size (copy from 0x2ff0)
     mov [es:0x1018], di
@@ -30,8 +30,10 @@ sysinfo_init:
     pop bx
     pop di
     pop es
-
     pop bp
+
+    xor ax, ax
+
     ret
 
 sysinfo_pci:
@@ -134,5 +136,3 @@ sysinfo_bda:
     pop ds
 
     ret
-
-sysinfo_bootloaderName db "AnkeOS bootloader 0.1.0", 0

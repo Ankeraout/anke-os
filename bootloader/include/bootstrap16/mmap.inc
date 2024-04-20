@@ -50,6 +50,9 @@ mmap_init:
     pop di
     pop es
     pop bp
+
+    xor ax, ax
+
     ret
 
 cpu 8086
