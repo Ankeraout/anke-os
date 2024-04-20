@@ -36,8 +36,10 @@ SECTIONS {
     } : rodata
 
     .bss : AT (ADDR(.bss) - 0x00010000) {
+        __bss_start = .;
         *(COMMON)
         *(.bss)
+        __bss_end = .;
     } : data
 
     /DISCARD/ : {
