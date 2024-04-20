@@ -1,5 +1,5 @@
 bits 16
-org 0x0000
+org 0x7c00
 cpu 8086
 
 _start:
@@ -10,15 +10,13 @@ _start:
 %include "bpb_fat12_16.inc"
 
 main:
-    mov ax, 0x7c0
+    xor ax, ax
     mov ds, ax
     mov es, ax
-
-    mov ax, 0x9000
     mov ss, ax
-    mov sp, 0xf000
+    xor sp, sp
 
-    jmp 0x7c0:next
+    jmp 0x0000:next
 
 next:
     ; Save drive number
@@ -37,13 +35,8 @@ next:
     mov si, ax
 
     ; Compute the size of the root directory in sectors
-    mov ax, [bpb.root_directory_entries]
-    shl ax, 1
-    shl ax, 1
-    shl ax, 1
-    shl ax, 1
-    shl ax, 1
-    xor dx, dx
+    mov ax, 32
+    mul word [bpb.root_directory_entries]
     div word [bpb.bytes_per_sector]
     mov cx, ax
 
@@ -70,8 +63,8 @@ search_file_loop:
     repz cmpsb
     pop cx
     jz file_found
-    and si, 0xffe0
-    add si, 32
+    or si, 0x001f
+    inc si
     loop search_file_loop
 
 file_not_found:
