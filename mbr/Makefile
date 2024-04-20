@@ -6,7 +6,7 @@ MKDIR ?= mkdir
 
 # Toolchain configuration
 ASM := nasm
-ASMFLAGS := -f bin
+ASMFLAGS := -f bin -Iinc
 
 # Sources
 SOURCES_ASM := $(shell find src -name '*.asm')

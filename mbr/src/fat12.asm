@@ -6,25 +6,8 @@ _start:
     jmp main
     nop
 
-bpb.oem_identifier          times 8 db 0x00
-bpb.bytes_per_sector        dw 0
-bpb.sectors_per_cluster     db 0
-bpb.reserved_sectors        dw 0
-bpb.fat_count               db 0
-bpb.root_directory_entries  dw 0
-bpb.total_sectors_16        dw 0
-bpb.media_descriptor_type   db 0
-bpb.sectors_per_fat         dw 0
-bpb.sectors_per_track       dw 0
-bpb.heads                   dw 0
-bpb.hidden_sectors          dd 0
-bpb.total_sectors_32        dd 0
-bpb.drive_number            db 0
-bpb.flags                   db 0
-bpb.signature               db 0
-bpb.volume_id               times 4 db 0
-bpb.volume_label            times 11 db 0
-bpb.system_identifier       times 8 db 0
+%include "bpb_fat.inc"
+%include "bpb_fat12_16.inc"
 
 main:
     mov ax, 0x7c0
@@ -50,9 +33,8 @@ next:
     mov al, [bpb.fat_count]
     xor ah, ah
     mul word [bpb.sectors_per_fat]
-    mov [fat_size_sectors], ax
     add ax, [bpb.reserved_sectors]
-    mov [first_root_sector], ax
+    mov si, ax
 
     ; Compute the size of the root directory in sectors
     mov ax, [bpb.root_directory_entries]
@@ -63,15 +45,14 @@ next:
     shl ax, 1
     xor dx, dx
     div word [bpb.bytes_per_sector]
-    mov [root_directory_size_sectors], ax
+    mov cx, ax
 
     ; Compute the LBA of cluster 2 (the first cluster)
-    add ax, [first_root_sector]
+    add ax, si
     mov [first_cluster_sector], ax
 
     ; Read the root directory in memory
-    mov ax, [first_root_sector]
-    mov cx, [root_directory_size_sectors]
+    mov ax, si
     mov bx, root_directory_buffer
 
     push es
@@ -140,65 +121,6 @@ execute_file:
     jmp 0x1000:0x0000
 
 ; Input:
-; AX = LBA
-; ES:BX = buffer
-; CX = number of sectors to read (must be > 0)
-read_sectors:
-    push ax
-    push cx
-    
-    call lba_to_chs
-    
-    mov dl, [bpb.drive_number]
-    mov ax, 0x0201
-    int 0x13
-    
-    jc error_io
-
-    mov cx, [bpb.bytes_per_sector]
-    shr cx, 1
-    shr cx, 1
-    shr cx, 1
-    shr cx, 1
-    mov ax, es
-    add ax, cx
-    mov es, ax
-
-    pop cx
-    pop ax
-    inc ax
-
-    loop read_sectors
-
-    ret
-
-; Input:
-; AX = LBA
-;
-; Output:
-; CH = cylinder[0, 7]
-; CL[0, 5] = sector
-; CL[6, 7] = cylinder[8, 9]
-; DH = head
-lba_to_chs:
-    xor dx, dx                          ; DX = 0
-    div word [bpb.sectors_per_track]    ; tmp = lba / bpb.sectors_per_track
-    mov cx, dx                          ; sector = lba % bpb.sectors_per_track
-    inc cx                              ; sector += 1
-    xor dx, dx                          ; DX = 0
-    div word [bpb.heads]                ; cylinder = tmp / bpb.heads
-                                        ; head = tmp % bpb.heads
-    
-    mov dh, dl                          ; DH = head
-    mov ch, al                          ; CH = cylinder & 0xff
-    shr ax, 1
-    shr ax, 1
-    and ax, 0xc0
-    or cl, al                           ; CL = sector | (cylinder >> 2) & 0xc0
-    
-    ret
-
-; Input:
 ; - [current_cluster]: current cluster number
 ;
 ; Output:
@@ -253,21 +175,9 @@ error_io:
     call puts
     jmp $
 
-; Input:
-; SI = message
-puts:
-    lodsb
-    test al, al
-    jz puts_ret
-
-    mov ah, 0x0e
-    xor bx, bx
-    int 0x10
-
-    jmp puts
-
-    puts_ret:
-        ret
+%include "lba_chs.inc"
+%include "puts.inc"
+%include "read_sectors.inc"
 
 file_name           db "BOOT    BIN"
 msg_error_io        db "Failed to load /BOOT.BIN.", 13, 10, 0
@@ -278,9 +188,6 @@ dw 0xaa55
 
 ; Variables start here
 section .bss
-fat_size_sectors resw 1
-root_directory_size_sectors resw 1
-first_root_sector resw 1
 first_cluster_sector resw 1
 current_cluster resw 1
 
