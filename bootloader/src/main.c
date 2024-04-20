@@ -2,11 +2,10 @@
 
 #include "asm.h"
 #include "stdio.h"
+#include "sysinfo.h"
 
-int main() {
-    stdio_init();
-
-    puts("AnkeOS bootloader 0.1.0 (long mode bootstrap)\n");
+int main(struct ts_systemInformation *p_systemInformation) {
+    printf("%s\n", (const char *)p_systemInformation->m_bootloaderName);
 
     while(1) {
         cli();
