@@ -2,6 +2,8 @@ bits 16
 org 0x7c00
 cpu 8086
 
+%define C_MAX_FILE_SIZE 524288
+
 _start:
     jmp main
     nop
@@ -72,17 +74,14 @@ file_not_found:
 
 file_found:
     ; Check file size
-    mov ax, [si + 19]
-    test ax, ax
+    cmp word [si + 19], C_MAX_FILE_SIZE >> 16
+    ja error_io
+    jnae .size_ok
+
+    cmp word [si + 17], C_MAX_FILE_SIZE & 0xffff
     jnz error_io
 
-    mov ax, [si + 17]
-    test ax, ax
-    jz error_io
-
-    cmp ax, 32768
-    ja error_io
-
+.size_ok:
     ; Save file cluster
     mov ax, [si + 15]
     mov [current_cluster], ax
