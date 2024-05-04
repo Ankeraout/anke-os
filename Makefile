@@ -13,7 +13,7 @@ KERNEL_CFLAGS := \
 	-std=gnu99 -pedantic-errors \
 	-g3 -O0 \
 	-ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64 \
-	-I../include -I../limine-bootloader
+	-Iinclude -Ilimine-bootloader
 
 KERNEL_LDFLAGS := \
 	-nostdlib -static -m elf_x86_64 \
