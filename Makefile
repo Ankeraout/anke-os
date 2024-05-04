@@ -1,3 +1,4 @@
+KERNEL_ASM := nasm
 KERNEL_CC := x86_64-elf-gcc
 KERNEL_LD := x86_64-elf-ld
 RM := rm -rf
@@ -6,6 +7,7 @@ XORRISO := xorriso
 CP := cp
 
 KERNEL_LIBS := 
+KERNEL_ASMFLAGS := -f elf64
 KERNEL_CFLAGS := \
 	-c \
 	-MMD -MP \
@@ -14,7 +16,6 @@ KERNEL_CFLAGS := \
 	-g3 -O0 \
 	-ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64 \
 	-Iinclude -Ilimine-bootloader
-
 KERNEL_LDFLAGS := \
 	-nostdlib -static -m elf_x86_64 \
 	-z max-page-size=0x1000 \
@@ -22,8 +23,13 @@ KERNEL_LDFLAGS := \
 	$(KERNEL_LIBS:%=-l%)
 
 KERNEL_SOURCES_C := $(shell find src/kernel -name '*.c')
-KERNEL_OBJECTS := $(KERNEL_SOURCES_C:src/kernel/%.c=obj/kernel/%.c.o)
-KERNEL_DEPENDENCIES := $(KERNEL_OBJECTS:obj/kernel/%.c.o=obj/kernel/%.c.d)
+KERNEL_SOURCES_ASM := $(shell find src/kernel -name '*.asm')
+KERNEL_OBJECTS_C := $(KERNEL_SOURCES_C:src/kernel/%.c=obj/kernel/%.c.o)
+KERNEL_OBJECTS_ASM := $(KERNEL_SOURCES_ASM:src/kernel/%.asm=obj/kernel/%.asm.o)
+KERNEL_OBJECTS := $(KERNEL_OBJECTS_C) $(KERNEL_OBJECTS_ASM)
+KERNEL_DEPENDENCIES_C := $(KERNEL_OBJECTS_C:obj/kernel/%.c.o=obj/kernel/%.c.d)
+KERNEL_DEPENDENCIES_ASM := $(KERNEL_OBJECTS_ASM:obj/kernel/%.asm.o=obj/kernel/%.asm.d)
+KERNEL_DEPENDENCIES := $(KERNEL_DEPENDENCIES_C) $(KERNEL_DEPENDENCIES_ASM)
 
 all: bin/anke-os.iso
 
@@ -69,6 +75,12 @@ obj/kernel/%.c.o: src/kernel/%.c
 		$(MKDIR) $(dir $@); \
 	fi
 	$(KERNEL_CC) $< -o $@ $(KERNEL_CFLAGS)
+
+obj/kernel/%.asm.o: src/kernel/%.asm
+	if [ ! -d $(dir $@) ]; then \
+		$(MKDIR) $(dir $@); \
+	fi
+	$(KERNEL_ASM) $(KERNEL_ASMFLAGS) $< -o $@ -MD $(@:obj/kernel/%.asm.o=obj/kernel/%.asm.d)
 
 clean:
 	$(RM) obj bin
