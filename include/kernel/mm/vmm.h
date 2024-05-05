@@ -92,4 +92,11 @@ int vmmUnmap(
     size_t p_size
 );
 
+/**
+ * @brief Returns the kernel VMM context.
+ * 
+ * @returns The kernel VMM context.
+*/
+struct ts_vmmContext *vmmGetKernelContext(void);
+
 #endif

@@ -325,6 +325,10 @@ int vmmUnmap(
     return 0;
 }
 
+struct ts_vmmContext *vmmGetKernelContext(void) {
+    return &s_vmmKernelContext;
+}
+
 static int vmmInitKernelContext(void) {
     s_vmmKernelContext.m_mapEntryPool = NULL;
 
