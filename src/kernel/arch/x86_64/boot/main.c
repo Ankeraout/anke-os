@@ -1,9 +1,11 @@
 #include "kernel/printk.h"
 #include "kernel/mm/pmm.h"
 
+#include "kernel/arch/x86_64/asm.h"
 #include "kernel/arch/x86_64/gdt.h"
 #include "kernel/arch/x86_64/idt.h"
 #include "kernel/arch/x86_64/isr.h"
+#include "kernel/arch/x86_64/pic.h"
 #include "kernel/mm/pmm.h"
 #include "kernel/mm/vmm.h"
 #include "kernel/panic.h"
@@ -14,14 +16,17 @@ void main(void) {
     gdtInit();
     isrInit();
     idtInit();
+    picInit();
 
     if(vmmInit() != 0) {
-        panic("VMM initialization failed.\n");
+        panic("kernel: VMM initialization failed.\n");
     }
 
     pr_info("kernel: Initialization complete.\n");
 
+    sti();
+
     while(1) {
-        asm("hlt");
+        hlt();
     }
 }

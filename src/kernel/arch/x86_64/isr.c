@@ -3,6 +3,7 @@
 
 #include "kernel/arch/x86_64/asm.h"
 #include "kernel/arch/x86_64/isr.h"
+#include "kernel/arch/x86_64/pic.h"
 #include "kernel/printk.h"
 #include "kernel/string.h"
 
@@ -47,7 +48,7 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
                 l_handler(p_registers, l_handlerArg);
             }
 
-            // TODO: send EOI
+            picEndOfInterrupt(p_registers->a_interruptNumber - 32);
         } else {
             printk(
                 "panic: Unhandled interrupt %d\n",

@@ -113,14 +113,14 @@ static void idtInitEntry(
     uintptr_t l_handler = (uintptr_t)p_handler;
 
     p_entry->m_offset_0_15 = l_handler;
-    p_entry->m_offset_16_31 = l_handler >> 16;
-    p_entry->m_offset_32_63 = l_handler >> 32;
+    p_entry->m_offset_16_31 = l_handler >> 16UL;
+    p_entry->m_offset_32_63 = l_handler >> 32UL;
     p_entry->m_segment = p_segmentSelector;
     p_entry->m_ist = p_interruptStackTable;
     p_entry->m_gateType = p_gateType;
     p_entry->m_dpl = p_dpl;
-    p_entry->m_present = p_present ? 1 : 0;
-    p_entry->m_reserved_0 = 0;
-    p_entry->m_reserved_1 = 0;
-    p_entry->m_zero = 0;
+    p_entry->m_present = p_present ? 1UL : 0UL;
+    p_entry->m_reserved_0 = 0UL;
+    p_entry->m_reserved_1 = 0UL;
+    p_entry->m_zero = 0UL;
 }
