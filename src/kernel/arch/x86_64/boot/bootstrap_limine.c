@@ -1,5 +1,6 @@
 #include <stddef.h>
 
+#include "kernel/arch/x86_64/stack.h"
 #include "kernel/mm/mm.h"
 #include "kernel/mm/pmm.h"
 #include "kernel/mm/vmm.h"
@@ -8,7 +9,6 @@
 #include "limine.h"
 
 #define C_MMAP_MAX_ENTRIES 256
-#define C_KERNEL_STACK_SIZE 65536
 
 extern void main(void);
 

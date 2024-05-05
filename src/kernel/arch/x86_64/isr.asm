@@ -102,6 +102,13 @@ isrCommon:
     mov ax, gs
     push rax
 
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
     mov rdi, rsp ; isrHandler argument: struct ts_isrRegisters *p_registers
 
     cld ; SysV x86_64 calling convention: direction flag must be clear
