@@ -57,8 +57,8 @@ static inline void iowait(void) {
 
 static inline void lidt(void *p_base, uint16_t p_size) {
     struct {
-        uint16_t a_size;
-        void *a_base;
+        uint16_t m_size;
+        void *m_base;
     } __attribute__((packed)) l_idtr = {p_size, p_base};
 
     asm("lidt %0" :: "m"(l_idtr));
@@ -66,8 +66,8 @@ static inline void lidt(void *p_base, uint16_t p_size) {
 
 static inline void lgdt(void *p_base, uint16_t p_size) {
     struct {
-        uint16_t a_size;
-        void *a_base;
+        uint16_t m_size;
+        void *m_base;
     } __attribute__((packed)) l_gdtr = {p_size, p_base};
 
     asm("lgdt %0" :: "m"(l_gdtr));

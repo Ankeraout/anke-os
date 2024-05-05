@@ -13,18 +13,18 @@ enum te_parserState {
 };
 
 struct ts_vsprintfContext {
-    char *a_buffer;
-    size_t a_index;
-    bool a_flagPrefix;
-    bool a_flagPadZero;
-    bool a_flagMinimumLength;
-    bool a_flagMaximumLength;
-    bool a_flagLong;
-    int a_minimumLength;
-    int a_maximumLength;
-    enum te_parserState a_state;
-    size_t a_sizeLimit;
-    bool a_sizeLimitEnabled;
+    char *m_buffer;
+    size_t m_index;
+    bool m_flagPrefix;
+    bool m_flagPadZero;
+    bool m_flagMinimumLength;
+    bool m_flagMaximumLength;
+    bool m_flagLong;
+    int m_minimumLength;
+    int m_maximumLength;
+    enum te_parserState m_state;
+    size_t m_sizeLimit;
+    bool m_sizeLimitEnabled;
 };
 
 static int vsprintf_generic(
@@ -79,9 +79,9 @@ int vsnprintf(
 
     memset(&l_context, 0, sizeof(l_context));
 
-    l_context.a_buffer = p_buffer;
-    l_context.a_sizeLimit = p_size - 1;
-    l_context.a_sizeLimitEnabled = true;
+    l_context.m_buffer = p_buffer;
+    l_context.m_sizeLimit = p_size - 1;
+    l_context.m_sizeLimitEnabled = true;
 
     return vsprintf_generic(p_format, p_args, &l_context);
 }
@@ -91,7 +91,7 @@ int vsprintf(char *p_buffer, const char *p_format, va_list p_args) {
 
     memset(&l_context, 0, sizeof(l_context));
 
-    l_context.a_buffer = p_buffer;
+    l_context.m_buffer = p_buffer;
 
     return vsprintf_generic(p_format, p_args, &l_context);
 }
@@ -106,17 +106,17 @@ static int vsprintf_generic(
     while(p_format[l_index] != '\0') {
         char l_character = p_format[l_index++];
 
-        switch(p_context->a_state) {
+        switch(p_context->m_state) {
             case E_PARSERSTATE_START:
                 if(l_character == '%') {
-                    p_context->a_flagPrefix = false;
-                    p_context->a_flagPadZero = false;
-                    p_context->a_flagMinimumLength = false;
-                    p_context->a_flagMaximumLength = false;
-                    p_context->a_flagLong = false;
-                    p_context->a_minimumLength = 0;
-                    p_context->a_maximumLength = 0;
-                    p_context->a_state = E_PARSERSTATE_ESCAPE;
+                    p_context->m_flagPrefix = false;
+                    p_context->m_flagPadZero = false;
+                    p_context->m_flagMinimumLength = false;
+                    p_context->m_flagMaximumLength = false;
+                    p_context->m_flagLong = false;
+                    p_context->m_minimumLength = 0;
+                    p_context->m_maximumLength = 0;
+                    p_context->m_state = E_PARSERSTATE_ESCAPE;
                 } else {
                     vsprintf_generic_out(p_context, l_character);
                 }
@@ -125,17 +125,17 @@ static int vsprintf_generic(
 
             case E_PARSERSTATE_ESCAPE:
                 if(l_character == '0') {
-                    p_context->a_flagPadZero = true;
+                    p_context->m_flagPadZero = true;
                 } else if(l_character == '#') {
-                    p_context->a_flagPrefix = true;
+                    p_context->m_flagPrefix = true;
                 } else if((l_character >= '1') && (l_character <= '9')) {
-                    p_context->a_flagMinimumLength = true;
-                    p_context->a_minimumLength = l_character - '0';
-                    p_context->a_state = E_PARSERSTATE_MINLEN;
+                    p_context->m_flagMinimumLength = true;
+                    p_context->m_minimumLength = l_character - '0';
+                    p_context->m_state = E_PARSERSTATE_MINLEN;
                 } else if(l_character == '.') {
-                    p_context->a_flagMaximumLength = true;
-                    p_context->a_maximumLength = 0;
-                    p_context->a_state = E_PARSERSTATE_MAXLEN;
+                    p_context->m_flagMaximumLength = true;
+                    p_context->m_maximumLength = 0;
+                    p_context->m_state = E_PARSERSTATE_MAXLEN;
                 } else {
                     vsprintf_generic_checkAction(p_context, l_character, p_args);
                 }
@@ -144,12 +144,12 @@ static int vsprintf_generic(
 
             case E_PARSERSTATE_MINLEN:
                 if((l_character >= '0') && (l_character <= '9')) {
-                    p_context->a_minimumLength *= 10;
-                    p_context->a_minimumLength += l_character - '0';
+                    p_context->m_minimumLength *= 10;
+                    p_context->m_minimumLength += l_character - '0';
                 } else if(l_character == '.') {
-                    p_context->a_flagMaximumLength = true;
-                    p_context->a_maximumLength = 0;
-                    p_context->a_state = E_PARSERSTATE_MAXLEN;
+                    p_context->m_flagMaximumLength = true;
+                    p_context->m_maximumLength = 0;
+                    p_context->m_state = E_PARSERSTATE_MAXLEN;
                 } else {
                     vsprintf_generic_checkAction(p_context, l_character, p_args);
                 }
@@ -158,8 +158,8 @@ static int vsprintf_generic(
 
             case E_PARSERSTATE_MAXLEN:
                 if((l_character >= '0') && (l_character <= '9')) {
-                    p_context->a_maximumLength *= 10;
-                    p_context->a_maximumLength += l_character - '0';
+                    p_context->m_maximumLength *= 10;
+                    p_context->m_maximumLength += l_character - '0';
                 } else {
                     vsprintf_generic_checkAction(p_context, l_character, p_args);
                 }
@@ -171,14 +171,14 @@ static int vsprintf_generic(
                 break;
 
             default:
-                p_context->a_state = E_PARSERSTATE_START;
+                p_context->m_state = E_PARSERSTATE_START;
                 break;
         }
     }
 
-    p_context->a_buffer[p_context->a_index] = '\0';
+    p_context->m_buffer[p_context->m_index] = '\0';
 
-    return (int)p_context->a_index;
+    return (int)p_context->m_index;
 }
 
 static void vsprintf_generic_checkAction(
@@ -191,14 +191,14 @@ static void vsprintf_generic_checkAction(
     } else if(p_character == 'c') {
         char l_character = va_arg(p_argList, int);
         vsprintf_generic_out(p_context, l_character);
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else if(p_character == 'd') {
         char l_buffer[32];
         int l_index = 32;
         int l_length = 0;
         long l_value = va_arg(p_argList, long);
 
-        if(!p_context->a_flagLong) {
+        if(!p_context->m_flagLong) {
             l_value = (int)l_value;
         }
 
@@ -207,7 +207,7 @@ static void vsprintf_generic_checkAction(
         if(l_negative) {
             vsprintf_generic_out(p_context, '-');
             l_value = -l_value;
-            p_context->a_minimumLength--;
+            p_context->m_minimumLength--;
         }
 
         do {
@@ -216,16 +216,16 @@ static void vsprintf_generic_checkAction(
             l_length++;
         } while(l_value != 0);
 
-        if(p_context->a_flagMinimumLength) {
+        if(p_context->m_flagMinimumLength) {
             char l_filler;
 
-            if(p_context->a_flagPadZero) {
+            if(p_context->m_flagPadZero) {
                 l_filler = '0';
             } else {
                 l_filler = ' ';
             }
 
-            while(l_length < p_context->a_minimumLength) {
+            while(l_length < p_context->m_minimumLength) {
                 l_buffer[--l_index] = l_filler;
                 l_length++;
             }
@@ -236,17 +236,17 @@ static void vsprintf_generic_checkAction(
             l_length--;
         }
 
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else if(p_character == 'l') {
-        p_context->a_flagLong = true;
-        p_context->a_state = E_PARSERSTATE_ACTION_L;
+        p_context->m_flagLong = true;
+        p_context->m_state = E_PARSERSTATE_ACTION_L;
     } else if(p_character == 'p') {
         uintptr_t l_value = va_arg(p_argList, uintptr_t);
 
         vsprintf_generic_out(p_context, '0');
         vsprintf_generic_out(p_context, 'x');
 
-        p_context->a_minimumLength -= 2;
+        p_context->m_minimumLength -= 2;
 
         char l_buffer[32];
         int l_index = 32;
@@ -258,16 +258,16 @@ static void vsprintf_generic_checkAction(
             l_length++;
         } while(l_value != 0);
 
-        if(p_context->a_flagMinimumLength) {
+        if(p_context->m_flagMinimumLength) {
             char l_filler;
 
-            if(p_context->a_flagPadZero) {
+            if(p_context->m_flagPadZero) {
                 l_filler = '0';
             } else {
                 l_filler = ' ';
             }
 
-            while(l_length < p_context->a_minimumLength) {
+            while(l_length < p_context->m_minimumLength) {
                 l_buffer[--l_index] = l_filler;
                 l_length++;
             }
@@ -278,7 +278,7 @@ static void vsprintf_generic_checkAction(
             l_length--;
         }
 
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else if(p_character == 's') {
         const char *l_value = va_arg(p_argList, const char *);
 
@@ -287,21 +287,21 @@ static void vsprintf_generic_checkAction(
         while(
             (l_value[l_index] != '\0')
             && (
-                (!p_context->a_flagMaximumLength)
-                || (l_index < p_context->a_maximumLength)
+                (!p_context->m_flagMaximumLength)
+                || (l_index < p_context->m_maximumLength)
             )
         ) {
             vsprintf_generic_out(p_context, l_value[l_index++]);
         }
 
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else if(p_character == 'u') {
         char l_buffer[32];
         int l_index = 32;
         int l_length = 0;
         unsigned long l_value = va_arg(p_argList, unsigned long);
 
-        if(!p_context->a_flagLong) {
+        if(!p_context->m_flagLong) {
             l_value = (unsigned int)l_value;
         }
 
@@ -311,16 +311,16 @@ static void vsprintf_generic_checkAction(
             l_length++;
         } while(l_value != 0);
 
-        if(p_context->a_flagMinimumLength) {
+        if(p_context->m_flagMinimumLength) {
             char l_filler;
 
-            if(p_context->a_flagPadZero) {
+            if(p_context->m_flagPadZero) {
                 l_filler = '0';
             } else {
                 l_filler = ' ';
             }
 
-            while(l_length < p_context->a_minimumLength) {
+            while(l_length < p_context->m_minimumLength) {
                 l_buffer[--l_index] = l_filler;
                 l_length++;
             }
@@ -331,22 +331,22 @@ static void vsprintf_generic_checkAction(
             l_length--;
         }
 
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else if(p_character == 'x') {
         char l_buffer[32];
         int l_index = 32;
         int l_length = 0;
         unsigned long l_value = va_arg(p_argList, unsigned long);
 
-        if(!p_context->a_flagLong) {
+        if(!p_context->m_flagLong) {
             l_value = (unsigned int)l_value;
         }
 
-        if(p_context->a_flagPrefix) {
+        if(p_context->m_flagPrefix) {
             vsprintf_generic_out(p_context, '0');
             vsprintf_generic_out(p_context, 'x');
 
-            p_context->a_minimumLength -= 2;
+            p_context->m_minimumLength -= 2;
         }
 
         do {
@@ -355,16 +355,16 @@ static void vsprintf_generic_checkAction(
             l_length++;
         } while(l_value != 0);
 
-        if(p_context->a_flagMinimumLength) {
+        if(p_context->m_flagMinimumLength) {
             char l_filler;
 
-            if(p_context->a_flagPadZero) {
+            if(p_context->m_flagPadZero) {
                 l_filler = '0';
             } else {
                 l_filler = ' ';
             }
 
-            while(l_length < p_context->a_minimumLength) {
+            while(l_length < p_context->m_minimumLength) {
                 l_buffer[--l_index] = l_filler;
                 l_length++;
             }
@@ -375,9 +375,9 @@ static void vsprintf_generic_checkAction(
             l_length--;
         }
 
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     } else {
-        p_context->a_state = E_PARSERSTATE_START;
+        p_context->m_state = E_PARSERSTATE_START;
     }
 }
 
@@ -386,9 +386,9 @@ static void vsprintf_generic_out(
     char p_character
 ) {
     if(
-        (!p_context->a_sizeLimitEnabled)
-        || (p_context->a_index < p_context->a_sizeLimit)
+        (!p_context->m_sizeLimitEnabled)
+        || (p_context->m_index < p_context->m_sizeLimit)
     ) {
-        p_context->a_buffer[p_context->a_index++] = p_character;
+        p_context->m_buffer[p_context->m_index++] = p_character;
     }
 }
