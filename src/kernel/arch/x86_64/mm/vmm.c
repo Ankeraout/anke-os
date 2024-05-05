@@ -62,6 +62,12 @@ int vmmInit(void) {
         l_entryValue += 0x0000000040000000;
     }
 
+    // 2.3. Set the PML4 entry
+    ((uint64_t *)s_vmmKernelContext.m_pagingContext)[0] =
+        (uint64_t)l_identityPdpt
+        | C_VMM_PAGING_FLAG_READ_WRITE
+        | C_VMM_PAGING_FLAG_PRESENT;
+
     // 3. Map kernel to 0xffffffff80000000
     // 3.1. Create the PDPT
     uint64_t *l_kernelPdpt = pmmAlloc(C_MM_PAGE_SIZE);

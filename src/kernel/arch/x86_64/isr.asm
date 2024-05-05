@@ -77,13 +77,6 @@ M_DEFINE_IRQ 47
 
 isrCommon:
     ; Save all registers
-    push rbx
-    push rbp
-    push r12
-    push r13
-    push r14
-    push r15
-
     push rax
     push rcx
     push rdx
@@ -126,13 +119,6 @@ isrCommon:
     pop rdx
     pop rcx
     pop rax
-
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
 
     add rsp, 16 ; Pop interrupt number and error code
 
