@@ -66,5 +66,6 @@ void isrIrq44(void);
 void isrIrq45(void);
 void isrIrq46(void);
 void isrIrq47(void);
+void isrSyscall(void);
 
 #endif

@@ -96,6 +96,8 @@ void idtInit(void) {
     idtInitEntry(&s_idt[46], isrIrq46, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
     idtInitEntry(&s_idt[47], isrIrq47, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
 
+    idtInitEntry(&s_idt[0x80], isrSyscall, 0x0008, 0, E_IDT_GATETYPE_INT64, 3, true);
+
     lidt(s_idt, sizeof(s_idt) - 1);
 
     printk("idt: IDT loaded.\n");

@@ -107,7 +107,7 @@ int vmmInit(void) {
             (void *)0xffffffff80000000,
             l_kernelPhysicalAddress,
             (uintptr_t)&__kernelEnd - (uintptr_t)&__kernelStart,
-            C_VMM_PROT_KERNEL | C_VMM_PROT_READ_WRITE | C_VMM_PROT_EXEC
+            C_VMM_PROT_KERNEL | C_VMM_PROT_READ_WRITE | C_VMM_PROT_EXEC | C_VMM_PROT_USER
         ) != 0
     ) {
         return -1;

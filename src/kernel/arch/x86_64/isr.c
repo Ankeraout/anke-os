@@ -46,17 +46,21 @@ void isrHandler(struct ts_isrRegisters *p_registers) {
         } else if(p_registers->a_interruptNumber < 48) {
             if(l_handler != NULL) {
                 l_handler(p_registers, l_handlerArg);
+            } else {
+                pr_info("isr: Unhandled interrupt %lu\n", p_registers->a_interruptNumber);
             }
 
             picEndOfInterrupt(p_registers->a_interruptNumber - 32);
         } else {
             printk(
-                "panic: Unhandled interrupt %d\n",
+                "panic: Unhandled interrupt %lu\n",
                 p_registers->a_interruptNumber
             );
 
             panic(p_registers);
         }
+    } else if(p_registers->a_interruptNumber == 0x80) {
+        pr_info("Syscall!\n");
     } else {
         printk(
             "panic: Unhandled interrupt %d\n",

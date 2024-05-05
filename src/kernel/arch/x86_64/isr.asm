@@ -75,6 +75,11 @@ M_DEFINE_IRQ 45
 M_DEFINE_IRQ 46
 M_DEFINE_IRQ 47
 
+global isrSyscall
+isrSyscall:
+    push qword 0x00 ; No error code
+    push qword 0x80 ; Interrupt number
+
 isrCommon:
     ; Save all registers
     push rbx
@@ -101,6 +106,13 @@ isrCommon:
     push rax
     mov ax, gs
     push rax
+
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
 
     mov rdi, rsp ; isrHandler argument: struct ts_isrRegisters *p_registers
 
