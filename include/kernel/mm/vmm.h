@@ -99,4 +99,11 @@ int vmmUnmap(
 */
 struct ts_vmmContext *vmmGetKernelContext(void);
 
+void *vmmGetPhysicalAddress(void *p_vptr);
+
+void *vmmGetPhysicalAddress2(
+    struct ts_vmmContext *p_context,
+    void *p_vptr
+);
+
 #endif

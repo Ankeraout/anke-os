@@ -26,10 +26,6 @@ static int vmmRefillContextEntryPool(struct ts_vmmContext *p_context);
 static struct ts_mmMemoryMapEntryListNode *vmmAllocateEntryPoolEntry(
     struct ts_vmmContext *p_context
 );
-static void *vmmGetPhysicalAddress(
-    struct ts_vmmContext *p_context,
-    void *p_vptr
-);
 static void vmmFreeNode(
     void *p_context,
     struct ts_mmMemoryMapEntryListNode *p_node
@@ -95,7 +91,7 @@ int vmmInit(void) {
     };
 
     void *l_kernelPhysicalAddress =
-        vmmGetPhysicalAddress(
+        vmmGetPhysicalAddress2(
             &l_temporaryKernelContext,
             (void *)0xffffffff80000000
         );
@@ -329,6 +325,65 @@ struct ts_vmmContext *vmmGetKernelContext(void) {
     return &s_vmmKernelContext;
 }
 
+void *vmmGetPhysicalAddress(void *p_vptr) {
+    struct ts_vmmContext l_context = {
+        .m_pagingContext = readCr3()
+    };
+
+    return vmmGetPhysicalAddress2(&l_context, p_vptr);
+}
+
+void *vmmGetPhysicalAddress2(
+    struct ts_vmmContext *p_context,
+    void *p_vptr
+) {
+    uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
+    int l_pml4Index = ((uintptr_t)p_vptr >> 39UL) & 0x1ff;
+
+    if((l_pml4[l_pml4Index] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        return NULL;
+    }
+
+    uint64_t *l_pdpt = (uint64_t *)(l_pml4[l_pml4Index] & 0x000ffffffffff000);
+    int l_pdptIndex = ((uintptr_t)p_vptr >> 30UL) & 0x1ff;
+    uintptr_t l_pdptAddress = l_pdpt[l_pdptIndex] & 0x000ffffffffff000;
+
+    if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        return NULL;
+    }
+
+    if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
+        return (void *)(l_pdptAddress & 0x000fffffc0000000);
+    }
+
+    uint64_t *l_pageDirectory = (uint64_t *)l_pdptAddress;
+    int l_pageDirectoryIndex = ((uintptr_t)p_vptr >> 21UL) & 0x1ff;
+    uintptr_t l_pageDirectoryAddress =
+        l_pageDirectory[l_pageDirectoryIndex] & 0x000ffffffffff000;
+
+    if(
+        (l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PRESENT)
+        == 0
+    ) {
+        return NULL;
+    }
+
+    if((l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
+        return (void *)(l_pageDirectoryAddress & 0x000fffffffe00000);
+    }
+
+    uint64_t *l_pageTable = (uint64_t *)l_pageDirectoryAddress;
+    int l_pageTableIndex = ((uintptr_t)p_vptr >> 12UL) & 0x1ff;
+    uintptr_t l_pageTableAddress =
+        l_pageTable[l_pageTableIndex] & 0x000ffffffffff000;
+
+    if((l_pageTable[l_pageTableIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        return NULL;
+    }
+
+    return (void *)l_pageTableAddress;
+}
+
 static int vmmInitKernelContext(void) {
     s_vmmKernelContext.m_mapEntryPool = NULL;
 
@@ -396,57 +451,6 @@ static struct ts_mmMemoryMapEntryListNode *vmmAllocateEntryPoolEntry(
     p_context->m_mapEntryPool = l_entry->m_next;
 
     return l_entry;
-}
-
-static void *vmmGetPhysicalAddress(
-    struct ts_vmmContext *p_context,
-    void *p_vptr
-) {
-    uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
-    int l_pml4Index = ((uintptr_t)p_vptr >> 39UL) & 0x1ff;
-
-    if((l_pml4[l_pml4Index] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
-        return NULL;
-    }
-
-    uint64_t *l_pdpt = (uint64_t *)(l_pml4[l_pml4Index] & 0x000ffffffffff000);
-    int l_pdptIndex = ((uintptr_t)p_vptr >> 30UL) & 0x1ff;
-    uintptr_t l_pdptAddress = l_pdpt[l_pdptIndex] & 0x000ffffffffff000;
-
-    if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
-        return NULL;
-    }
-
-    if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
-        return (void *)(l_pdptAddress & 0x000fffffc0000000);
-    }
-
-    uint64_t *l_pageDirectory = (uint64_t *)l_pdptAddress;
-    int l_pageDirectoryIndex = ((uintptr_t)p_vptr >> 21UL) & 0x1ff;
-    uintptr_t l_pageDirectoryAddress =
-        l_pageDirectory[l_pageDirectoryIndex] & 0x000ffffffffff000;
-
-    if(
-        (l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PRESENT)
-        == 0
-    ) {
-        return NULL;
-    }
-
-    if((l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
-        return (void *)(l_pageDirectoryAddress & 0x000fffffffe00000);
-    }
-
-    uint64_t *l_pageTable = (uint64_t *)l_pageDirectoryAddress;
-    int l_pageTableIndex = ((uintptr_t)p_vptr >> 12UL) & 0x1ff;
-    uintptr_t l_pageTableAddress =
-        l_pageTable[l_pageTableIndex] & 0x000ffffffffff000;
-
-    if((l_pageTable[l_pageTableIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
-        return NULL;
-    }
-
-    return (void *)l_pageTableAddress;
 }
 
 static void vmmFreeNode(
