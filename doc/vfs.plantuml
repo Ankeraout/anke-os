@@ -1,0 +1,55 @@
+@startuml
+
+struct ts_vfsFile {
+    + int m_flags
+    + loff_t m_offset
+    + void *m_fileSystemData
+}
+
+struct ts_vfsNode {
+    + char m_name[C_MAX_FILE_NAME_SIZE + 1]
+    + int m_referenceCount
+    + mutex_t m_mutex
+    + size_t m_size
+    + uid_t m_uid
+    + gid_t m_gid
+    + mode_t m_mode
+    + dev_t m_device
+    + void *m_fileSystemData
+}
+
+struct ts_vfsFileOperations {
+    + int (*m_open)(struct ts_vfsFile *p_file, int p_flags)
+    + int (*m_close)(struct ts_vfsFile *p_file)
+    + ssize_t (*m_llseek)(struct ts_vfsFile *p_file, loff_t p_offset, int p_whence)
+    + ssize_t (*m_read)(struct ts_vfsFile *p_file, void *p_buffer, size_t p_size, loff_t p_offset)
+    + ssize_t (*m_write)(struct ts_vfsFile *p_file, const void *p_buffer, size_t p_size, loff_t p_offset)
+    + int (*m_ioctl)(struct ts_vfsFile *p_file, int p_request, void *p_arg)
+}
+
+struct ts_vfsNodeOperations {
+    + int (*m_lookup)(struct ts_vfsNode *p_node, const char *p_name, struct ts_vfsNode **p_result)
+    + int (*m_release)(struct ts_vfsNode *p_node)
+    + int (*m_chmod)(struct ts_vfsNode *p_node, mode_t p_mode)
+    + int (*m_chown)(struct ts_vfsNode *p_node, uid_t p_uid)
+    + int (*m_chgrp)(struct ts_vfsNode *p_node, gid_t p_gid)
+    + int (*m_link)(struct ts_vfsNode *p_node, struct ts_vfsNode *p_parent, const char *p_name);
+    + int (*m_unlink)(struct ts_vfsNode *p_node)
+    + int (*m_mknod)(struct ts_vfsNode *p_node, const char *p_name, mode_t p_mode, dev_t p_device);
+}
+
+enum te_vfsNodeType {
+    + E_VFSNODETYPE_DIRECTORY
+    + E_VFSNODETYPE_FILE
+    + E_VFSNODETYPE_MOUNT
+    + E_VFSNODETYPE_CHAR
+    + E_VFSNODETYPE_BLOCK
+}
+
+ts_vfsFile "*" --> "1" ts_vfsNode: m_node
+ts_vfsNode "1" -- "*" ts_vfsNode: m_children / m_parent
+ts_vfsNode "*" --> "1" te_vfsNodeType: m_type
+ts_vfsNode "*" --> "1" ts_vfsNodeOperations: m_operations
+ts_vfsFile "*" --> "1" ts_vfsFileOperations: m_operations
+
+@enduml

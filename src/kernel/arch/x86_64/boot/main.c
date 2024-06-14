@@ -6,6 +6,7 @@
 #include "kernel/arch/x86_64/idt.h"
 #include "kernel/arch/x86_64/isr.h"
 #include "kernel/arch/x86_64/pic.h"
+#include "kernel/fs/vfs.h"
 #include "kernel/mm/pmm.h"
 #include "kernel/mm/vmm.h"
 #include "kernel/panic.h"
