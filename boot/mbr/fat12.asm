@@ -98,7 +98,7 @@ file_found:
 
 read_file:
     ; Read BOOT.BIN
-    mov ax, 0x1000
+    mov ax, 0x0800
     mov es, ax
     xor bx, bx
     
@@ -114,7 +114,7 @@ execute_file:
     mov dl, [bpb.drive_number]
 
     ; Jump to the loaded file.
-    jmp 0x1000:0x0000
+    jmp 0x0000:0x8000
 
 ; Input:
 ; - [current_cluster]: current cluster number

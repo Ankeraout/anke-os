@@ -3,6 +3,8 @@ hw_detect_cpu:
     push bp
     mov bp, sp
 
+    sub sp, 2
+
     mov ax, g_str_hw_detect_cpu
     push ax
     call puts
@@ -22,7 +24,11 @@ hw_detect_cpu:
     call puts
     add sp, 2
 
+    mov ax, [l_cpuModel]
+
     pop si
+
+    add sp, 2
 
     pop bp
     ret
@@ -69,7 +75,7 @@ hw_cpu_get_model:
     pop bx
 
     cpu 386
-    mov word [g_hw_detect_cpu_goto], .detected_80386
+    mov word [g_hw_detect_cpu_goto], .detected_80286
     mov eax, 0
 
     cpu 486
@@ -95,8 +101,6 @@ cpu 8086
     mov ax, 7
 
 .epilogue:
-    popf
-
     push ax
     push es
     xor ax, ax
@@ -109,6 +113,7 @@ cpu 8086
 
     pop es
     pop ax
+    popf
 
     add sp, 4
 
@@ -121,6 +126,7 @@ cpu 8086
 
 .detected_80186:
     mov ax, 1
+    pop bx
     jmp .epilogue
 
 .detected_80286:
