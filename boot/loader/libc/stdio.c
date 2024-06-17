@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "asm.h"
+#include "arch/x86/asm.h"
 #include "stdio.h"
 #include "string.h"
 

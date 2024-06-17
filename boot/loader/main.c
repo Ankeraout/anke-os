@@ -1,5 +1,5 @@
-#include "asm.h"
-#include "bioscall.h"
+#include "arch/x86/asm.h"
+#include "arch/x86/bioscall.h"
 #include "stdio.h"
 
 void main(void) {

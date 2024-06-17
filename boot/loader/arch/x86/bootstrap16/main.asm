@@ -95,9 +95,9 @@ bits 32
     jmp .halt
 
 bits 16
-%include "bootstrap16/stdio.inc"
-%include "bootstrap16/strings.inc"
-%include "bootstrap16/hw_cpu.inc"
-%include "bootstrap16/gdt.inc"
+%include "arch/x86/bootstrap16/stdio.inc"
+%include "arch/x86/bootstrap16/strings.inc"
+%include "arch/x86/bootstrap16/hw_cpu.inc"
+%include "arch/x86/bootstrap16/gdt.inc"
 
 g_bootDrive db 0
