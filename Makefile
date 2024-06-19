@@ -11,12 +11,16 @@ CFLAGS_LOADER := -W -Wall -Wextra -Os -ffreestanding -Iboot/loader
 LDFLAGS_LOADER :=
 SOURCES_ASM_LOADER := \
 	boot/loader/arch/x86/bootstrap16/main.asm \
-	boot/loader/arch/x86/bioscall.asm
+	boot/loader/arch/x86/bioscall.asm \
+	boot/loader/arch/x86/isr.asm
 OBJECTS_ASM_LOADER := $(SOURCES_ASM_LOADER:boot/loader/%.asm=obj/boot/loader/%.asm.o)
 SOURCES_C_LOADER := \
 	boot/loader/main.c \
 	boot/loader/libc/stdio.c \
-	boot/loader/libc/string.c
+	boot/loader/libc/string.c \
+	boot/loader/arch/x86/idt.c \
+	boot/loader/arch/x86/isr.c \
+	boot/loader/arch/x86/pic.c
 OBJECTS_C_LOADER := $(SOURCES_C_LOADER:boot/loader/%.c=obj/boot/loader/%.c.o)
 OBJECTS_LOADER := $(OBJECTS_ASM_LOADER) $(OBJECTS_C_LOADER)
 DEPENDENCIES_LOADER := $(OBJECTS_LOADER:%.o=%.d)
