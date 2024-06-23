@@ -19,8 +19,8 @@ SOURCES_C_LOADER := \
 	boot/loader/libc/stdio.c \
 	boot/loader/libc/string.c \
 	boot/loader/arch/x86/idt.c \
-	boot/loader/arch/x86/isr.c \
-	boot/loader/arch/x86/pic.c
+	boot/loader/arch/x86/irq.c \
+	boot/loader/drivers/irq/i8259.c
 OBJECTS_C_LOADER := $(SOURCES_C_LOADER:boot/loader/%.c=obj/boot/loader/%.c.o)
 OBJECTS_LOADER := $(OBJECTS_ASM_LOADER) $(OBJECTS_C_LOADER)
 DEPENDENCIES_LOADER := $(OBJECTS_LOADER:%.o=%.d)
