@@ -18,6 +18,7 @@ BOOTLOADER_SOURCES_C := $(shell find boot/loader -name '*.c')
 BOOTLOADER_OBJECTS_ASM := $(patsubst %.asm,obj/%.asm.o,$(BOOTLOADER_SOURCES_ASM))
 BOOTLOADER_OBJECTS_C := $(patsubst %.c,obj/%.c.o,$(BOOTLOADER_SOURCES_C))
 BOOTLOADER_OBJECTS := $(BOOTLOADER_OBJECTS_ASM) $(BOOTLOADER_OBJECTS_C)
+BOOTLOADER_DEPENDENCIES := $(patsubst %.o,%.d,$(BOOTLOADER_OBJECTS))
 
 all: bin/fdd.img
 
@@ -43,7 +44,7 @@ obj/boot/loader/%.c.o: boot/loader/%.c
 	@if [ ! -d $(dir $@) ]; then \
 		$(MKDIR) $(dir $@); \
 	fi
-	$(BOOTLOADER_CC) $(BOOTLOADER_CFLAGS) $< -o $@
+	$(BOOTLOADER_CC) $(BOOTLOADER_CFLAGS) $< -o $@ -MMD
 
 bin/boot/loader.bin: $(BOOTLOADER_OBJECTS)
 	@if [ ! -d $(dir $@) ]; then \
@@ -61,3 +62,5 @@ clean:
 
 .PHONY: all clean
 .SUFFIXES:
+
+-include $(BOOTLOADER_DEPENDENCIES)
