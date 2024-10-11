@@ -1,6 +1,18 @@
 bits 16
 cpu 8086
 
+section .bootstrap16
+
+; TODO:
+; - Detect CPU
+; - Obtain memory map from BIOS
+; - Detect PCI bus using BIOS
+; - Protected mode
+; - PCI driver
+; - PATA driver
+; - FAT driver (12/16 at least)
+
+global _start
 _start:
     mov ax, 0x1000
     mov ds, ax
@@ -9,15 +21,7 @@ _start:
     mov ss, ax
     xor sp, sp
 
-    push es
-    mov ax, 0xb800
-    mov es, ax
-    mov byte [es:0], 'A'
-    mov byte [es:1], 0x1f
-    pop es
-
 halt:
     cli
     hlt
     jmp halt
-    
