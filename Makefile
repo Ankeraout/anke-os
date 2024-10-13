@@ -7,7 +7,7 @@ VBR_ASMFLAGS := -Wall -f bin
 BOOTLOADER_ASM := nasm
 BOOTLOADER_ASMFLAGS := -Wall -f elf
 BOOTLOADER_CC := i686-elf-gcc
-BOOTLOADER_CFLAGS := -W -Wall -Wextra -Os -fno-builtin -nostdlib -ffreestanding -c
+BOOTLOADER_CFLAGS := -W -Wall -Wextra -Os -fno-builtin -nostdlib -ffreestanding -c -Iinclude
 BOOTLOADER_LD := i686-elf-ld
 BOOTLOADER_LDFLAGS := -T boot/loader/bootloader.ld
 

@@ -2,28 +2,28 @@ ENTRY(_start)
 OUTPUT_FORMAT(binary)
 
 SECTIONS {
-    . = 0x00010000;
-
-    .bootstrap16 : AT(. - 0x00010000) {
+    .bootstrap16 (0x00000000) : {
         *(.bootstrap16)
     }
 
-    .text : {
+    . += 0x10000;
+
+    .text : AT(ADDR(.text) - 0x10000) {
         *(.text)
         *(.text.*)
     }
 
-    .data : {
+    .data : AT(ADDR(.data) - 0x10000) {
         *(.data)
         *(.data.*)
     }
 
-    .rodata : {
+    .rodata : AT(ADDR(.rodata) - 0x10000) {
         *(.rodata)
         *(.rodata.*)
     }
 
-    .bss (NOLOAD) : {
+    .bss (NOLOAD) : AT(ADDR(.bss) - 0x10000) {
         *(.bss)
         *(.bss.*)
         *(COMMON)

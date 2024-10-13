@@ -171,9 +171,7 @@ fileFound:
         jz .even
 
     .odd:
-        mov cx, 16
         div cx
-        jmp .loop
 
     .even:
         and ax, 0xfff
