@@ -1,5 +1,5 @@
-#ifndef __INCLUDE_BOOT_LOADER_CONSOLE_H__
-#define __INCLUDE_BOOT_LOADER_CONSOLE_H__
+#ifndef __INCLUDE_BOOT_LOADER_DRIVERS_CONSOLE_FBCON_H__
+#define __INCLUDE_BOOT_LOADER_DRIVERS_CONSOLE_FBCON_H__
 
 #include <stddef.h>
 
@@ -7,9 +7,8 @@
 #include "boot/loader/framebuffer.h"
 #include "boot/loader/types.h"
 
-struct ts_console {
+struct ts_fbcon {
     struct ts_framebuffer *m_framebuffer;
-    const struct ts_font *m_font;
     unsigned int m_width;
     unsigned int m_height;
     unsigned int m_x;
@@ -18,13 +17,12 @@ struct ts_console {
     uint32_t m_backgroundColor;
 };
 
-int console_init(
-    struct ts_console *p_console,
-    const struct ts_font *p_font,
+int fbcon_init(
+    struct ts_fbcon *p_fbcon,
     struct ts_framebuffer *p_framebuffer
 );
-ssize_t console_write(
-    struct ts_console *p_console,
+ssize_t fbcon_write(
+    struct ts_fbcon *p_fbcon,
     const void *p_buffer,
     size_t p_size
 );
