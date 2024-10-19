@@ -1,3 +1,7 @@
+#include "boot/loader/arch/x86/asm.h"
+#include "boot/loader/arch/x86/idt.h"
+#include "boot/loader/arch/x86/isr.h"
+#include "boot/loader/arch/x86/pic.h"
 #include "boot/loader/boot.h"
 #include "boot/loader/drivers/cmos.h"
 #include "boot/loader/drivers/console/console.h"
@@ -22,10 +26,17 @@ int main(const struct ts_bootInfoStructure *p_bootInfoStructure) {
     console_init();
     fbcon_init(&l_framebuffer);
     printf("Hello, world!\n");
+    printf("%02x\n", cmos_read(C_CMOS_REGISTER_FLOPPY));
+
+    // Initialize interrupts
+    idt_init();
+    isr_init();
+    pic_init();
+    sti();
+
+    printf("System ready.\n");
 
     while(1) {
         asm("hlt");
     }
 }
-
-
