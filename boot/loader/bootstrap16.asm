@@ -85,6 +85,10 @@ supportedCpu:
     call getFramebuffer
     call enableA20
 
+    ; Disable NMI
+    xor al,al
+    out 0x70, al
+
     ; Disable interrupts
     cli
 
