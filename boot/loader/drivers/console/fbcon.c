@@ -20,7 +20,7 @@ static struct ts_fbcon s_fbcon;
 int fbcon_init(struct ts_framebuffer *p_framebuffer) {
     s_fbcon.m_framebuffer = p_framebuffer;
     s_fbcon.m_width = p_framebuffer->m_width / g_font.m_characterWidth;
-    s_fbcon.m_height = g_font.m_characterHeight / g_font.m_characterHeight;
+    s_fbcon.m_height = p_framebuffer->m_height / g_font.m_characterHeight;
     s_fbcon.m_x = 0U;
     s_fbcon.m_y = 0U;
     s_fbcon.m_foregroundColor =
