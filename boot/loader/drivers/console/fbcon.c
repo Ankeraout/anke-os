@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "boot/loader/drivers/console/console.h"
 #include "boot/loader/drivers/console/fbcon.h"
 
 static void drawCharacter(
@@ -8,29 +9,50 @@ static void drawCharacter(
     unsigned int p_y,
     unsigned char p_char
 );
+static ssize_t fbcon_write(
+    struct ts_console *p_console,
+    const void *p_buffer,
+    size_t p_size
+);
 
-int fbcon_init(
-    struct ts_fbcon *p_fbcon,
-    struct ts_framebuffer *p_framebuffer
-) {
-    p_fbcon->m_framebuffer = p_framebuffer;
-    p_fbcon->m_width = p_framebuffer->m_width / g_font.m_characterWidth;
-    p_fbcon->m_height = g_font.m_characterHeight / g_font.m_characterHeight;
-    p_fbcon->m_x = 0U;
-    p_fbcon->m_y = 0U;
-    p_fbcon->m_foregroundColor =
+static struct ts_fbcon s_fbcon;
+
+int fbcon_init(struct ts_framebuffer *p_framebuffer) {
+    s_fbcon.m_framebuffer = p_framebuffer;
+    s_fbcon.m_width = p_framebuffer->m_width / g_font.m_characterWidth;
+    s_fbcon.m_height = g_font.m_characterHeight / g_font.m_characterHeight;
+    s_fbcon.m_x = 0U;
+    s_fbcon.m_y = 0U;
+    s_fbcon.m_foregroundColor =
         framebuffer_createColor(p_framebuffer, 255U, 255U, 255U);
-    p_fbcon->m_backgroundColor =
+    s_fbcon.m_backgroundColor =
         framebuffer_createColor(p_framebuffer, 0U, 0U, 0U);
+
+    // Register console
+    struct ts_console *l_console = console_alloc();
+
+    if(l_console == NULL) {
+        // Failed to allocate console
+        return -1;
+    }
+
+    l_console->driverData = &s_fbcon;
+    l_console->write = fbcon_write;
+
+    // Register console
+    console_register(l_console);
+
+    // TODO: what if the console could not be registered?
 
     return 0;
 }
 
-ssize_t fbcon_write(
-    struct ts_fbcon *p_fbcon,
+static ssize_t fbcon_write(
+    struct ts_console *p_console,
     const void *p_buffer,
     size_t p_size
 ) {
+    struct ts_fbcon *l_fbcon = (struct ts_fbcon *)p_console->driverData;
     const uint8_t *l_str = (const uint8_t *)p_buffer;
     size_t l_index = 0UL;
 
@@ -40,30 +62,30 @@ ssize_t fbcon_write(
         if(l_character == '\0') {
             // Do nothing
         } else if(l_character == '\t') {
-            p_fbcon->m_x += 4U - (p_fbcon->m_x % 4U);
+            l_fbcon->m_x += 4U - (l_fbcon->m_x % 4U);
         } else if(l_character == '\n') {
-            p_fbcon->m_x = 0U;
-            p_fbcon->m_y++;
+            l_fbcon->m_x = 0U;
+            l_fbcon->m_y++;
         } else if(l_character == '\r') {
-            p_fbcon->m_x = 0U;
+            l_fbcon->m_x = 0U;
         } else {
             drawCharacter(
-                p_fbcon,
-                p_fbcon->m_x * g_font.m_characterWidth,
-                p_fbcon->m_y * g_font.m_characterHeight,
+                l_fbcon,
+                l_fbcon->m_x * g_font.m_characterWidth,
+                l_fbcon->m_y * g_font.m_characterHeight,
                 l_character
             );
 
-            p_fbcon->m_x++;
+            l_fbcon->m_x++;
         }
 
-        if(p_fbcon->m_x >= p_fbcon->m_width) {
-            p_fbcon->m_x = 0U;
-            p_fbcon->m_y++;
+        if(l_fbcon->m_x >= l_fbcon->m_width) {
+            l_fbcon->m_x = 0U;
+            l_fbcon->m_y++;
         }
 
-        if(p_fbcon->m_y >= p_fbcon->m_height) {
-            p_fbcon->m_y = 0U;
+        if(l_fbcon->m_y >= l_fbcon->m_height) {
+            l_fbcon->m_y = 0U;
         }
     }
 

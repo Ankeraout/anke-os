@@ -17,14 +17,6 @@ struct ts_fbcon {
     uint32_t m_backgroundColor;
 };
 
-int fbcon_init(
-    struct ts_fbcon *p_fbcon,
-    struct ts_framebuffer *p_framebuffer
-);
-ssize_t fbcon_write(
-    struct ts_fbcon *p_fbcon,
-    const void *p_buffer,
-    size_t p_size
-);
+int fbcon_init(struct ts_framebuffer *p_framebuffer);
 
 #endif

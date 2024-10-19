@@ -1,5 +1,8 @@
 #include "boot/loader/boot.h"
+#include "boot/loader/drivers/cmos.h"
+#include "boot/loader/drivers/console/console.h"
 #include "boot/loader/drivers/console/fbcon.h"
+#include "boot/loader/stdio.h"
 
 int main(const struct ts_bootInfoStructure *p_bootInfoStructure) {
     struct ts_framebuffer l_framebuffer = {
@@ -16,12 +19,13 @@ int main(const struct ts_bootInfoStructure *p_bootInfoStructure) {
         .m_blueShift = p_bootInfoStructure->m_framebufferBlueShift
     };
 
-    struct ts_fbcon l_fbcon;
-
-    fbcon_init(&l_fbcon, &l_framebuffer);
-    fbcon_write(&l_fbcon, "Hello, world!", 13UL);
+    console_init();
+    fbcon_init(&l_framebuffer);
+    printf("Hello, world!\n");
 
     while(1) {
         asm("hlt");
     }
 }
+
+
