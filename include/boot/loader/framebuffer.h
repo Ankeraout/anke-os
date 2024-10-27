@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "boot/loader/boot.h"
+
 struct ts_framebuffer {
     void *m_buffer;
     uint32_t m_width;
@@ -17,11 +19,13 @@ struct ts_framebuffer {
     uint32_t m_blueShift;
 };
 
+void framebuffer_init(const struct ts_bootInfoStructure *p_bootInfoStructure);
 uint32_t framebuffer_createColor(
     struct ts_framebuffer *p_framebuffer,
     uint8_t p_red,
     uint8_t p_green,
     uint8_t p_blue
 );
+struct ts_framebuffer *framebuffer_get(void);
 
 #endif

@@ -10,6 +10,13 @@ BOOTLOADER_CC := i686-elf-gcc
 BOOTLOADER_CFLAGS := -W -Wall -Wextra -Os -fno-builtin -nostdlib -ffreestanding -c -Iinclude
 BOOTLOADER_LD := i686-elf-ld
 BOOTLOADER_LDFLAGS := -T boot/loader/bootloader.ld
+BOOTLOADER_OBJCOPY := i686-elf-objcopy
+
+# Compiling with i686-elf-gcc-14.2.0 and linking with i686-elf-ld gives "cannot find -lgcc: file format not recognized".
+# Compiling with i686-elf-gcc-14.2.0 and linking with it gives "collect2: fatal error: ld terminated with signal 11 [Segmentation fault]" (bug?)
+# Compiling with i686-elf-gcc-14.2.0 and linking with i686-elf-ld with these flags works.
+BOOTLOADER_LDFLAGS += -L$(HOME)/opt/cross/lib/gcc/i686-elf/14.2.0
+BOOTLOADER_LIBS := -lgcc
 
 MBR_SOURCES := boot/mbr/mbr.asm
 
@@ -46,11 +53,14 @@ obj/boot/loader/%.c.o: boot/loader/%.c
 	fi
 	$(BOOTLOADER_CC) $(BOOTLOADER_CFLAGS) $< -o $@ -MMD
 
-bin/boot/loader.bin: $(BOOTLOADER_OBJECTS)
+bin/boot/loader.bin: bin/boot/loader.elf
+	$(BOOTLOADER_OBJCOPY) -O binary $< $@
+
+bin/boot/loader.elf: $(BOOTLOADER_OBJECTS)
 	@if [ ! -d $(dir $@) ]; then \
 		$(MKDIR) $(dir $@); \
 	fi
-	$(BOOTLOADER_LD) $(BOOTLOADER_LDFLAGS) $^ -o $@
+	$(BOOTLOADER_LD) $(BOOTLOADER_LDFLAGS) $^ -o $@ $(BOOTLOADER_LIBS)
 
 bin/fdd.img: bin/boot/vbr/fat12.bin bin/boot/loader.bin
 	dd if=/dev/zero of=$@ bs=512 count=2880

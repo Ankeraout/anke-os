@@ -17,16 +17,18 @@ static ssize_t fbcon_write(
 
 static struct ts_fbcon s_fbcon;
 
-int fbcon_init(struct ts_framebuffer *p_framebuffer) {
-    s_fbcon.m_framebuffer = p_framebuffer;
-    s_fbcon.m_width = p_framebuffer->m_width / g_font.m_characterWidth;
-    s_fbcon.m_height = p_framebuffer->m_height / g_font.m_characterHeight;
+int fbcon_init() {
+    struct ts_framebuffer *l_framebuffer = framebuffer_get();
+
+    s_fbcon.m_framebuffer = l_framebuffer;
+    s_fbcon.m_width = l_framebuffer->m_width / g_font.m_characterWidth;
+    s_fbcon.m_height = l_framebuffer->m_height / g_font.m_characterHeight;
     s_fbcon.m_x = 0U;
     s_fbcon.m_y = 0U;
     s_fbcon.m_foregroundColor =
-        framebuffer_createColor(p_framebuffer, 255U, 255U, 255U);
+        framebuffer_createColor(l_framebuffer, 0xaaU, 0xaaU, 0xaaU);
     s_fbcon.m_backgroundColor =
-        framebuffer_createColor(p_framebuffer, 0U, 0U, 0U);
+        framebuffer_createColor(l_framebuffer, 0U, 0U, 0U);
 
     // Register console
     struct ts_console *l_console = console_alloc();

@@ -171,6 +171,7 @@ fileFound:
         jz .even
 
     .odd:
+        xor dx, dx
         div cx
 
     .even:

@@ -15,7 +15,16 @@ struct ts_isrRegisters {
 typedef void tf_isrHandler(struct ts_isrRegisters *p_registers, void *p_arg);
 
 void isr_init(void);
-void isr_setHandler(int p_interruptNumber, tf_isrHandler *p_handler, void *p_arg);
+void isr_setHandler(
+    int p_interruptNumber,
+    tf_isrHandler *p_handler,
+    void *p_arg
+);
+void isr_setHandlerIrq(
+    int p_irqNumber,
+    tf_isrHandler *p_handler,
+    void *p_arg
+);
 void isr_handler(struct ts_isrRegisters *p_registers);
 void isr_exception0(void);
 void isr_exception1(void);

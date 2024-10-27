@@ -25,6 +25,14 @@ void isr_setHandler(int p_interruptNumber, tf_isrHandler *p_handler, void *p_arg
     s_isrHandlers[p_interruptNumber].arg = p_arg;
 }
 
+void isr_setHandlerIrq(
+    int p_irqNumber,
+    tf_isrHandler *p_handler,
+    void *p_arg
+) {
+    isr_setHandler(p_irqNumber + 32, p_handler, p_arg);
+}
+
 void isr_handler(struct ts_isrRegisters *p_registers) {
     if(p_registers->interruptNumber < 48) {
         tf_isrHandler *l_handler =
