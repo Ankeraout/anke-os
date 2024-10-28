@@ -5,6 +5,7 @@
 #include "boot/loader/drivers/block/block.h"
 #include "boot/loader/drivers/block/floppy.h"
 #include "boot/loader/drivers/cmos.h"
+#include "boot/loader/drivers/isadma.h"
 #include "boot/loader/stdio.h"
 #include "boot/loader/string.h"
 
@@ -237,6 +238,8 @@ static int fdc_init(struct ts_fdc *p_fdc, uint16_t p_ioBase, int p_irq) {
     fdc_writeData(p_fdc, 0x48);
     fdc_writeData(p_fdc, 0);
 
+    isadma_init(2, 512);
+
     return 0;
 }
 
@@ -272,7 +275,7 @@ static void fdc_reset(struct ts_fdc *p_fdc) {
 
     // Reset controller
     fdc_setDor(p_fdc, 0x00);
-    fdc_setDor(p_fdc, C_FDC_DOR_ENABLED);
+    fdc_setDor(p_fdc, C_FDC_DOR_ENABLED | C_FDC_DOR_DMA_IRQ);
     fdc_waitIrq(p_fdc);
 
     printf("floppy: Controller reset complete.\n");
@@ -303,7 +306,7 @@ static void fdd_specify(struct ts_floppyDrive *p_drive) {
     );
     fdc_writeData(
         p_drive->fdc,
-        (s_floppyDriveTypes[p_drive->type].headLoadTime << 1) | 1
+        (s_floppyDriveTypes[p_drive->type].headLoadTime << 1)
     );
     
     p_drive->fdc->currentSetting = p_drive->type;
@@ -331,11 +334,10 @@ static void fdc_interrupt(
     struct ts_isrRegisters *p_registers,
     void *p_arg
 ) {
+    (void)p_registers;
     printf("fdc_interrupt()\n");
 
     struct ts_fdc *l_fdc = (struct ts_fdc *)p_arg;
-
-    (void)p_registers;
 
     l_fdc->irqOccurred = true;
 }
@@ -433,6 +435,8 @@ static ssize_t fdd_read(
 
     printf("floppy: Motor turned on.\n");
 
+    isadma_init_read(2);
+
     fdc_writeData(l_fdd->fdc, C_FDC_CMD_READ_SECTOR | C_FDC_CMD_OPTION_MF);
     fdc_writeData(l_fdd->fdc, (l_head << 2) | l_fdd->driveIndex);
     fdc_writeData(l_fdd->fdc, l_cylinder);
@@ -449,8 +453,10 @@ static ssize_t fdd_read(
     
     printf("fdd_read: Reading 512 bytes...\n");
 
-    for(int l_i = 0; l_i < 512; l_i++) {
-        printf("%02x ", fdc_readData(l_fdd->fdc));
+    isadma_read(p_buffer, 512);
+
+    for(int l_index = 0; l_index < 512; l_index++) {
+        printf("%02x ", ((uint8_t *)p_buffer)[l_index]);
     }
 
     printf("\n");

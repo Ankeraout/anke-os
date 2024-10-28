@@ -26,6 +26,11 @@ SECTIONS {
     .bss (NOLOAD) : AT(ADDR(.bss) - 0x10000) {
         *(.bss)
         *(.bss.*)
+
+        . = ALIGN(0x8000);
+        g_isadmaBuffer = .;
+        . += 0x8000;
+        
         *(COMMON)
     }
 }
