@@ -160,20 +160,30 @@ static int fdc_init(struct ts_fdc *p_fdc, uint16_t p_ioBase, int p_irq);
 static int fdd_init(struct ts_floppyDrive *p_fdd);
 static void fdc_reset(struct ts_fdc *p_fdc);
 static void fdd_specify(struct ts_floppyDrive *p_drive);
-static int fdd_seek(struct ts_floppyDrive *p_drive, unsigned int p_cylinder);
 static void fdc_interrupt(struct ts_isrRegisters *p_registers, void *p_arg);
 static void fdc_waitIrq(struct ts_fdc *p_fdc);
 static void fdc_writeData(struct ts_fdc *p_fdc, uint8_t p_value);
 static uint8_t fdc_readData(struct ts_fdc *p_fdc);
 static void fdc_checkInt(struct ts_fdc *p_fdc, uint8_t *p_st0, uint8_t *p_cyl);
 static int fdd_calibrate(struct ts_floppyDrive *p_drive);
-static ssize_t fdd_read(struct ts_block *p_block, lba_t p_lba, void *p_buffer);
+static ssize_t fdd_read(
+    struct ts_block *p_block,
+    lba_t p_lba,
+    void *p_buffer,
+    size_t p_size
+);
 static void fdc_setDor(struct ts_fdc *p_fdc, uint8_t p_dor);
 static uint8_t fdc_getDor(struct ts_fdc *p_fdc);
 static void fdc_startMotor(struct ts_fdc *p_fdc, int p_motor);
 static void fdc_stopMotor(struct ts_fdc *p_fdc, int p_motor);
 static void fdd_startMotor(struct ts_floppyDrive *p_fdd);
 static void fdd_stopMotor(struct ts_floppyDrive *p_fdd);
+static ssize_t fdd_readPart(
+    struct ts_floppyDrive *p_fdd,
+    lba_t p_lba,
+    void *p_buffer,
+    size_t p_size
+);
 
 int floppy_init(void) {
     // Initialize fdc structure
@@ -219,8 +229,6 @@ int floppy_init(void) {
 }
 
 static int fdc_init(struct ts_fdc *p_fdc, uint16_t p_ioBase, int p_irq) {
-    printf("floppy: Initializing controller...\n");
-
     p_fdc->ioBase = p_ioBase;
     p_fdc->irq = p_irq;
     p_fdc->irqOccurred = false;
@@ -238,14 +246,10 @@ static int fdc_init(struct ts_fdc *p_fdc, uint16_t p_ioBase, int p_irq) {
     fdc_writeData(p_fdc, 0x48);
     fdc_writeData(p_fdc, 0);
 
-    isadma_init(2, 512);
-
     return 0;
 }
 
 static int fdd_init(struct ts_floppyDrive *p_fdd) {
-    printf("fdd_init: Initializing drive %d\n", p_fdd->driveIndex);
-
     // Calibrate drive
     fdd_specify(p_fdd);
     
@@ -263,7 +267,7 @@ static int fdd_init(struct ts_floppyDrive *p_fdd) {
 
     memset(l_block, 0, sizeof(*l_block));
 
-    sprintf(l_block->name, "floppy%d", p_fdd->driveIndex);
+    sprintf(l_block->name, "fd%d", p_fdd->driveIndex);
     l_block->driverData = p_fdd;
     l_block->read = fdd_read;
 
@@ -271,14 +275,10 @@ static int fdd_init(struct ts_floppyDrive *p_fdd) {
 }
 
 static void fdc_reset(struct ts_fdc *p_fdc) {
-    printf("floppy: Resetting controller...\n");
-
     // Reset controller
     fdc_setDor(p_fdc, 0x00);
     fdc_setDor(p_fdc, C_FDC_DOR_ENABLED | C_FDC_DOR_DMA_IRQ);
     fdc_waitIrq(p_fdc);
-
-    printf("floppy: Controller reset complete.\n");
 
     // Send CHECK_INT to all drives
     for(int l_drive = 0; l_drive < 2; l_drive++) {
@@ -296,8 +296,6 @@ static void fdd_specify(struct ts_floppyDrive *p_drive) {
         return;
     }
 
-    printf("floppy: Sending SPECIFY command...\n");
-
     fdc_writeData(p_drive->fdc, C_FDC_CMD_SPECIFY);
     fdc_writeData(
         p_drive->fdc,
@@ -312,30 +310,11 @@ static void fdd_specify(struct ts_floppyDrive *p_drive) {
     p_drive->fdc->currentSetting = p_drive->type;
 }
 
-static int fdd_seek(struct ts_floppyDrive *p_drive, unsigned int p_cylinder) {
-    fdc_writeData(p_drive->fdc, C_FDC_CMD_SEEK);
-    fdc_writeData(p_drive->fdc, p_drive->driveIndex);
-    fdc_writeData(p_drive->fdc, p_cylinder);
-    fdc_waitIrq(p_drive->fdc);
-
-    uint8_t l_st0;
-    uint8_t l_cyl;
-
-    fdc_checkInt(p_drive->fdc, &l_st0, &l_cyl);
-
-    if(l_cyl == p_cylinder) {
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
 static void fdc_interrupt(
     struct ts_isrRegisters *p_registers,
     void *p_arg
 ) {
     (void)p_registers;
-    printf("fdc_interrupt()\n");
 
     struct ts_fdc *l_fdc = (struct ts_fdc *)p_arg;
 
@@ -378,19 +357,14 @@ static int fdd_calibrate(struct ts_floppyDrive *p_drive) {
     uint8_t l_cyl;
     int l_returnValue = -1;
 
-    printf("floppy: Sending CALIBRATE command...\n");
-
     // Turn on the motor
     fdd_startMotor(p_drive);
 
     for(int l_attempt = 0; l_attempt < 10; l_attempt++) {
-        printf("floppy: Calibrate attempt %d\n", l_attempt);
         fdc_writeData(p_drive->fdc, C_FDC_CMD_CALIBRATE);
         fdc_writeData(p_drive->fdc, p_drive->driveIndex);
         fdc_waitIrq(p_drive->fdc);
         fdc_checkInt(p_drive->fdc, &l_st0, &l_cyl);
-
-        printf("Current cylinder: %d\n", l_cyl);
 
         if(l_cyl == 0) {
             l_returnValue = 0;
@@ -407,68 +381,47 @@ static int fdd_calibrate(struct ts_floppyDrive *p_drive) {
 static ssize_t fdd_read(
     struct ts_block *p_block,
     lba_t p_lba,
-    void *p_buffer
+    void *p_buffer,
+    size_t p_size
 ) {
-    printf("fdd_read: called\n");
-
+    uint8_t *l_buffer = (uint8_t *)p_buffer;
     struct ts_floppyDrive *l_fdd =
         (struct ts_floppyDrive *)p_block->driverData;
     const struct ts_floppyDriveType *l_type = &s_floppyDriveTypes[l_fdd->type];
-
-    printf("fdd_read: type=0x%02x\n", l_fdd->type);
 
     if(p_lba > l_type->sectorCount) {
         return -1;
     }
 
-    unsigned int l_temp = p_lba / l_type->sectors;
-    unsigned int l_sector = (p_lba % l_type->sectors) + 1;
-    unsigned int l_head = l_temp % l_type->heads;
-    unsigned int l_cylinder = l_temp / l_type->heads;
-
     fdd_specify(l_fdd);
-
-    printf("fdd_read: SPECIFY done.\n");
-
-    // Turn on the motor
     fdd_startMotor(l_fdd);
-
-    printf("floppy: Motor turned on.\n");
-
     isadma_init_read(2);
 
-    fdc_writeData(l_fdd->fdc, C_FDC_CMD_READ_SECTOR | C_FDC_CMD_OPTION_MF);
-    fdc_writeData(l_fdd->fdc, (l_head << 2) | l_fdd->driveIndex);
-    fdc_writeData(l_fdd->fdc, l_cylinder);
-    fdc_writeData(l_fdd->fdc, l_head);
-    fdc_writeData(l_fdd->fdc, l_sector);
-    fdc_writeData(l_fdd->fdc, 2); // 512 bytes per sector
-    fdc_writeData(l_fdd->fdc, l_type->sectors);
-    fdc_writeData(l_fdd->fdc, 27); // GAP1
-    fdc_writeData(l_fdd->fdc, 0xff); // 512 bytes per sector
+    size_t l_readBytes = 0;
+    lba_t l_currentLba = p_lba;
 
-    printf("floppy: Sent READ_SECTOR command.\n");
+    while(l_readBytes < p_size) {
+        ssize_t l_readPartBytes = fdd_readPart(
+            l_fdd,
+            l_currentLba,
+            &l_buffer[l_readBytes],
+            p_size - l_readBytes
+        );
 
-    fdc_waitIrq(l_fdd->fdc);
-    
-    printf("fdd_read: Reading 512 bytes...\n");
+        if(l_readPartBytes < 0) {
+            fdd_stopMotor(l_fdd);
+            return -1;
+        } else if(l_readPartBytes == 0) {
+            return l_readBytes;
+        }
 
-    isadma_read(p_buffer, 512);
-
-    for(int l_index = 0; l_index < 512; l_index++) {
-        printf("%02x ", ((uint8_t *)p_buffer)[l_index]);
+        l_currentLba += l_readPartBytes / 512;
+        l_readBytes += l_readPartBytes;
     }
 
-    printf("\n");
+    fdd_stopMotor(l_fdd);
 
-    for(int l_i = 0; l_i < 7; l_i++) {
-        printf("%02x ", fdc_readData(l_fdd->fdc));
-    }
-
-    printf("\n");
-
-    // TODO
-    return 0;
+    return l_readBytes;
 }
 
 static void fdc_setDor(struct ts_fdc *p_fdc, uint8_t p_dor) {
@@ -496,4 +449,51 @@ static void fdd_startMotor(struct ts_floppyDrive *p_fdd) {
 
 static void fdd_stopMotor(struct ts_floppyDrive *p_fdd) {
     fdc_stopMotor(p_fdd->fdc, p_fdd->driveIndex);
+}
+
+static ssize_t fdd_readPart(
+    struct ts_floppyDrive *p_fdd,
+    lba_t p_lba,
+    void *p_buffer,
+    size_t p_size
+) {
+    const struct ts_floppyDriveType *l_type = &s_floppyDriveTypes[p_fdd->type];
+
+    if(p_lba > l_type->sectorCount) {
+        return 0;
+    }
+
+    unsigned int l_temp = p_lba / l_type->sectors;
+    unsigned int l_sector = (p_lba % l_type->sectors) + 1;
+    unsigned int l_head = l_temp % l_type->heads;
+    unsigned int l_cylinder = l_temp / l_type->heads;
+    unsigned int l_maxSectors = l_type->sectors - l_sector + 1;
+    unsigned int l_maxSize = l_maxSectors * 512;
+
+    isadma_init(2, l_maxSize);
+
+    fdc_writeData(p_fdd->fdc, C_FDC_CMD_READ_SECTOR | C_FDC_CMD_OPTION_MF);
+    fdc_writeData(p_fdd->fdc, (l_head << 2) | p_fdd->driveIndex);
+    fdc_writeData(p_fdd->fdc, l_cylinder);
+    fdc_writeData(p_fdd->fdc, l_head);
+    fdc_writeData(p_fdd->fdc, l_sector);
+    fdc_writeData(p_fdd->fdc, 2); // 512 bytes per sector
+    fdc_writeData(p_fdd->fdc, l_type->sectors);
+    fdc_writeData(p_fdd->fdc, 27); // GAP1
+    fdc_writeData(p_fdd->fdc, 0xff); // 512 bytes per sector
+
+    fdc_waitIrq(p_fdd->fdc);
+
+    size_t l_byteCount = p_size < l_maxSize ? p_size : l_maxSize;
+
+    isadma_read(p_buffer, l_byteCount);
+
+    // Skip result bytes
+    for(int l_i = 0; l_i < 7; l_i++) {
+        fdc_readData(p_fdd->fdc);
+    }
+
+    // TODO: detect errors
+
+    return l_byteCount;
 }

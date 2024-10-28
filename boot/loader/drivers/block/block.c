@@ -25,7 +25,7 @@ struct ts_block *block_alloc(void) {
 int block_register(struct ts_block *p_block) {
     p_block->registered = true;
 
-    p_block->read(p_block, 0, NULL);
+    printf("block: Registered %s\n", p_block->name);
 
     return 0;
 }
