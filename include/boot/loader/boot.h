@@ -21,4 +21,11 @@ struct ts_bootInfoStructure {
     uint8_t m_pciSupported;
 } __attribute__((packed));
 
+struct ts_memoryMapEntry {
+    uint64_t m_base;
+    uint64_t m_size;
+    uint32_t m_type;
+    uint32_t m_attributes;
+} __attribute__((packed));
+
 #endif
