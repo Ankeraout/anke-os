@@ -47,6 +47,7 @@
 #define C_FDC_CMD_CONFIGURE 0x13
 
 #define C_FDC_CMD_OPTION_MF 0x40
+#define C_FLOPPY_BYTES_PER_SECTOR 512
 
 struct ts_floppyDriveType {
     unsigned int cylinders;
@@ -270,6 +271,7 @@ static int fdd_init(struct ts_floppyDrive *p_fdd) {
     sprintf(l_block->name, "fd%d", p_fdd->driveIndex);
     l_block->driverData = p_fdd;
     l_block->read = fdd_read;
+    l_block->sectorSize = C_FLOPPY_BYTES_PER_SECTOR;
 
     return block_register(l_block);
 }
@@ -415,7 +417,7 @@ static ssize_t fdd_read(
             return l_readBytes;
         }
 
-        l_currentLba += l_readPartBytes / 512;
+        l_currentLba += l_readPartBytes / C_FLOPPY_BYTES_PER_SECTOR;
         l_readBytes += l_readPartBytes;
     }
 
@@ -468,7 +470,7 @@ static ssize_t fdd_readPart(
     unsigned int l_head = l_temp % l_type->heads;
     unsigned int l_cylinder = l_temp / l_type->heads;
     unsigned int l_maxSectors = l_type->sectors - l_sector + 1;
-    unsigned int l_maxSize = l_maxSectors * 512;
+    unsigned int l_maxSize = l_maxSectors * C_FLOPPY_BYTES_PER_SECTOR;
 
     isadma_init(2, l_maxSize);
 

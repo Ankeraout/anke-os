@@ -11,6 +11,7 @@ struct ts_block {
     bool registered;
     char name[16];
     void *driverData;
+    size_t sectorSize;
     ssize_t (*read)(
         struct ts_block *p_block,
         lba_t p_lba,
