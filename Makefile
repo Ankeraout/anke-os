@@ -3,7 +3,7 @@ RM := rm -rf
 XORRISO := xorriso
 CP := cp
 
-bin/anke-os.iso: limine/limine obj/iso/limine-uefi-cd.bin obj/iso/limine-bios-cd.bin obj/iso/limine-bios.sys obj/iso/limine.conf limine/limine
+bin/anke-os.iso: limine/limine obj/iso/limine-uefi-cd.bin obj/iso/limine-bios-cd.bin obj/iso/limine-bios.sys obj/iso/limine.conf limine/limine obj/iso/boot/kernel.elf
 	if [ ! -d $(dir $@) ]; then \
 		$(MKDIR) $(dir $@); \
 	fi
@@ -28,11 +28,21 @@ obj/iso/%: src/iso/%
 	fi
 	$(CP) $< $@
 
+obj/iso/boot/kernel.elf: kernel/bin/kernel.elf
+	if [ ! -d $(dir $@) ]; then \
+		$(MKDIR) $(dir $@); \
+	fi
+	$(CP) $< $@
+
+kernel/bin/kernel.elf:
+	$(MAKE) -C kernel
+
 limine/limine:
 	$(MAKE) -C limine
 
 clean:
 	$(MAKE) -C limine clean
 	$(RM) bin obj
+	$(MAKE) -C kernel clean
 
 .PHONY: all clean
