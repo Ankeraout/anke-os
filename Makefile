@@ -34,10 +34,10 @@ obj/iso/boot/kernel.elf: kernel/bin/kernel.elf
 	fi
 	$(CP) $< $@
 
-kernel/bin/kernel.elf:
+kernel/bin/kernel.elf: FORCE
 	$(MAKE) -C kernel
 
-limine/limine:
+limine/limine: FORCE
 	$(MAKE) -C limine
 
 clean:
@@ -45,4 +45,4 @@ clean:
 	$(RM) bin obj
 	$(MAKE) -C kernel clean
 
-.PHONY: all clean
+.PHONY: all clean FORCE
