@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "arch/amd64/asm.h"
+#include "printk.h"
 
 struct ts_gdtEntry {
     uint64_t m_limit_0_15 : 16;
@@ -43,6 +44,8 @@ void gdtInit(void) {
         "retfq \n"
         "gdtReloadCs: \n"
     );
+
+    pr_info("gdt: GDT loaded.\n");
 }
 
 static void gdtInitEntry(
