@@ -3,6 +3,7 @@
 #include "arch/amd64/asm.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
+#include "printk.h"
 #include "string.h"
 
 #define C_VMM_ENTRIES_PER_PAGE \
@@ -39,52 +40,21 @@ int vmmInit(void) {
         return -1;
     }
 
-    // 2. Identity map the first 512 GiB of memory
-    // 2.1. Create the PDPT
-    uint64_t *l_identityPdpt = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_identityPdpt == NULL) {
+    // 2. Identity map the first 4 GiB of memory
+    if(
+        vmmMap(
+            &s_vmmKernelContext,
+            (void *)0x0000000000001000,
+            (void *)0x0000000000001000,
+            (1UL << 32UL) - 0x1000UL,
+            C_VMM_PROT_KERNEL | C_VMM_PROT_READ_WRITE
+        ) != 0
+    ) {
         return -1;
     }
-
-    // 2.2. Initialize the PDPT entries
-    uint64_t l_entryValue = 0
-        | C_VMM_PAGING_FLAG_PS
-        | C_VMM_PAGING_FLAG_READ_WRITE
-        | C_VMM_PAGING_FLAG_PRESENT;
-
-    for(int l_index = 0; l_index < 512; l_index++) {
-        l_identityPdpt[l_index] = l_entryValue;
-        l_entryValue += 0x0000000040000000;
-    }
-
-    // 2.3. Set the PML4 entry
-    ((uint64_t *)s_vmmKernelContext.m_pagingContext)[0] =
-        (uint64_t)l_identityPdpt
-        | C_VMM_PAGING_FLAG_READ_WRITE
-        | C_VMM_PAGING_FLAG_PRESENT;
 
     // 3. Map kernel to 0xffffffff80000000
-    // 3.1. Create the PDPT
-    uint64_t *l_kernelPdpt = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_kernelPdpt == NULL) {
-        return -1;
-    }
-
-    // 3.2. Create the page directory
-    uint64_t *l_kernelPageDirectory = pmmAlloc(C_MM_PAGE_SIZE);
-
-    if(l_kernelPageDirectory == NULL) {
-        return -1;
-    }
-
-    // 3.3. Initialize the PDPT entry
-    l_kernelPdpt[0x1ff] = (uintptr_t)l_kernelPageDirectory
-        | C_VMM_PAGING_FLAG_READ_WRITE
-        | C_VMM_PAGING_FLAG_PRESENT;
-
-    // 3.4. Get the physical address of the kernel from the current paging
+    // 3.1. Get the physical address of the kernel from the current paging
     // structure
     struct ts_vmmContext l_temporaryKernelContext = {
         .m_pagingContext = readCr3()
@@ -96,7 +66,7 @@ int vmmInit(void) {
             (void *)0xffffffff80000000
         );
 
-    // 3.5. Map the kernel
+    // 3.2. Map the kernel
     if(
         vmmMap(
             &s_vmmKernelContext,
@@ -109,7 +79,7 @@ int vmmInit(void) {
         return -1;
     }
 
-    // Reload CR3
+    // 4. Reload CR3
     writeCr3(s_vmmKernelContext.m_pagingContext);
 
     return 0;
@@ -242,12 +212,15 @@ int vmmMap(
                 }
 
                 l_pdIndex++;
+                l_ptIndex = 0;
             }
 
             l_pdptIndex++;
+            l_pdIndex = 0;
         }
 
         l_pml4Index++;
+        l_pdptIndex = 0;
     }
 
     return 0;
@@ -304,16 +277,19 @@ int vmmUnmap(
                 }
 
                 l_pdIndex++;
+                l_ptIndex = 0;
 
                 vmmTryFreePagingStructure(l_pt);
             }
 
             l_pdptIndex++;
+            l_pdIndex = 0;
 
             vmmTryFreePagingStructure(l_pd);
         }
 
         l_pml4Index++;
+        l_pdptIndex = 0;
 
         vmmTryFreePagingStructure(l_pdpt);
     }

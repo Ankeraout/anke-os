@@ -1,5 +1,6 @@
 #include <stddef.h>
 
+#include "acpi/acpi.h"
 #include "arch/amd64/asm.h"
 #include "limine.h"
 #include "mm/mm.h"
@@ -76,5 +77,12 @@ void bootstrap(void) {
             cli();
             hlt();
         }
+    }
+
+    if(g_rsdpRequest.response != NULL) {
+        pr_info("bootstrap: RSDP at %p\n", g_rsdpRequest.response->address);
+        acpiSetRsdpLocation(g_rsdpRequest.response->address);
+    } else {
+        pr_info("bootstrap: No RSDP provided by the bootloader.\n");
     }
 }
