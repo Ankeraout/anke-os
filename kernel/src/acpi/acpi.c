@@ -1,3 +1,4 @@
+#include "stdlib.h"
 #include "string.h"
 
 #include "acpi/acpi.h"
@@ -14,6 +15,16 @@ int acpiInit(void) {
 
     // Initialize ACPI structure
     memset(&s_acpi, 0, sizeof(struct ts_acpi));
+
+    // Create root scope object
+    s_acpi.m_root = malloc(sizeof(struct ts_acpiScopeObject));
+
+    memcpy(s_acpi.m_root->m_header.m_name, "\\___", 4);
+    s_acpi.m_root->m_header.m_type = E_ACPI_OBJECT_TYPE_SCOPE;
+
+    if(s_acpi.m_root == NULL) {
+        return -1;
+    }
 
     // Parse RSDP
     acpiRsdpParse(&s_acpi, s_rsdp);

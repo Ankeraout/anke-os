@@ -4,8 +4,6 @@
 #include "acpi/acpi.h"
 #include "acpi/sdt.h"
 
-struct ts_acpi;
-
 struct ts_acpiXsdt {
     struct ts_acpiSdtHeader m_header;
     uint64_t m_tablePointers[];

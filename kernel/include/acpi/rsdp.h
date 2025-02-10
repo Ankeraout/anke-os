@@ -6,8 +6,6 @@
 
 #include "acpi/acpi.h"
 
-struct ts_acpi;
-
 struct ts_acpiRsdp {
     uint8_t m_signature[8];
     uint8_t m_checksum;

@@ -4,8 +4,6 @@
 #include "acpi/acpi.h"
 #include "acpi/sdt.h"
 
-struct ts_acpi;
-
 struct ts_acpiDsdt {
     struct ts_acpiSdtHeader m_header;
     uint8_t m_data[];

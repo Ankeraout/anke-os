@@ -1,3 +1,4 @@
+#include "acpi/aml.h"
 #include "acpi/dsdt.h"
 
 int acpiDsdtParse(struct ts_acpi *p_acpi) {
@@ -6,5 +7,5 @@ int acpiDsdtParse(struct ts_acpi *p_acpi) {
         return 1;
     }
 
-    return 0;
+    return acpiParseSdt(p_acpi, p_acpi->m_dsdt);
 }
