@@ -21,7 +21,7 @@ struct ts_acpi {
     const struct ts_acpiMadt *m_madt;
     const struct ts_acpiDsdt *m_dsdt;
     bool m_acpi2;
-    struct ts_acpiScopeObject *m_root;
+    struct ts_acpiNode *m_root;
 };
 
 int acpiInit(void);

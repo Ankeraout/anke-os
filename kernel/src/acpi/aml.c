@@ -1,8 +1,9 @@
 #include "acpi/aml.h"
 #include "printk.h"
+#include "stdlib.h"
 #include "string.h"
 
-#define C_ACPI_MAX_NAME_LENGTH 256
+#define C_ACPI_MAX_PATH_LENGTH 256
 
 enum te_acpiAmlOpcode {
     E_ACPI_AML_OPCODE_ZERO_OP = 0x00,
@@ -124,166 +125,322 @@ enum te_acpiAmlOpcode {
     E_ACPI_AML_OPCODE_ONES_OP = 0xFF
 };
 
-struct ts_acpiAmlParseContext {
-    struct ts_acpi *m_acpi;
-    const uint8_t *m_data;
-    size_t m_size;
-    size_t m_offset;
-};
-
-static int acpiAmlInitParseContext(
-    struct ts_acpiAmlParseContext *p_context,
-    struct ts_acpi *p_acpi,
-    const struct ts_acpiDsdt *p_dsdt
-);
-static int acpiAmlParseTermList(
-    struct ts_acpiAmlParseContext *p_context,
-    size_t p_size
-);
-static int acpiAmlParseTermObj(struct ts_acpiAmlParseContext *p_context);
-static int acpiAmlParsePkgLength(
-    struct ts_acpiAmlParseContext *p_context,
+/**
+ * @brief Parses an AML scope definition.
+ * 
+ * @param[in] p_node A pointer to the node.
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[out] p_length The length of the buffer.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiAmlParseDefScope(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
     size_t *p_length
 );
-static int acpiAmlParseNameString(
-    struct ts_acpiAmlParseContext *p_context,
-    char *p_name
-);
+
+/**
+ * @brief Parses a name segment from an AML buffer.
+ * 
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[out] p_name A pointer to the name buffer.
+ * @param[out] p_length The length of the name segment.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
 static int acpiAmlParseNameSeg(
-    struct ts_acpiAmlParseContext *p_context,
+    const uint8_t *p_buffer,
     char *p_name,
     size_t *p_length
 );
-static int acpiAmlParseDefScope(struct ts_acpiAmlParseContext *p_context);
-static int acpiAmlParseDefName(struct ts_acpiAmlParseContext *p_context);
-static int acpiAmlParseDefPackage(struct ts_acpiAmlParseContext *p_context);
 
-int acpiParseSdt(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt) {
-    struct ts_acpiAmlParseContext l_context;
-    const size_t l_size =
-        p_sdt->m_header.m_length - sizeof(struct ts_acpiSdtHeader);
+/**
+ * @brief Parses a name string from an AML buffer.
+ * 
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[out] p_name A pointer to the name buffer.
+ * @param[out] p_length The length of the name string.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiAmlParseNameString(
+    const uint8_t *p_buffer,
+    char *p_name,
+    size_t *p_length
+);
 
-    int l_result = acpiAmlInitParseContext(&l_context, p_acpi, p_sdt);
+/**
+ * @brief Parses a package length from an AML buffer.
+ * 
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[out] p_pkgLength The package length.
+ * 
+ * @returns The number of bytes read.
+ */
+static size_t acpiAmlParsePkgLength(
+    const uint8_t *p_buffer,
+    size_t *p_pkgLength
+);
+
+/**
+ * @brief Parses a term list from an AML buffer.
+ * 
+ * @param[in] p_node A pointer to the node.
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[in] p_length The length of the buffer.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiAmlParseTermList(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
+    size_t p_length
+);
+
+/**
+ * @brief Parses a term obj from an AML buffer.
+ * 
+ * @param[in] p_node A pointer to the node.
+ * @param[in] p_buffer A pointer to the buffer.
+ * @param[in] p_length The length of the parsed object.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiAmlParseTermObj(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
+    size_t *p_length
+);
+
+/**
+ * @brief Creates a new node.
+ * 
+ * @param[in] p_parent The parent node.
+ * @param[out] p_node A pointer to the node.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiCreateNode(
+    struct ts_acpiNode *p_parent,
+    struct ts_acpiNode **p_node
+);
+
+/**
+ * @brief Gets a child node by name.
+ * 
+ * @param[in] p_node A pointer to the node.
+ * @param[in] p_name The name.
+ * @param[out] p_child A pointer to the child node.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiGetChildByName(
+    struct ts_acpiNode *p_node,
+    const char *p_name,
+    struct ts_acpiNode **p_child
+);
+
+/**
+ * @brief Gets a node by path.
+ * 
+ * @param[in] p_baseNode A pointer to the node to start the search from.
+ * @param[in] p_path The path.
+ * @param[out] p_node A pointer to the node.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiGetNode(
+    struct ts_acpiNode *p_baseNode,
+    const char *p_path,
+    struct ts_acpiNode **p_node
+);
+
+/**
+ * @brief Gets the name of a path.
+ * 
+ * @param[in] p_path The path.
+ * @param[out] p_name A pointer to the name.
+ */
+static void acpiGetPathName(const char *p_path, char *p_name);
+
+/**
+ * @brief Gets a parent node by path.
+ * 
+ * @param[in] p_baseNode A pointer to the node to start the search from.
+ * @param[in] p_path The path.
+ * @param[out] p_node A pointer to the node.
+ * 
+ * @returns 0 on success, -1 on failure.
+ */
+static int acpiGetParentByPath(
+    struct ts_acpiNode *p_baseNode,
+    const char *p_path,
+    struct ts_acpiNode **p_node
+);
+
+/**
+ * @brief Gets the root node.
+ * 
+ * @param[in] p_baseNode A pointer to the base node.
+ * 
+ * @returns A pointer to the root node.
+ */
+static struct ts_acpiNode *acpiGetRootNode(struct ts_acpiNode *p_baseNode);
+
+int acpiParseAml(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt) {
+    // Initialize root node
+    if(p_acpi->m_root == NULL) {
+        int l_result = acpiCreateNode(NULL, &p_acpi->m_root);
+
+        if(l_result != 0) {
+            return l_result;
+        }
+
+        p_acpi->m_root->m_name[0] = '\\';
+    }
+
+    return acpiAmlParseTermList(
+        p_acpi->m_root,
+        p_sdt->m_data,
+        p_sdt->m_header.m_length - sizeof(struct ts_acpiSdtHeader)
+    );
+}
+
+static int acpiAmlParseDefScope(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
+    size_t *p_length
+) {
+    size_t l_offset = 0U;
+
+    if(p_buffer[l_offset++] != E_ACPI_AML_OPCODE_SCOPE_OP) {
+        pr_err("acpi: Expected scope opcode\n");
+        return -1;
+    }
+
+    // Parse package length
+    size_t l_pkgLength;
+    l_offset += acpiAmlParsePkgLength(&p_buffer[l_offset], &l_pkgLength);
+
+    // Parse name
+    char l_name[C_ACPI_MAX_PATH_LENGTH];
+    size_t l_nameLength;
+
+    int l_result =
+        acpiAmlParseNameString(&p_buffer[l_offset], l_name, &l_nameLength);
 
     if(l_result != 0) {
         return l_result;
     }
 
-    return acpiAmlParseTermList(&l_context, l_size);
-}
+    l_offset += l_nameLength;
 
-static int acpiAmlInitParseContext(
-    struct ts_acpiAmlParseContext *p_context,
-    struct ts_acpi *p_acpi,
-    const struct ts_acpiDsdt *p_sdt
-) {
-    p_context->m_acpi = p_acpi;
-    p_context->m_data = p_sdt->m_data;
-    p_context->m_size =
-        p_sdt->m_header.m_length - sizeof(struct ts_acpiSdtHeader);
-    p_context->m_offset = 0;
+    // Get parent node
+    struct ts_acpiNode *l_parentNode;
+    l_result = acpiGetParentByPath(p_node, l_name, &l_parentNode);
 
-    return 0;
-}
-
-static int acpiAmlParseTermList(
-    struct ts_acpiAmlParseContext *p_context,
-    size_t p_size
-) {
-    size_t l_endOffset = p_context->m_offset + p_size;
-
-    while(p_context->m_offset < l_endOffset) {
-        int result = acpiAmlParseTermObj(p_context);
-
-        if(result != 0) {
-            return result;
-        }
+    if(l_result != 0) {
+        return l_result;
     }
 
-    return 0;
-}
+    struct ts_acpiNode *l_node;
+    
+    // Get the existing node, and if it does not exist, create it.
+    if(acpiGetChildByName(l_parentNode, l_name, &l_node) != 0) {
+        l_result = acpiCreateNode(l_parentNode, &l_node);
 
-static int acpiAmlParseTermObj(struct ts_acpiAmlParseContext *p_context) {
-    const uint8_t l_opcode = p_context->m_data[p_context->m_offset++];
-
-    pr_info("acpi: Parsing term obj at 0x%04x\n", p_context->m_offset);
-
-    switch(l_opcode) {
-        /*
-        case E_ACPI_AML_OPCODE_ALIAS_OP:
-            return acpiAmlParseDefAlias(p_context);
-        */
-
-        case E_ACPI_AML_OPCODE_NAME_OP:
-            return acpiAmlParseDefName(p_context);
-
-        case E_ACPI_AML_OPCODE_SCOPE_OP:
-            return acpiAmlParseDefScope(p_context);
-
-        case E_ACPI_AML_OPCODE_PACKAGE_OP:
-            return acpiAmlParseDefPackage(p_context);
-
-        default:
-            pr_err("acpi: Unexpected AML opcode: 0x%02x\n", l_opcode);
+        if(l_node == NULL) {
             return -1;
+        }
+
+        l_node->m_type = E_ACPI_OBJECT_TYPE_SCOPE;
+        
+        acpiGetPathName(l_name, l_node->m_name);
     }
+
+    // Parse term list
+    l_result = acpiAmlParseTermList(
+        l_node,
+        &p_buffer[l_offset],
+        l_pkgLength - l_offset + 1
+    );
+
+    if(l_result != 0) {
+        return l_result;
+    }
+
+    // Return the length of the parsed object
+    *p_length = l_pkgLength + 1;
+
+    return 0;
 }
 
-static int acpiAmlParsePkgLength(
-    struct ts_acpiAmlParseContext *p_context,
+static int acpiAmlParseNameSeg(
+    const uint8_t *p_buffer,
+    char *p_name,
     size_t *p_length
 ) {
-    const uint8_t l_pkgLeadByte = p_context->m_data[p_context->m_offset];
-    const uint8_t l_byteCount = (l_pkgLeadByte >> 6U) + 1U;
+    bool l_isSuffix = true;
+    size_t l_length = 0;
 
-    if(l_byteCount == 1U) {
-        *p_length = l_pkgLeadByte & 0x3fU;
-    } else {
-        size_t l_pkgLength = l_pkgLeadByte & 0x0fU;
-
-        for(size_t l_offset = 1; l_offset < l_byteCount; l_offset++) {
-            l_pkgLength |= (
-                p_context->m_data[p_context->m_offset + l_offset]
-                << (8U * (l_offset - 1U) + 4U)
-            );
+    for(int l_offset = 3; l_offset >= 0; l_offset--) {
+        if(
+            l_isSuffix
+            && (p_buffer[l_offset] != '_')
+        ) {
+            l_isSuffix = false;
+            l_length = l_offset + 1;
         }
 
-        *p_length = l_pkgLength;
+        if(!l_isSuffix) {
+            p_name[l_offset] = p_buffer[l_offset];
+        }
     }
 
-    p_context->m_offset += l_byteCount;
+    // TODO: validate name
+
+    *p_length = l_length;
 
     return 0;
 }
 
 static int acpiAmlParseNameString(
-    struct ts_acpiAmlParseContext *p_context,
-    char *p_name
+    const uint8_t *p_buffer,
+    char *p_name,
+    size_t *p_length
 ) {
     size_t l_length = 0;
     size_t l_segmentLength;
     size_t l_segmentCount;
+    size_t l_offset = 0;
 
     while(true) {
-        switch(p_context->m_data[p_context->m_offset]) {
+        switch(p_buffer[l_offset]) {
             case 0: // Null name
-                p_context->m_offset++;
+                l_offset++;
                 p_name[l_length] = '\0';
                 break;
 
             case 0x2e: // Dual name prefix
-                p_context->m_offset++;
+                l_offset++;
 
                 for(size_t l_index = 0; l_index < 2; l_index++) {
                     if(l_index > 0) {
                         p_name[l_length++] = '.';
                     }
 
-                    acpiAmlParseNameSeg(
-                        p_context,
-                        &p_name[l_length],
-                        &l_segmentLength
-                    );
+                    if(
+                        acpiAmlParseNameSeg(
+                            &p_buffer[l_offset],
+                            &p_name[l_length],
+                            &l_segmentLength
+                        ) != 0
+                    ) {
+                        return -1;
+                    }
+
+                    l_offset += 4U;
 
                     l_length += l_segmentLength;
                 }
@@ -291,19 +448,25 @@ static int acpiAmlParseNameString(
                 break;
 
             case 0x2f: // Multi name prefix
-                p_context->m_offset++;
-                l_segmentCount = p_context->m_data[p_context->m_offset++];
+                l_offset++;
+                l_segmentCount = p_buffer[l_offset++];
 
                 for(size_t l_index = 0; l_index < l_segmentCount; l_index++) {
                     if(l_index > 0) {
                         p_name[l_length++] = '.';
                     }
 
-                    acpiAmlParseNameSeg(
-                        p_context,
-                        &p_name[l_length],
-                        &l_segmentLength
-                    );
+                    if(
+                        acpiAmlParseNameSeg(
+                            &p_buffer[l_offset],
+                            &p_name[l_length],
+                            &l_segmentLength
+                        ) != 0
+                    ) {
+                        return -1;
+                    }
+
+                    l_offset += 4U;
 
                     l_length += l_segmentLength;
                 }
@@ -312,8 +475,8 @@ static int acpiAmlParseNameString(
             
             case '\\':
             case '^':
-                p_name[l_length++] = p_context->m_data[p_context->m_offset];
-                p_context->m_offset++;
+                p_name[l_length++] = p_buffer[l_offset];
+                l_offset++;
                 continue;
 
             case 'A':
@@ -343,11 +506,17 @@ static int acpiAmlParseNameString(
             case 'Y':
             case 'Z':
             case '_':
-                acpiAmlParseNameSeg(
-                    p_context,
-                    &p_name[l_length],
-                    &l_segmentLength
-                );
+                if(
+                    acpiAmlParseNameSeg(
+                        &p_buffer[l_offset],
+                        &p_name[l_length],
+                        &l_segmentLength
+                    ) != 0
+                ) {
+                    return -1;
+                }
+
+                l_offset += 4U;
                 
                 l_length += l_segmentLength;
 
@@ -356,7 +525,7 @@ static int acpiAmlParseNameString(
             default:
                 pr_err(
                     "acpi: Unexpected character in name string: 0x%02x\n",
-                    p_context->m_data[p_context->m_offset]
+                    p_buffer[l_offset]
                 );
 
                 return -1;
@@ -367,101 +536,256 @@ static int acpiAmlParseNameString(
 
     p_name[l_length] = '\0';
 
+    *p_length = l_offset;
+
     return 0;
 }
 
-static int acpiAmlParseNameSeg(
-    struct ts_acpiAmlParseContext *p_context,
-    char *p_name,
+static size_t acpiAmlParsePkgLength(
+    const uint8_t *p_buffer,
+    size_t *p_pkgLength
+) {
+    const uint8_t l_pkgLeadByte = p_buffer[0];
+    const uint8_t l_byteCount = (l_pkgLeadByte >> 6U) + 1U;
+
+    if(l_byteCount == 1U) {
+        *p_pkgLength = l_pkgLeadByte & 0x3fU;
+    } else {
+        size_t l_pkgLength = l_pkgLeadByte & 0x0fU;
+
+        for(size_t l_offset = 1; l_offset < l_byteCount; l_offset++) {
+            l_pkgLength |= (p_buffer[l_offset] << (8U * (l_offset - 1U) + 4U));
+        }
+
+        *p_pkgLength = l_pkgLength;
+    }
+
+    return l_byteCount;
+}
+
+static int acpiAmlParseTermList(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
+    size_t p_length
+) {
+    size_t l_offset = 0U;
+
+    while(l_offset <= p_length) {
+        size_t l_termObjectLength;
+        
+        int l_result = acpiAmlParseTermObj(
+            p_node,
+            &p_buffer[l_offset],
+            &l_termObjectLength
+        );
+
+        if(l_result != 0) {
+            return l_result;
+        }
+
+        l_offset += l_termObjectLength;
+    }
+
+    return 0;
+}
+
+static int acpiAmlParseTermObj(
+    struct ts_acpiNode *p_node,
+    const uint8_t *p_buffer,
     size_t *p_length
 ) {
-    bool l_isSuffix = true;
-    size_t l_length = 0;
-
-    for(int l_offset = 3; l_offset >= 0; l_offset--) {
-        if(
-            l_isSuffix
-            && (p_context->m_data[p_context->m_offset + l_offset] != '_')
-        ) {
-            l_isSuffix = false;
-            l_length = l_offset + 1;
-        }
-
-        if(!l_isSuffix) {
-            p_name[l_offset] =
-                p_context->m_data[p_context->m_offset + l_offset];
-        }
+    switch(p_buffer[0]) {
+        case E_ACPI_AML_OPCODE_SCOPE_OP:
+            return acpiAmlParseDefScope(p_node, p_buffer, p_length);
     }
 
-    p_context->m_offset += 4;
-    *p_length = l_length;
+    // Undefined opcode
+    pr_err(
+        "acpi: Undefined AML opcode: 0x%02x\n",
+        p_buffer[0]
+    );
 
-    return 0;
+    return -1;
 }
 
-static int acpiAmlParseDefScope(struct ts_acpiAmlParseContext *p_context) {
-    const size_t l_pkgStartOffset = p_context->m_offset;
-    size_t l_pkgLength;
+static int acpiCreateNode(
+    struct ts_acpiNode *p_parent,
+    struct ts_acpiNode **p_node
+) {
+    struct ts_acpiNode *l_node = malloc(sizeof(struct ts_acpiNode));
 
-    int l_result = acpiAmlParsePkgLength(p_context, &l_pkgLength);
-
-    if(l_result != 0) {
-        return l_result;
+    if (l_node == NULL) {
+        printk("acpi: failed to allocate memory for node\n");
+        return -1;
     }
 
-    const size_t l_pkgLengthLength = p_context->m_offset - l_pkgStartOffset;
-
-    char l_name[C_ACPI_MAX_NAME_LENGTH];
-
-    l_result = acpiAmlParseNameString(p_context, l_name);
-
-    if(l_result != 0) {
-        return l_result;
-    }
-
-    const size_t l_nameLength =
-        p_context->m_offset - l_pkgStartOffset - l_pkgLengthLength;
-
-    pr_info("acpi: DefScope: %s (size: %llu)\n", l_name, l_pkgLength);
-
-    //return acpiAmlParseTermList(p_context, l_pkgLength - l_pkgLengthLength);
-
-    p_context->m_offset += l_pkgLength - l_pkgLengthLength - l_nameLength;
-
-    return 0;
-}
-
-static int acpiAmlParseDefName(struct ts_acpiAmlParseContext *p_context) {
-    char l_name[C_ACPI_MAX_NAME_LENGTH];
-
-    int l_result = acpiAmlParseNameString(p_context, l_name);
-
-    if(l_result != 0) {
-        return l_result;
-    }
-
-    pr_info("acpi: DefName: %s\n", l_name);
-
-    l_result = acpiAmlParseTermObj(p_context);
-
-    if(l_result != 0) {
-        return l_result;
-    }
-
-    // TODO: store term object
-
-    return 0;
-}
-
-static int acpiAmlParseDefPackage(struct ts_acpiAmlParseContext *p_context) {
-    size_t l_pkgLength;
-    int l_result = acpiAmlParsePkgLength(p_context, &l_pkgLength);
-
-    if(l_result != 0) {
-        return l_result;
-    }
-
-    uint8_t l_numElements = p_context->m_data[p_context->m_offset++];
-
+    memset(l_node, 0, sizeof(struct ts_acpiNode));
     
+    if(p_parent != NULL) {
+        if(p_parent->m_children == NULL) {
+            p_parent->m_children = l_node;
+        } else {
+            struct ts_acpiNode *l_child = p_parent->m_children;
+
+            while(l_child->m_next != NULL) {
+                l_child = l_child->m_next;
+            }
+
+            l_child->m_next = l_node;
+        }
+
+        l_node->m_parent = p_parent;
+    }
+
+    *p_node = l_node;
+
+    return 0;
+}
+
+static int acpiGetChildByName(
+    struct ts_acpiNode *p_node,
+    const char *p_name,
+    struct ts_acpiNode **p_child
+) {
+    struct ts_acpiNode *l_child = p_node->m_children;
+
+    while(l_child != NULL) {
+        if(strcmp(l_child->m_name, p_name) == 0) {
+            *p_child = l_child;
+            return 0;
+        }
+
+        l_child = l_child->m_next;
+    }
+
+    return -1;
+}
+
+static int acpiGetNode(
+    struct ts_acpiNode *p_baseNode,
+    const char *p_path,
+    struct ts_acpiNode **p_node
+) {
+    struct ts_acpiNode *l_node = p_baseNode;
+
+    if(p_path[0] == '\\') {
+        p_path++;
+        
+        // Go back to the root node
+        while(l_node->m_parent != NULL) {
+            l_node = l_node->m_parent;
+        }
+    }
+
+    while(*p_path != '\0') {
+        if(*p_path == '.') {
+            p_path++;
+        }
+
+        char l_name[C_ACPI_NAME_LENGTH + 1];
+        int l_index = 0;
+
+        while(*p_path != '.' && *p_path != '\0') {
+            if(l_index >= C_ACPI_NAME_LENGTH) {
+                printk("acpi: name too long\n");
+                return -1;
+            }
+
+            l_name[l_index++] = *p_path++;
+        }
+
+        l_name[l_index] = '\0';
+
+        struct ts_acpiNode *l_child = l_node->m_children;
+
+        while(l_child != NULL) {
+            if(strcmp(l_child->m_name, l_name) == 0) {
+                l_node = l_child;
+                break;
+            }
+
+            l_child = l_child->m_next;
+        }
+
+        if(l_child == NULL) {
+            printk("acpi: node not found\n");
+            return -1;
+        }
+    }
+
+    *p_node = l_node;
+
+    return 0;
+}
+
+static void acpiGetPathName(const char *p_path, char *p_name) {
+    const char *l_lastDot = strrchr(p_path, '.');
+
+    if(l_lastDot == NULL) {
+        p_name[0] = '\0';
+        return;
+    }
+
+    size_t l_nameLength = 0U;
+
+    while(
+        (l_nameLength < C_ACPI_NAME_LENGTH)
+        && (l_lastDot[l_nameLength + 1] != '\0')
+    ) {
+        p_name[l_nameLength] = l_lastDot[l_nameLength + 1];
+        l_nameLength++;
+    }
+    
+    p_name[l_nameLength] = '\0';
+
+    return;
+}
+
+static int acpiGetParentByPath(
+    struct ts_acpiNode *p_baseNode,
+    const char *p_path,
+    struct ts_acpiNode **p_node
+) {
+    struct ts_acpiNode *l_node = p_baseNode;
+    size_t l_pathIndex = 0U;
+    char l_name[C_ACPI_NAME_LENGTH + 1];
+    size_t l_nameIndex = 0U;
+    const char *l_lastDot = strrchr(p_path, '.');
+
+    if(l_lastDot == NULL) {
+        *p_node = p_baseNode;
+        return 0;
+    }
+
+    size_t l_lastDotIndex = l_lastDot - p_path;
+
+    while(l_pathIndex <= l_lastDotIndex) {
+        if(p_path[l_pathIndex] == '.') {
+            l_name[l_nameIndex] = '\0';
+
+            int l_result = acpiGetChildByName(l_node, l_name, &l_node);
+
+            if(l_result != 0) {
+                return l_result;
+            }
+
+            l_nameIndex = 0;
+        }
+
+        l_pathIndex++;
+    }
+
+    *p_node = l_node;
+
+    return 0;
+}
+
+static struct ts_acpiNode *acpiGetRootNode(struct ts_acpiNode *p_baseNode) {
+    struct ts_acpiNode *l_node = p_baseNode;
+
+    while(l_node->m_parent != NULL) {
+        l_node = l_node->m_parent;
+    }
+
+    return l_node;
 }

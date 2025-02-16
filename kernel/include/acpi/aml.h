@@ -7,29 +7,40 @@
 #include "acpi/acpi.h"
 #include "acpi/dsdt.h"
 
+#define C_ACPI_NAME_LENGTH 4
+
 enum te_acpiObjectType {
     E_ACPI_OBJECT_TYPE_SCOPE,
     E_ACPI_OBJECT_TYPE_DEVICE,
     E_ACPI_OBJECT_TYPE_NAME,
-    E_ACPI_OBJECT_TYPE_METHOD
+    E_ACPI_OBJECT_TYPE_METHOD,
+    E_ACPI_OBJECT_TYPE_PROCESSOR,
+    E_ACPI_OBJECT_TYPE_THERMAL_ZONE,
+    E_ACPI_OBJECT_TYPE_POWER_RESOURCE,
+    E_ACPI_OBJECT_TYPE_EVENT,
+    E_ACPI_OBJECT_TYPE_OPERATION_REGION,
+    E_ACPI_OBJECT_TYPE_FIELD,
+    E_ACPI_OBJECT_TYPE_ALIAS,
+    E_ACPI_OBJECT_TYPE_MUTEX,
+    E_ACPI_OBJECT_TYPE_SEMAPHORE
 };
 
-struct ts_acpiObjectHeader {
+enum te_acpiDataObjectType {
+    E_ACPI_DATA_OBJECT_TYPE_INTEGER,
+    E_ACPI_DATA_OBJECT_TYPE_STRING,
+    E_ACPI_DATA_OBJECT_TYPE_BUFFER,
+    E_ACPI_DATA_OBJECT_TYPE_PACKAGE,
+    E_ACPI_DATA_OBJECT_TYPE_REFERENCE
+};
+
+struct ts_acpiNode {
+    char m_name[C_ACPI_NAME_LENGTH + 1];
     enum te_acpiObjectType m_type;
+    struct ts_acpiNode *m_parent;
+    struct ts_acpiNode *m_next;
+    struct ts_acpiNode *m_children;
 };
 
-struct ts_acpiNamedObjectHeader {
-    enum te_acpiObjectType m_type;
-    char m_name[4];
-    struct ts_acpiNamedObjectHeader *m_parent;
-    struct ts_acpiNamedObjectHeader *m_next;
-};
-
-struct ts_acpiScopeObject {
-    struct ts_acpiNamedObjectHeader m_header;
-    struct ts_acpiNamedObjectHeader *m_child;
-};
-
-int acpiParseSdt(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt);
+int acpiParseAml(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt);
 
 #endif
