@@ -11,7 +11,7 @@ bin/anke-os.img: obj/boot/vbr/fat12.bin obj/kernel/kernel.bin
 
 obj/%.bin: %.asm
 	if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
-	$(ASM) -f bin $< -o $@
+	$(ASM) -f bin $< -o $@ -l $(patsubst %.bin,%.lst,$@) $(ASMFLAGS)
 
 clean:
 	rm -rf obj bin
