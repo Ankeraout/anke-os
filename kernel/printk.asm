@@ -1,3 +1,4 @@
+section .text
 printk:
     push bp
     mov bp, sp

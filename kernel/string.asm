@@ -1,3 +1,5 @@
+section .text
+
 ; char *strrev(char *p_string)
 strrev:
     %define p_stringSegment (bp + 4)

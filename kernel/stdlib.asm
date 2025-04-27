@@ -1,3 +1,5 @@
+section .text
+
 ; char *utoa(unsigned p_value, char *p_buffer, int p_base)
 utoa:
     %define p_value (bp + 4)
@@ -117,4 +119,5 @@ itoa:
     %undef p_bufferOffset
     %undef p_base
 
+section .rodata
 g_utoa_baseString db "0123456789abcdefghijklmnopqrstuvwxyz"

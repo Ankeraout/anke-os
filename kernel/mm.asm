@@ -1,6 +1,7 @@
 ; 640 KB / 16 bytes per segment / 8 bits per byte = 5120 bytes
 %define C_MM_MMAP_SIZE 5120
 
+section .text
 mm_init:
     %define l_utoaBuffer (bp - 8)
     push bp
@@ -49,3 +50,6 @@ mm_init:
 
 g_mm_strDetectedMemory db "mm: Detected memory: ", 0
 g_mm_strDetectedMemory2 db " KB", 13, 10, 0
+
+section .bss
+g_mm_bitmap resb C_MM_MMAP_SIZE
