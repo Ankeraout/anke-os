@@ -1,4 +1,5 @@
 bits 16
+cpu 8086
 
 _start:
     mov ax, 0x1000
@@ -8,28 +9,18 @@ _start:
     mov ss, ax
     xor sp, sp
 
-    ; Print "Hello, World!" to the screen
-    mov si, hello_world
-    call print_string
+    mov ax, g_kernel_msg_boot
+    push ax
+    push ds
+    call printk
+    add sp, 4
 
-    ; Infinite loop to prevent the CPU from executing random code
-.loop:
-    ; Halt the CPU
     cli
     hlt
-    jmp .loop
 
-print_string:
-    mov ah, 0x0e
+%include "kernel/printk.inc"
 
-.next_char: 
-    lodsb
-    cmp al, 0
-    je .done
-    int 0x10
-    jmp .next_char
+g_kernel_msg_boot:
+    db "AnkeOS kernel x86_16 0.1.0 (", __DATE__, " ", __TIME__, ")", 13, 10, 0
 
-.done:
-    ret
-
-hello_world db 'Hello, World!', 0
+g_kernel_end:
