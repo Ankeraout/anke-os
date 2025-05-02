@@ -123,3 +123,37 @@ memcpy:
     %undef p_srcSegment
     %undef p_srcOffset
     %undef p_size
+
+; void *memset(void *p_dst, int p_value, size_t p_size)
+memset:
+    %define p_dstSegment (bp + 4)
+    %define p_dstOffset (bp + 6)
+    %define p_value (bp + 8)
+    %define p_size (bp + 10)
+
+    push bp
+    mov bp, sp
+
+    push si
+    push es
+    push di
+
+    mov ax, [p_dstSegment]
+    mov es, ax
+    mov di, [p_dstOffset]
+
+    mov cx, [p_size]
+    mov al, [p_value]
+
+    rep stosb
+
+    pop di
+    pop es
+    pop si
+    pop bp
+    ret
+
+    %undef p_dstSegment
+    %undef p_dstOffset
+    %undef p_value
+    %undef p_size

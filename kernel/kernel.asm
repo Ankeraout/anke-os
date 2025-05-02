@@ -33,4 +33,3 @@ main:
 section .rodata
 g_kernel_msg_boot:
     db "AnkeOS kernel x86_16 0.1.0 (", __DATE__, " ", __TIME__, ")", 13, 10, 0
-
