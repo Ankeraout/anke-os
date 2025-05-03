@@ -119,5 +119,95 @@ itoa:
     %undef p_bufferOffset
     %undef p_base
 
+; void *malloc(uint16_t p_size)
+malloc:
+    %define p_size (bp + 4)
+    
+    push bp
+    mov bp, sp
+
+    mov ax, [p_size]
+
+    ; If the size is 0, return NULL.
+    test ax, ax
+    jz .error
+
+    ; If the size is greater than 65518, return NULL.
+    cmp ax, 65518
+    ja .error
+
+    ; Convert the size to segments. Add 2 bytes for the allocation header.
+    add ax, 17
+    mov cl, 4
+    shr ax, cl
+
+    ; Allocate the memory
+    push ax
+    call mm_alloc
+    add sp, 2
+
+    ; If mm_alloc returned 0, then the allocation failed.
+    test ax, ax
+    jz .error
+
+    ; Add the allocation header
+    push es
+    mov es, ax
+    mov dx, [p_size]
+    mov [es:0x0000], dx
+    pop es
+
+    ; Return the pointer to the allocated memory
+    mov dx, ax
+    mov ax, 2
+
+    .end:
+        pop bp
+        ret
+
+    .error:
+        xor ax, ax
+        xor dx, dx
+        jmp .end
+
+    %undef p_size
+
+; void free(void *p_ptr)
+free:
+    %define p_segment (bp + 4)
+    %define p_offset (bp + 6)
+
+    push bp
+    mov bp, sp
+
+    ; Read the size from the allocation header
+    push es
+    push di
+    mov ax, [p_segment]
+    mov es, ax
+    mov di, [p_offset]
+    mov ax, [es:di]
+    pop di
+    pop es
+
+    ; Convert the size to segments
+    add ax, 17
+    mov cl, 4
+    shr ax, cl
+
+    ; Free the memory
+    xor dx, dx
+    push dx
+    push ax
+    push word [p_segment]
+    call mm_mark
+    add sp, 6
+
+    pop bp
+    ret
+
+    %undef p_segment
+    %undef p_offset
+
 section .rodata
 g_utoa_baseString db "0123456789abcdefghijklmnopqrstuvwxyz"
