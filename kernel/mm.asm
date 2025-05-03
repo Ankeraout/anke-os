@@ -143,17 +143,131 @@ mm_mark:
             cmp dl, 1
             jz .incrementByteOffset
 
+        .keepLooping:
             loop .markLoop
+            jmp .end
         
         .incrementByteOffset:
             inc di
-            loop .markLoop
+            jmp .keepLooping
 
-    pop di
-    pop bp
-    ret
+    .end:
+        pop di
+        pop bp
+        ret
 
     %undef p_firstSegment
+    %undef p_nbSegments
+
+; uint16_t mm_alloc(uint16_t p_nbSegments)
+mm_alloc:
+    %define p_nbSegments (bp + 4)    
+    
+    push bp
+    mov bp, sp
+    push di
+
+    mov di, g_mm_bitmap
+    mov cx, C_MM_MMAP_SIZE << 3
+    xor dx, dx
+    mov ah, 0x01
+
+    .allocLoop:
+        ; Get the current byte in the bitmap
+        mov al, [di]
+
+        ; Check if the current bit is free
+        test al, ah
+        jnz .notFree
+
+        ; If the current bit is free, increment the free segment counter
+        inc dx
+
+        ; Check if we have found enough free segments
+        cmp dx, [p_nbSegments]
+        jz .found
+
+        .keepSearching:
+            ; If we haven't found enough free segments, continue searching
+            rol ah, 1
+
+            ; Increment the byte offset
+            cmp ah, 1
+            jz .incrementByteOffset
+
+        .keepLooping:
+            loop .allocLoop
+
+        .notFound:
+            xor ax, ax
+            jmp .end
+
+        .incrementByteOffset:
+            inc di
+            jmp .keepLooping
+
+        .notFree:
+            ; If the current bit is not free, reset the free segment counter
+            xor dx, dx
+
+            ; Continue searching for free segments
+            jmp .keepSearching
+
+    .found:
+        ; Compute the bit offset
+        xor dx, dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+        shr ah, 1
+        jc .computeSegmentOffset
+        inc dx
+
+    .computeSegmentOffset:
+        ; Compute the address of the first free segment
+        ; Compute offset from byte index
+        mov ax, di
+        sub ax, g_mm_bitmap
+        mov cl, 3
+        shl ax, cl
+
+        ; Add offset from bit index
+        add ax, dx
+
+        ; Subtract segment count
+        sub ax, [p_nbSegments]
+        inc ax
+
+        ; Mark the allocated segments as used
+        push ax
+        mov dl, 1
+        push dx
+        push word [p_nbSegments]
+        push ax
+        call mm_mark
+        add sp, 6
+        pop ax
+
+    .end:
+        pop di
+        pop bp
+        ret
+
     %undef p_nbSegments
 
 section .rodata
