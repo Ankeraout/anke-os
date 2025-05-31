@@ -1,6 +1,8 @@
 bits 16
 cpu 8086
 
+%define C_KERNEL_SEGMENT 0x1000
+
 section .text
 _start:
     jmp main
@@ -11,7 +13,7 @@ _start:
 %include "kernel/string.asm"
 
 main:
-    mov ax, 0x1000
+    mov ax, C_KERNEL_SEGMENT
     mov ds, ax
     mov es, ax
     mov ax, 0x7000

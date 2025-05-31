@@ -4,90 +4,49 @@
 section .text
 ; void mm_init()
 mm_init:
-    %define l_utoaBuffer (bp - 8)
     push bp
     mov bp, sp
-    sub sp, 8
     
-    .initializeMap:
-        mov ax, C_MM_MMAP_SIZE
-        push ax
-        mov al, 0xff
-        push ax
-        mov ax, g_mm_bitmap
-        push ax
-        push ds
-        call memset
-        add sp, 8
-
-    .markFreeMemory:
-        ; Mark 0x500-0xffff as free
-        xor ax, ax
-        push ax
-        mov ax, (0x10000 - 0x500) >> 4
-        push ax
-        mov ax, 0x50
-        push ax
-        call mm_mark
-        add sp, 6
-
-        ; Get the amount of memory from BIOS
-        int 0x12
-
-        ; Convert KB to segments
-        mov cl, 6
-        shl ax, cl
-
-        ; Mark 0x20000-0x((ax << 4) + 0x0f) as free
-        xor dx, dx
-        push dx
-        sub ax, 0x2000
-        push ax
-        mov ax, 0x2000
-        push ax
-        call mm_mark
-        add sp, 6
-
-    .printDetectedMemory:
-        ; Print the detected memory message
-        mov ax, g_mm_strDetectedMemory
-        push ax
-        push ds
-        call printk
-        add sp, 4
-        
-        ; Get the amount of memory from BIOS
-        int 0x12
-
-        ; Convert the amount of memory to a string
-        mov dx, 10
-        push dx
-        lea dx, [l_utoaBuffer]
-        push dx
-        push ss
-        push ax
-        call utoa
-        add sp, 8
-
-        ; Print the amount of memory
-        lea ax, [l_utoaBuffer]
-        push ax
-        push ss
-        call printk
-        add sp, 4
-
-        ; Print the KB suffix
-        mov ax, g_mm_strDetectedMemory2
-        push ax
-        push ds
-        call printk
-        add sp, 4
-
+    ; Mark all the memory as used
+    mov ax, C_MM_MMAP_SIZE
+    push ax
+    mov al, 0xff
+    push ax
+    mov ax, g_mm_bitmap
+    push ax
+    push ds
+    call memset
     add sp, 8
+
+    ; Mark 0x500-0xffff as free
+    xor ax, ax
+    push ax
+    mov ax, (0x10000 - 0x500) >> 4
+    push ax
+    mov ax, 0x50
+    push ax
+    call mm_mark
+    add sp, 6
+
+    ; Get the amount of memory from BIOS
+    int 0x12
+
+    ; Convert KB to segments
+    mov cl, 6
+    shl ax, cl
+
+    ; Mark 0x20000-0x((ax << 4) + 0x0f) as free
+    xor dx, dx
+    push dx
+    sub ax, 0x2000
+    push ax
+    mov ax, 0x2000
+    push ax
+    call mm_mark
+    add sp, 6
+
     pop bp
     ret
-
-    %undef l_utoaBuffer
 
 ; void mm_mark(uint16_t p_firstSegment, uint16_t p_nbSegments, bool p_used)
 mm_mark:
