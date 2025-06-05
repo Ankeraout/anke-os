@@ -2,7 +2,7 @@
 %define C_MM_MMAP_SIZE 5120
 
 section .text
-; void mm_init()
+; int mm_init()
 mm_init:
     push bp
     mov bp, sp
@@ -44,6 +44,8 @@ mm_init:
     push ax
     call mm_mark
     add sp, 6
+
+    xor ax, ax
 
     pop bp
     ret
