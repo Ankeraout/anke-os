@@ -57,28 +57,25 @@ strlen:
 
     push bp
     mov bp, sp
-    push ds
+    
+    push es
     push si
 
     mov ax, [p_stringSegment]
-    mov ds, ax
+    mov es, ax
     mov si, [p_stringOffset]
+
+    xor ax, ax
     xor cx, cx
+    repne scasb
+    mov ax, cx
+    neg ax
 
-    .loop:
-        lodsb
-        test al, al
-        jz .end
-        inc cx
+    pop si
+    pop es
 
-        jmp .loop
-    
-    .end:
-        mov ax, cx
-        pop si
-        pop ds
-        pop bp
-        ret
+    pop bp
+    ret
 
     %undef p_stringSegment
     %undef p_stringOffset
