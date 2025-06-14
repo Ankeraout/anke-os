@@ -12,6 +12,9 @@ _start:
 %include "kernel/sequence.asm"
 %include "kernel/stdlib.asm"
 %include "kernel/string.asm"
+%include "kernel/task.asm"
+
+section .text
 
 main:
     mov ax, C_KERNEL_SEGMENT
@@ -31,6 +34,8 @@ main:
     push ax
     call sequence_run
     add sp, 2
+
+    call task_test
 
     cli
     hlt

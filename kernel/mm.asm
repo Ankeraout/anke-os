@@ -231,9 +231,5 @@ mm_alloc:
 
     %undef p_nbSegments
 
-section .rodata
-g_mm_strDetectedMemory db "mm: Detected memory: ", 0
-g_mm_strDetectedMemory2 db " KB", 13, 10, 0
-
 section .bss
 g_mm_bitmap resb C_MM_MMAP_SIZE
