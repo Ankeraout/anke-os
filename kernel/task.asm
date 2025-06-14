@@ -61,14 +61,64 @@ struc ts_task
     .m_processOffset: resw 1
     .m_threadSegment: resw 1
     .m_threadOffset: resw 1
-    .m_previousTaskSegment: resw 1
-    .m_previousTaskOffset: resw 1
-    .m_nextTaskSegment: resw 1
-    .m_nextTaskOffset: resw 1
     .m_context: resb ts_taskContext_size
 endstruc
 
 section .text
+
+; struct ts_task *task_new(
+;     struct ts_process *p_process,
+;     struct ts_thread *p_thread
+; )
+task_new:
+    %define p_processSegment (bp + 4)
+    %define p_processOffset (bp + 6)
+    %define p_threadSegment (bp + 8)
+    %define p_threadOffset (bp + 10)
+
+    push bp
+    mov bp, sp
+
+    ; Allocate memory for the task object
+    mov ax, ts_task_size
+    push ax
+    call malloc
+    add sp, 2
+
+    ; If malloc() returned NULL, return NULL.
+    cmp dx, 0
+    jz .end
+
+    ; Make ES:DI point to the task object
+    push es
+    push di
+    mov es, dx
+    mov di, ax
+
+    ; Initialize the task object
+    mov ax, [p_processSegment]
+    mov es:[di + ts_task.m_processSegment], ax
+    mov ax, [p_processOffset]
+    mov es:[di + ts_task.m_processOffset], ax
+    mov ax, [p_threadSegment]
+    mov es:[di + ts_task.m_threadSegment], ax
+    mov ax, [p_threadOffset]
+    mov es:[di + ts_task.m_threadOffset], ax
+
+    mov dx, es
+    mov ax, di
+
+    pop di
+    pop es
+
+.end:
+    pop bp
+    ret
+
+    %undef p_processSegment
+    %undef p_processOffset
+    %undef p_threadSegment
+    %undef p_threadOffset
 
 ; void task_switch(struct ts_task *p_task)
 task_switch:
