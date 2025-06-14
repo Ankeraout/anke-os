@@ -17,6 +17,7 @@ _start:
 %include "kernel/stdlib.asm"
 %include "kernel/string.asm"
 %include "kernel/task.asm"
+%include "kernel/test.asm"
 %include "kernel/thread.asm"
 
 section .text
@@ -40,8 +41,6 @@ main:
     call sequence_run
     add sp, 2
 
-    call task_test
-
     cli
     hlt
 
@@ -51,14 +50,19 @@ g_kernel_msg_boot:
 
 g_kernel_sequence_init_name: db "Kernel initialization sequence", 0
 g_kernel_sequence_init_mm_name: db "Memory manager initialization", 0
+g_kernel_sequence_init_test_name: db "Kernel test", 0
 
 g_kernel_sequence_init:
 istruc ts_sequence
     at .m_name, dw g_kernel_sequence_init_name
-    at .m_count, dw 1
+    at .m_count, dw 2
     at .m_elements
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_mm_name
     at .m_func, dw mm_init
+iend
+istruc ts_sequenceElement
+    at .m_name, dw g_kernel_sequence_init_test_name
+    at .m_func, dw test
 iend

@@ -9,6 +9,8 @@ struc ts_process
     .m_codeSegment: resw 1
 endstruc
 
+section .text
+
 ; struct ts_process *process_new(struct ts_process *p_parent)
 process_new:
     %define p_parentSegment (bp + 4)
@@ -70,5 +72,5 @@ process_new:
     %undef p_parentSegment
     %undef p_parentOffset
 
-section .data:
+section .data
 g_process_nextPid: dw 1

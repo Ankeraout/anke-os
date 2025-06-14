@@ -22,16 +22,16 @@ section .text
 thread_new:
     %define p_processSegment (bp + 4)
     %define p_processOffset (bp + 6)
-    %define p_codeOffset (bp + 8)
-    %define p_stackSize (bp + 10)
-    %define l_codeSegment (bp - 6)
+    %define p_codeSegment (bp + 8)
+    %define p_codeOffset (bp + 10)
+    %define p_stackSize (bp + 12)
     %define l_stackSegment (bp - 4)
     %define l_stackOffset (bp - 2)
 
     push bp
     mov bp, sp
 
-    sub sp, 6
+    sub sp, 4
 
     ; Save ES and DI for later
     push es
@@ -40,12 +40,6 @@ thread_new:
     ; Make ES:DI point to the process
     mov ax, [p_processOffset]
     mov dx, [p_processSegment]
-
-    ; Read the code segment
-    mov es, dx
-    mov di, ax
-    mov ax, es:[di + ts_process.m_codeSegment]
-    mov [l_codeSegment], ax
 
     ; Allocate struct ts_thread
     mov ax, ts_thread_size
@@ -99,9 +93,10 @@ thread_new:
     mov ax, [l_stackSegment]
     mov es:[di + ts_task.m_context + ts_taskContext.m_ss], ax
     mov ax, [l_stackOffset]
+    add ax, [p_stackSize]
     mov es:[di + ts_task.m_context + ts_taskContext.m_sp], ax
     mov word es:[di + ts_task.m_context + ts_taskContext.m_flags], 0x0200
-    mov ax, [l_codeSegment]
+    mov ax, [p_codeSegment]
     mov es:[di + ts_task.m_context + ts_taskContext.m_cs], ax
     mov es:[di + ts_task.m_context + ts_taskContext.m_ds], ax
     mov es:[di + ts_task.m_context + ts_taskContext.m_es], ax
@@ -111,7 +106,7 @@ thread_new:
 .end:
     pop di
     pop es
-    add sp, 6
+    add sp, 4
     pop bp
     ret
     
