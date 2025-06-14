@@ -120,15 +120,8 @@ task_new:
     %undef p_threadSegment
     %undef p_threadOffset
 
-; void task_switch(struct ts_task *p_task)
-task_switch:
-    %define p_taskSegment (bp + 4)
-    %define p_taskOffset (bp + 6)
-
-    push bp
-    mov bp, sp
-
-    ; Copy the saved context to the current task
+; void task_save()
+task_save:
     mov ax, ts_taskContext_size
     push ax
     mov ax, g_task_currentTaskContext
@@ -141,37 +134,15 @@ task_switch:
     call memcpy
     add sp, 10
 
-    ; TODO: Set the status of the current task to READY
-    ; TODO: Set the status of the new task to RUNNING
-    
-    push word [p_taskOffset]
-    push word [p_taskSegment]
+    ret
 
-    call task_run
-
-    %undef p_taskSegment
-    %undef p_taskOffset
-
-; void task_run(struct ts_task *p_task)
-task_run:
+; void task_load(struct ts_task *p_task)
+task_load:
     %define p_taskSegment (bp + 4)
     %define p_taskOffset (bp + 6)
 
     push bp
     mov bp, sp
-
-    ; Copy the context to the temporary area
-    mov ax, ts_taskContext_size
-    push ax
-    mov ax, [p_taskOffset]
-    add ax, ts_task.m_context
-    push ax
-    push word [p_taskSegment]
-    mov ax, g_task_currentTaskContext
-    push ax
-    push ds
-    call memcpy
-    add sp, 10
 
     ; Set the current task
     mov ax, [p_taskSegment]
@@ -179,6 +150,27 @@ task_run:
     mov ax, [p_taskOffset]
     mov [g_task_currentTaskOffset], ax
 
+    ; Load the task context
+    mov ax, ts_taskContext_size
+    push ax
+    mov ax, [g_task_currentTaskOffset]
+    add ax, ts_task.m_context
+    push ax
+    push word [g_task_currentTaskSegment]
+    mov ax, g_task_currentTaskContext
+    push ax
+    push cs
+    call memcpy
+    add sp, 10
+
+    pop bp
+    ret
+
+    %undef p_taskSegment
+    %undef p_taskOffset
+
+; void task_resume()
+task_resume:
     ; Set the correct register values
     mov ax, [g_task_currentTaskContext + ts_taskContext.m_ss]
     mov ss, ax
@@ -204,9 +196,6 @@ task_run:
 
     ; Jump to the task
     iret
-
-    %undef p_taskSegment
-    %undef p_taskOffset
 
 section .bss
 g_task_currentTaskSegment: resw 1

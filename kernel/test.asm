@@ -41,7 +41,21 @@ test:
     mov [l_threadSegment], dx
     mov [l_threadOffset], ax
 
-    xor ax, ax
+    push es
+    push di
+
+    mov es, dx
+    mov di, ax
+
+    push word es:[di + ts_thread.m_taskOffset]
+    push word es:[di + ts_thread.m_taskSegment]
+    
+    call task_load
+
+    pop di
+    pop es
+
+    call task_resume
 
 .end:
     add sp, 8

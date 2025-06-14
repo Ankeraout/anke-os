@@ -87,6 +87,10 @@ thread_new:
     ; Initialize task context
     mov es:[di + ts_thread.m_taskSegment], dx
     mov es:[di + ts_thread.m_taskOffset], ax
+
+    push es
+    push di
+
     mov es, dx
     mov di, ax
 
@@ -102,6 +106,9 @@ thread_new:
     mov es:[di + ts_task.m_context + ts_taskContext.m_es], ax
     mov ax, [p_codeOffset]
     mov es:[di + ts_task.m_context + ts_taskContext.m_ip], ax
+
+    pop ax
+    pop dx
 
 .end:
     pop di
