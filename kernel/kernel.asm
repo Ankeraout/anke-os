@@ -7,12 +7,15 @@ section .text
 _start:
     jmp main
 
+%include "kernel/thread_constants.asm"
+
 %include "kernel/critical_section.asm"
 %include "kernel/list.asm"
 %include "kernel/memory_allocation.asm"
 %include "kernel/mm.asm"
 %include "kernel/printk.asm"
 %include "kernel/process.asm"
+%include "kernel/scheduler.asm"
 %include "kernel/sequence.asm"
 %include "kernel/stdlib.asm"
 %include "kernel/string.asm"

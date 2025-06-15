@@ -1,8 +1,3 @@
-%define E_THREADSTATUS_READY 0
-%define E_THREADSTATUS_RUNNING 1
-%define E_THREADSTATUS_SUSPENDED 2
-%define E_THREADSTATUS_WAITING 3
-
 struc ts_thread
     .m_status: resw 1
     .m_taskSegment: resw 1
@@ -70,7 +65,7 @@ thread_new:
     mov [l_stackOffset], ax
 
     ; Set the thread state
-    mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
+    mov word es:[di + ts_thread.m_status], E_THREADSTATUS_INITIALIZING
 
     ; Create a new task
     push di
@@ -138,3 +133,28 @@ thread_new:
     %undef l_codeSegment
     %undef l_stackSegment
     %undef l_stackOffset
+
+; void thread_start(struct ts_thread *p_thread)
+thread_start:
+    %define p_threadSegment (bp + 4)
+    %define p_threadOffset (bp + 6)
+
+    push bp
+    mov bp, sp
+
+    push es
+    push di
+
+    mov es, [p_threadSegment]
+    mov di, [p_threadOffset]
+
+    mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
+
+    pop di
+    pop es
+
+    pop bp
+    ret
+
+    %undef p_threadSegment
+    %undef p_threadOffset

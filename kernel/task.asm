@@ -24,10 +24,8 @@
     mov [g_task_currentTaskContext + ts_taskContext.m_sp], ax
     mov [g_task_currentTaskContext + ts_taskContext.m_si], si
     mov [g_task_currentTaskContext + ts_taskContext.m_di], di
-    mov ax, es
-    mov [g_task_currentTaskContext + ts_taskContext.m_es], ax
-    mov ax, ss
-    mov [g_task_currentTaskContext + ts_taskContext.m_ss], ax
+    mov [g_task_currentTaskContext + ts_taskContext.m_es], es
+    mov [g_task_currentTaskContext + ts_taskContext.m_ss], ss
     mov ax, [bp]
     mov [g_task_currentTaskContext + ts_taskContext.m_ip], ax
     mov ax, [bp + 2]
@@ -105,6 +103,12 @@ task_new:
     mov ax, [p_threadOffset]
     mov es:[di + ts_task.m_threadOffset], ax
 
+    ; Register the task object
+    push di
+    push es
+    call scheduler_add
+    add sp, 4
+
     mov dx, es
     mov ax, di
 
@@ -122,6 +126,11 @@ task_new:
 
 ; void task_save()
 task_save:
+    ; If there is no task to save, do not save.
+    mov ax, [g_task_currentTaskSegment]
+    or ax, [g_task_currentTaskOffset]
+    jz .end
+
     mov ax, ts_taskContext_size
     push ax
     mov ax, g_task_currentTaskContext
@@ -134,7 +143,8 @@ task_save:
     call memcpy
     add sp, 10
 
-    ret
+    .end:
+        ret
 
 ; void task_load(struct ts_task *p_task)
 task_load:
@@ -196,6 +206,17 @@ task_resume:
 
     ; Jump to the task
     iret
+
+; void task_unload()
+task_unload:
+    call task_save
+
+; void task_clear()
+task_clear:
+    xor ax, ax
+    mov word [g_task_currentTaskSegment], ax
+    mov word [g_task_currentTaskOffset], ax
+    ret
 
 section .bss
 g_task_currentTaskSegment: resw 1

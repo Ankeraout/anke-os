@@ -13,8 +13,7 @@ utoa:
     push di
     push si
 
-    mov ax, [p_bufferSegment]
-    mov es, ax
+    mov es, [p_bufferSegment]
     mov di, [p_bufferOffset]
 
     ; Make sure that p_base is valid
@@ -74,8 +73,7 @@ itoa:
 
     push es
 
-    mov ax, [p_bufferSegment]
-    mov es, ax
+    mov es, [p_bufferSegment]
     mov di, [p_bufferOffset]
 
     ; Make sure that p_base is valid
@@ -183,8 +181,7 @@ free:
     ; Read the size from the allocation header
     push es
     push di
-    mov ax, [p_segment]
-    mov es, ax
+    mov es, [p_segment]
     mov di, [p_offset]
     mov ax, [es:di]
     pop di

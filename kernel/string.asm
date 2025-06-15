@@ -25,8 +25,7 @@ strrev:
     mov si, [p_stringOffset]
     mov di, si
     add di, ax
-    mov ax, [p_stringSegment]
-    mov es, ax
+    mov es, [p_stringSegment]
 
     .loop:
         cmp si, di
@@ -61,8 +60,7 @@ strlen:
     push es
     push si
 
-    mov ax, [p_stringSegment]
-    mov es, ax
+    mov es, [p_stringSegment]
     mov si, [p_stringOffset]
 
     xor ax, ax
@@ -96,8 +94,7 @@ memcpy:
     push es
     push di
 
-    mov ax, [p_dstSegment]
-    mov es, ax
+    mov es, [p_dstSegment]
     mov di, [p_dstOffset]
 
     mov ax, [p_srcSegment]
@@ -135,8 +132,7 @@ memset:
     push es
     push di
 
-    mov ax, [p_dstSegment]
-    mov es, ax
+    mov es, [p_dstSegment]
     mov di, [p_dstOffset]
 
     mov cx, [p_size]
