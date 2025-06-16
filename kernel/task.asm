@@ -182,10 +182,8 @@ task_load:
 ; void task_resume()
 task_resume:
     ; Set the correct register values
-    mov ax, [g_task_currentTaskContext + ts_taskContext.m_ss]
-    mov ss, ax
-    mov ax, [g_task_currentTaskContext + ts_taskContext.m_es]
-    mov es, ax
+    mov ss, [g_task_currentTaskContext + ts_taskContext.m_ss]
+    mov es, [g_task_currentTaskContext + ts_taskContext.m_es]
     mov di, [g_task_currentTaskContext + ts_taskContext.m_di]
     mov si, [g_task_currentTaskContext + ts_taskContext.m_si]
     mov bp, [g_task_currentTaskContext + ts_taskContext.m_bp]
@@ -193,16 +191,15 @@ task_resume:
     mov dx, [g_task_currentTaskContext + ts_taskContext.m_dx]
     mov cx, [g_task_currentTaskContext + ts_taskContext.m_cx]
     mov bx, [g_task_currentTaskContext + ts_taskContext.m_bx]
+    mov ax, [g_task_currentTaskContext + ts_taskContext.m_ax]
 
     ; Prepare the stack for the IRET opcode
     push word [g_task_currentTaskContext + ts_taskContext.m_flags]
     push word [g_task_currentTaskContext + ts_taskContext.m_cs]
     push word [g_task_currentTaskContext + ts_taskContext.m_ip]
 
-    ; Set DS and AX
-    push word [g_task_currentTaskContext + ts_taskContext.m_ds]
-    mov ax, [g_task_currentTaskContext + ts_taskContext.m_ax]
-    pop ds
+    ; Set DS
+    mov ds, [g_task_currentTaskContext + ts_taskContext.m_ds]
 
     ; Jump to the task
     iret
