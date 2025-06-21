@@ -29,16 +29,9 @@ scheduler_run:
     call task_unload
 
     ; If the current task is RUNNING, make it READY.
-    mov es, [g_scheduler_currentTaskSegment]
-    mov di, [g_scheduler_currentTaskOffset]
-
-    mov dx, es:[di + ts_listElement.m_dataSegment]
-    mov di, es:[di + ts_listElement.m_dataOffset]
-    mov es, dx
-
-    mov dx, es:[di + ts_task.m_threadSegment]
-    mov di, es:[di + ts_task.m_threadOffset]
-    mov es, dx
+    les di, [g_scheduler_currentTaskOffset]
+    les di, es:[di + ts_listElement.m_dataOffset]
+    les di, es:[di + ts_task.m_threadOffset]
 
     cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
     jnz .initializeLoopNextTask
@@ -47,8 +40,7 @@ scheduler_run:
 
     .initializeLoopNextTask:
         ; Load the current task
-        mov es, [g_scheduler_currentTaskSegment]
-        mov di, [g_scheduler_currentTaskOffset]
+        les di, [g_scheduler_currentTaskOffset]
 
         ; If there is no next task, start looking from the first task.
         mov ax, es:[di + ts_listElement.m_nextSegment]
@@ -56,9 +48,7 @@ scheduler_run:
         jz .initializeLoopFirstTask
 
         ; If there is a next task, start looking from it.
-        mov dx, es:[di + ts_listElement.m_nextSegment]
-        mov di, es:[di + ts_listElement.m_nextOffset]
-        mov es, dx
+        les di, es:[di + ts_listElement.m_nextOffset]
     
     .initializeLoop:
         ; Save the first checked task for stopping later
@@ -71,14 +61,10 @@ scheduler_run:
         push di
 
         ; Get the task object
-        mov dx, es:[di + ts_listElement.m_dataSegment]
-        mov di, es:[di + ts_listElement.m_dataOffset]
-        mov es, dx
+        les di, es:[di + ts_listElement.m_dataOffset]
 
         ; Get the thread object
-        mov dx, es:[di + ts_task.m_threadSegment]
-        mov di, es:[di + ts_task.m_threadOffset]
-        mov es, dx
+        les di, es:[di + ts_task.m_threadOffset]
 
         ; If the thread is ready, run it.
         cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
@@ -98,9 +84,7 @@ scheduler_run:
         jz .exitLoop
 
         ; There are more elements to check: get the next task list element.
-        mov dx, es:[di + ts_listElement.m_nextSegment]
-        mov di, es:[di + ts_listElement.m_nextOffset]
-        mov es, dx
+        les di, es:[di + ts_listElement.m_nextOffset]
         jmp .loop
 
     .foundThread:
@@ -141,8 +125,7 @@ scheduler_run:
 
     .initializeLoopFirstTask:
         ; Load the first task
-        mov es, [g_scheduler_taskListSegment]
-        mov di, [g_scheduler_taskListOffset]
+        les di, [g_scheduler_taskListOffset]
         jmp .initializeLoop
 
 ; int scheduler_add(struct ts_task *p_task)
