@@ -32,10 +32,6 @@ thread_new:
     push es
     push di
 
-    ; Make ES:DI point to the process
-    mov ax, [p_processOffset]
-    mov dx, [p_processSegment]
-
     ; Allocate struct ts_thread
     mov ax, ts_thread_size
     push ax
@@ -145,8 +141,7 @@ thread_start:
     push es
     push di
 
-    mov es, [p_threadSegment]
-    mov di, [p_threadOffset]
+    les di, [p_threadOffset]
 
     mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
 

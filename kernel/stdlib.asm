@@ -13,8 +13,7 @@ utoa:
     push di
     push si
 
-    mov es, [p_bufferSegment]
-    mov di, [p_bufferOffset]
+    les di, [p_bufferOffset]
 
     ; Make sure that p_base is valid
     cmp word [p_base], 2
@@ -73,8 +72,7 @@ itoa:
 
     push es
 
-    mov es, [p_bufferSegment]
-    mov di, [p_bufferOffset]
+    les di, [p_bufferOffset]
 
     ; Make sure that p_base is valid
     cmp word [p_base], 2
@@ -181,8 +179,7 @@ free:
     ; Read the size from the allocation header
     push es
     push di
-    mov es, [p_segment]
-    mov di, [p_offset]
+    les di, [p_offset]
     mov ax, [es:di]
     pop di
     pop es

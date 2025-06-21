@@ -132,8 +132,7 @@ memset:
     push es
     push di
 
-    mov es, [p_dstSegment]
-    mov di, [p_dstOffset]
+    les di, [p_dstOffset]
 
     mov cx, [p_size]
     mov al, [p_value]
