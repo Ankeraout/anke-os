@@ -42,15 +42,15 @@ struc ts_taskContext
     .m_bx: resw 1
     .m_cx: resw 1
     .m_dx: resw 1
-    .m_sp: resw 1
     .m_bp: resw 1
     .m_si: resw 1
-    .m_di: resw 1
     .m_ds: resw 1
+    .m_di: resw 1
     .m_es: resw 1
+    .m_sp: resw 1
     .m_ss: resw 1
-    .m_cs: resw 1
     .m_ip: resw 1
+    .m_cs: resw 1
     .m_flags: resw 1
 endstruc
 
@@ -181,25 +181,21 @@ task_load:
 
 ; void task_resume()
 task_resume:
-    ; Set the correct register values
-    mov ss, [g_task_currentTaskContext + ts_taskContext.m_ss]
-    mov es, [g_task_currentTaskContext + ts_taskContext.m_es]
-    mov di, [g_task_currentTaskContext + ts_taskContext.m_di]
-    mov si, [g_task_currentTaskContext + ts_taskContext.m_si]
-    mov bp, [g_task_currentTaskContext + ts_taskContext.m_bp]
-    mov sp, [g_task_currentTaskContext + ts_taskContext.m_sp]
-    mov dx, [g_task_currentTaskContext + ts_taskContext.m_dx]
-    mov cx, [g_task_currentTaskContext + ts_taskContext.m_cx]
-    mov bx, [g_task_currentTaskContext + ts_taskContext.m_bx]
-    mov ax, [g_task_currentTaskContext + ts_taskContext.m_ax]
-
     ; Prepare the stack for the IRET opcode
+    mov ss, [g_task_currentTaskContext + ts_taskContext.m_ss]
+    mov sp, [g_task_currentTaskContext + ts_taskContext.m_sp]
     push word [g_task_currentTaskContext + ts_taskContext.m_flags]
     push word [g_task_currentTaskContext + ts_taskContext.m_cs]
     push word [g_task_currentTaskContext + ts_taskContext.m_ip]
 
-    ; Set DS
-    mov ds, [g_task_currentTaskContext + ts_taskContext.m_ds]
+    ; Set the correct register values
+    les di, [g_task_currentTaskContext + ts_taskContext.m_di]
+    mov bp, [g_task_currentTaskContext + ts_taskContext.m_bp]
+    mov dx, [g_task_currentTaskContext + ts_taskContext.m_dx]
+    mov cx, [g_task_currentTaskContext + ts_taskContext.m_cx]
+    mov bx, [g_task_currentTaskContext + ts_taskContext.m_bx]
+    mov ax, [g_task_currentTaskContext + ts_taskContext.m_ax]
+    lds si, [g_task_currentTaskContext + ts_taskContext.m_si]
 
     ; Jump to the task
     iret

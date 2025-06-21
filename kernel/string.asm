@@ -21,11 +21,10 @@ strrev:
     jz .end
 
     dec ax
-
-    mov si, [p_stringOffset]
+    
+    les si, [p_stringOffset]
     mov di, si
     add di, ax
-    mov es, [p_stringSegment]
 
     .loop:
         cmp si, di
@@ -60,8 +59,7 @@ strlen:
     push es
     push si
 
-    mov es, [p_stringSegment]
-    mov si, [p_stringOffset]
+    les si, [p_stringOffset]
 
     xor ax, ax
     xor cx, cx
@@ -94,13 +92,8 @@ memcpy:
     push es
     push di
 
-    mov es, [p_dstSegment]
-    mov di, [p_dstOffset]
-
-    mov ax, [p_srcSegment]
-    mov ds, ax
-    mov si, [p_srcOffset]
-
+    les di, [p_dstOffset]
+    lds si, [p_srcOffset]
     mov cx, [p_size]
 
     rep movsb
