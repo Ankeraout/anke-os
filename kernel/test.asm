@@ -1,12 +1,12 @@
 section .text
 
 test:
-    %define l_thread1Segment (bp - 12)
-    %define l_thread1Offset (bp - 10)
-    %define l_thread2Segment (bp - 8)
-    %define l_thread2Offset (bp - 6)
-    %define l_processSegment (bp - 4)
-    %define l_processOffset (bp - 2)
+    %define l_processSegment (bp - 2)
+    %define l_processOffset (bp - 4)
+    %define l_thread1Segment (bp - 6)
+    %define l_thread1Offset (bp - 8)
+    %define l_thread2Segment (bp - 10)
+    %define l_thread2Offset (bp - 12)
 
     push bp
     mov bp, sp
@@ -30,10 +30,10 @@ test:
     mov ax, 4096
     push ax
     mov ax, thread_1_main
-    push ax
     push cs
-    push word [l_processOffset]
+    push ax
     push word [l_processSegment]
+    push word [l_processOffset]
     call thread_new
     add sp, 10
     
@@ -43,8 +43,8 @@ test:
     mov [l_thread1Segment], dx
     mov [l_thread1Offset], ax
 
-    push ax
     push dx
+    push ax
     call thread_start
     add sp, 4
 
@@ -52,10 +52,10 @@ test:
     mov ax, 4096
     push ax
     mov ax, thread_2_main
-    push ax
     push cs
-    push word [l_processOffset]
+    push ax
     push word [l_processSegment]
+    push word [l_processOffset]
     call thread_new
     add sp, 10
     
@@ -65,8 +65,8 @@ test:
     mov [l_thread2Segment], dx
     mov [l_thread2Offset], ax
 
-    push ax
     push dx
+    push ax
     call thread_start
     add sp, 4
 

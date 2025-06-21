@@ -13,8 +13,8 @@ mm_init:
     mov al, 0xff
     push ax
     mov ax, g_mm_bitmap
-    push ax
     push ds
+    push ax
     call memset
     add sp, 8
 
@@ -216,7 +216,7 @@ mm_alloc:
 
         ; Mark the allocated segments as used
         push ax
-        mov dl, 1
+        mov dx, 1
         push dx
         push word [p_nbSegments]
         push ax

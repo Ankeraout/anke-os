@@ -2,8 +2,8 @@ section .text
 
 ; char *strrev(char *p_string)
 strrev:
-    %define p_stringSegment (bp + 4)
-    %define p_stringOffset (bp + 6)
+    %define p_stringOffset (bp + 4)
+    %define p_stringSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -12,8 +12,8 @@ strrev:
     push es
     push di
 
-    push word [p_stringOffset]
     push word [p_stringSegment]
+    push word [p_stringOffset]
     call strlen
     add sp, 4
 
@@ -51,8 +51,8 @@ strrev:
 
 ; size_t strlen(const char *p_string)
 strlen:
-    %define p_stringSegment (bp + 4)
-    %define p_stringOffset (bp + 6)
+    %define p_stringOffset (bp + 4)
+    %define p_stringSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -80,10 +80,10 @@ strlen:
 
 ; void *memcpy(void *p_dst, const void *p_src, size_t p_size)
 memcpy:
-    %define p_dstSegment (bp + 4)
-    %define p_dstOffset (bp + 6)
-    %define p_srcSegment (bp + 8)
-    %define p_srcOffset (bp + 10)
+    %define p_dstOffset (bp + 4)
+    %define p_dstSegment (bp + 6)
+    %define p_srcOffset (bp + 8)
+    %define p_srcSegment (bp + 10)
     %define p_size (bp + 12)
 
     push bp
@@ -120,8 +120,8 @@ memcpy:
 
 ; void *memset(void *p_dst, int p_value, size_t p_size)
 memset:
-    %define p_dstSegment (bp + 4)
-    %define p_dstOffset (bp + 6)
+    %define p_dstOffset (bp + 4)
+    %define p_dstSegment (bp + 6)
     %define p_value (bp + 8)
     %define p_size (bp + 10)
 

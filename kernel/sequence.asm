@@ -31,20 +31,20 @@ sequence_run:
     push si
 
     mov ax, g_sequence_msg_runningSequence1
-    push ax
     push ds
+    push ax
     call printk
     add sp, 4
 
     mov bx, [p_sequence]
-    push word [bx + ts_sequence.m_name]
     push ds
+    push word [bx + ts_sequence.m_name]
     call printk
     add sp, 4
 
     mov ax, g_sequence_msg_runningSequence2
-    push ax
     push ds
+    push ax
     call printk
     add sp, 4
 
@@ -60,20 +60,20 @@ sequence_run:
         mov si, ax
 
         mov ax, g_sequence_msg_runningElement1
-        push ax
         push ds
+        push ax
         call printk
         add sp, 4
 
         mov ax, [bx + si + ts_sequence.m_elements + ts_sequenceElement.m_name]
-        push ax
         push ds
+        push ax
         call printk
         add sp, 4
 
         mov ax, g_sequence_msg_runningElement2
-        push ax
         push ds
+        push ax
         call printk
         add sp, 4
         
@@ -85,8 +85,8 @@ sequence_run:
         jnz .failed
 
         mov ax, g_sequence_msg_successElement
-        push ax
         push ds
+        push ax
         call printk
         add sp, 4
 
@@ -95,8 +95,8 @@ sequence_run:
 
     .failed:
         mov dx, g_sequence_msg_errorElement
-        push dx
         push ds
+        push dx
         call printk
         add sp, 4
 
@@ -105,8 +105,8 @@ sequence_run:
     .loop_end:
 
     mov ax, g_sequence_msg_endOfSequence
-    push ax
     push ds
+    push ax
     call printk
     add sp, 4
 

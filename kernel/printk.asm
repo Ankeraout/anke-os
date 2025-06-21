@@ -1,8 +1,8 @@
 section .text
 ; void printk(const char *p_str);
 printk:
-    %define p_strSegment (bp + 4)
-    %define p_strOffset (bp + 6)
+    %define p_strOffset (bp + 4)
+    %define p_strSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -10,10 +10,7 @@ printk:
     push ds
     push si
 
-    mov ax, [p_strSegment]
-    mov ds, ax
-
-    mov si, [p_strOffset]
+    lds si, [p_strOffset]
 
     mov ah, 0x0e
 

@@ -15,10 +15,10 @@ section .text
 ;     uint16_t p_stackSize
 ; )
 thread_new:
-    %define p_processSegment (bp + 4)
-    %define p_processOffset (bp + 6)
-    %define p_codeSegment (bp + 8)
-    %define p_codeOffset (bp + 10)
+    %define p_processOffset (bp + 4)
+    %define p_processSegment (bp + 6)
+    %define p_codeOffset (bp + 8)
+    %define p_codeSegment (bp + 10)
     %define p_stackSize (bp + 12)
     %define l_stackSegment (bp - 4)
     %define l_stackOffset (bp - 2)
@@ -68,10 +68,10 @@ thread_new:
     mov word es:[di + ts_thread.m_status], E_THREADSTATUS_INITIALIZING
 
     ; Create a new task
-    push di
     push es
-    push word [p_processOffset]
+    push di
     push word [p_processSegment]
+    push word [p_processOffset]
     call task_new
     add sp, 8
 
@@ -113,15 +113,15 @@ thread_new:
     ret
     
 .failedToCreateTask:
-    push word [l_stackOffset]
     push word [l_stackSegment]
+    push word [l_stackOffset]
     call free
     add sp, 4
 
 .failedToAllocateStack:
     ; Free the allocated struct ts_thread
-    push di
     push es
+    push di
     call free
     add sp, 4
     jmp .end
@@ -136,8 +136,8 @@ thread_new:
 
 ; void thread_start(struct ts_thread *p_thread)
 thread_start:
-    %define p_threadSegment (bp + 4)
-    %define p_threadOffset (bp + 6)
+    %define p_threadOffset (bp + 4)
+    %define p_threadSegment (bp + 6)
 
     push bp
     mov bp, sp

@@ -1,11 +1,11 @@
 struc ts_process
     .m_id: resw 1
-    .m_parentSegment: resw 1
     .m_parentOffset: resw 1
-    .m_threadListSegment: resw 1
+    .m_parentSegment: resw 1
     .m_threadListOffset: resw 1
-    .m_memoryAllocationListSegment: resw 1
+    .m_threadListSegment: resw 1
     .m_memoryAllocationListOffset: resw 1
+    .m_memoryAllocationListSegment: resw 1
     .m_codeSegment: resw 1
 endstruc
 
@@ -13,8 +13,8 @@ section .text
 
 ; struct ts_process *process_new(struct ts_process *p_parent)
 process_new:
-    %define p_parentSegment (bp + 4)
-    %define p_parentOffset (bp + 6)
+    %define p_parentOffset (bp + 4)
+    %define p_parentSegment (bp + 6)
 
     push bp
     mov bp, sp

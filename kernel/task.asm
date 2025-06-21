@@ -55,10 +55,10 @@ struc ts_taskContext
 endstruc
 
 struc ts_task
-    .m_processSegment: resw 1
     .m_processOffset: resw 1
-    .m_threadSegment: resw 1
+    .m_processSegment: resw 1
     .m_threadOffset: resw 1
+    .m_threadSegment: resw 1
     .m_context: resb ts_taskContext_size
 endstruc
 
@@ -69,10 +69,10 @@ section .text
 ;     struct ts_thread *p_thread
 ; )
 task_new:
-    %define p_processSegment (bp + 4)
-    %define p_processOffset (bp + 6)
-    %define p_threadSegment (bp + 8)
-    %define p_threadOffset (bp + 10)
+    %define p_processOffset (bp + 4)
+    %define p_processSegment (bp + 6)
+    %define p_threadOffset (bp + 8)
+    %define p_threadSegment (bp + 10)
 
     push bp
     mov bp, sp
@@ -104,8 +104,8 @@ task_new:
     mov es:[di + ts_task.m_threadOffset], ax
 
     ; Register the task object
-    push di
     push es
+    push di
     call scheduler_add
     add sp, 4
 
@@ -134,12 +134,12 @@ task_save:
     mov ax, ts_taskContext_size
     push ax
     mov ax, g_task_currentTaskContext
-    push ax
     push cs
+    push ax
+    push word [g_task_currentTaskSegment]
     mov ax, [g_task_currentTaskOffset]
     add ax, ts_task.m_context
     push ax
-    push word [g_task_currentTaskSegment]
     call memcpy
     add sp, 10
 
@@ -148,8 +148,8 @@ task_save:
 
 ; void task_load(struct ts_task *p_task)
 task_load:
-    %define p_taskSegment (bp + 4)
-    %define p_taskOffset (bp + 6)
+    %define p_taskOffset (bp + 4)
+    %define p_taskSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -163,13 +163,13 @@ task_load:
     ; Load the task context
     mov ax, ts_taskContext_size
     push ax
+    push word [g_task_currentTaskSegment]
     mov ax, [g_task_currentTaskOffset]
     add ax, ts_task.m_context
     push ax
-    push word [g_task_currentTaskSegment]
+    push cs
     mov ax, g_task_currentTaskContext
     push ax
-    push cs
     call memcpy
     add sp, 10
 
@@ -216,6 +216,6 @@ task_clear:
     ret
 
 section .bss
-g_task_currentTaskSegment: resw 1
 g_task_currentTaskOffset: resw 1
+g_task_currentTaskSegment: resw 1
 g_task_currentTaskContext: resb ts_taskContext_size

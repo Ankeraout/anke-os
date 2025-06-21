@@ -113,8 +113,8 @@ scheduler_run:
 
         ; Make ES:DI point to the task object
         ; Load the task
-        push word es:[di + ts_listElement.m_dataOffset]
         push word es:[di + ts_listElement.m_dataSegment]
+        push word es:[di + ts_listElement.m_dataOffset]
         call task_load
 
         ; Save the new running task
@@ -147,8 +147,8 @@ scheduler_run:
 
 ; int scheduler_add(struct ts_task *p_task)
 scheduler_add:
-    %define p_taskSegment (bp + 4)
-    %define p_taskOffset (bp + 6)
+    %define p_taskOffset (bp + 4)
+    %define p_taskSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -205,7 +205,7 @@ scheduler_add:
     %undef p_taskOffset
 
 section .data
-g_scheduler_taskListSegment: dw 0
 g_scheduler_taskListOffset: dw 0
-g_scheduler_currentTaskSegment: dw 0
+g_scheduler_taskListSegment: dw 0
 g_scheduler_currentTaskOffset: dw 0
+g_scheduler_currentTaskSegment: dw 0

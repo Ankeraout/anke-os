@@ -34,8 +34,8 @@ main:
     xor sp, sp
 
     mov ax, g_kernel_msg_boot
-    push ax
     push ds
+    push ax
     call printk
     add sp, 4
 

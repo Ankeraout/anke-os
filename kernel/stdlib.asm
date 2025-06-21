@@ -3,8 +3,8 @@ section .text
 ; char *utoa(unsigned p_value, char *p_buffer, int p_base)
 utoa:
     %define p_value (bp + 4)
-    %define p_bufferSegment (bp + 6)
-    %define p_bufferOffset (bp + 8)
+    %define p_bufferOffset (bp + 6)
+    %define p_bufferSegment (bp + 8)
     %define p_base (bp + 10)
 
     push bp
@@ -42,8 +42,8 @@ utoa:
 
     .reverse:
         mov byte [es:di], 0
-        push word [p_bufferOffset]
         push es
+        push word [p_bufferOffset]
         call strrev
         add sp, 4
 
@@ -64,8 +64,8 @@ utoa:
 ; char *itoa(int p_value, char *p_buffer, int p_base)
 itoa:
     %define p_value (bp + 4)
-    %define p_bufferSegment (bp + 6)
-    %define p_bufferOffset (bp + 8)
+    %define p_bufferOffset (bp + 6)
+    %define p_bufferSegment (bp + 8)
     %define p_base (bp + 10)
 
     push bp
@@ -95,8 +95,8 @@ itoa:
     .positive:
         ; Call utoa to convert the number to a string
         push word [p_base]
-        push di
         push es
+        push di
         push ax
         call utoa
         add sp, 8
@@ -172,8 +172,8 @@ malloc:
 
 ; void free(void *p_ptr)
 free:
-    %define p_segment (bp + 4)
-    %define p_offset (bp + 6)
+    %define p_offset (bp + 4)
+    %define p_segment (bp + 6)
 
     push bp
     mov bp, sp
