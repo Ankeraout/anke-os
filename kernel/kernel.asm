@@ -8,6 +8,7 @@ _start:
     jmp main
 
 %include "kernel/thread_constants.asm"
+%include "kernel/task_macros.asm"
 
 %include "kernel/critical_section.asm"
 %include "kernel/list.asm"
@@ -19,6 +20,7 @@ _start:
 %include "kernel/sequence.asm"
 %include "kernel/stdlib.asm"
 %include "kernel/string.asm"
+%include "kernel/syscall.asm"
 %include "kernel/task.asm"
 %include "kernel/test.asm"
 %include "kernel/thread.asm"
@@ -53,17 +55,21 @@ g_kernel_msg_boot:
 
 g_kernel_sequence_init_name: db "Kernel initialization sequence", 0
 g_kernel_sequence_init_mm_name: db "Memory manager initialization", 0
+g_kernel_sequence_init_syscall_name: db "System call initialization", 0
 g_kernel_sequence_init_test_name: db "Kernel test", 0
 
 g_kernel_sequence_init:
 istruc ts_sequence
     at .m_name, dw g_kernel_sequence_init_name
-    at .m_count, dw 2
-    at .m_elements
+    at .m_count, dw 3
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_mm_name
     at .m_func, dw mm_init
+iend
+istruc ts_sequenceElement
+    at .m_name, dw g_kernel_sequence_init_syscall_name
+    at .m_func, dw syscall_init
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_test_name

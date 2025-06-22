@@ -111,36 +111,36 @@ thread_1_main:
     mov ax, 0xb800
     mov es, ax
     xor di, di
-    mov byte es:[di], '0'
-    mov byte es:[di + 1], 0x1f
-    
-    .loop:
-        inc byte es:[di]
-        cmp byte es:[di], '9' + 1
-        jz .reset
-        hlt
-        jmp .loop
+    mov byte es:[di + 1], 0x4f
+    mov cx, 1
     
     .reset:
-        mov byte es:[di], '0' - 1
+        mov ax, '0' - 1
+    
+    .loop:
+        int 0x80
+        mov es:[di], al
+        hlt
+        cmp al, '9'
+        jz .reset
         jmp .loop
 
 thread_2_main:
     mov ax, 0xb800
     mov es, ax
     mov di, 2
-    mov byte es:[di], '9'
     mov byte es:[di + 1], 0x1f
-    
-    .loop:
-        dec byte es:[di]
-        cmp byte es:[di], '0' - 1
-        jz .reset
-        hlt
-        jmp .loop
+    mov cx, -1
     
     .reset:
-        mov byte es:[di], '9' + 1
+        mov ax, '9' + 1
+    
+    .loop:
+        int 0x80
+        mov es:[di], al
+        hlt
+        cmp al, '0'
+        jz .reset
         jmp .loop
 
 isr_irq0:
