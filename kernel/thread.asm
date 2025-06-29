@@ -1,9 +1,9 @@
 struc ts_thread
     .m_status: resw 1
-    .m_taskSegment: resw 1
     .m_taskOffset: resw 1
-    .m_memoryAllocationListSegment: resw 1
+    .m_taskSegment: resw 1
     .m_memoryAllocationListOffset: resw 1
+    .m_memoryAllocationListSegment: resw 1
 endstruc
 
 section .text
