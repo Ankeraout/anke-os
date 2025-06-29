@@ -20,115 +20,182 @@ thread_new:
     %define p_codeOffset (bp + 8)
     %define p_codeSegment (bp + 10)
     %define p_stackSize (bp + 12)
-    %define l_stackSegment (bp - 4)
-    %define l_stackOffset (bp - 2)
+    %define l_threadSegment (bp - 2)
+    %define l_threadOffset (bp - 4)
+    %define l_listElementSegment (bp - 6)
+    %define l_listElementOffset (bp - 8)
 
     push bp
     mov bp, sp
-
-    sub sp, 4
-
-    ; Save ES and DI for later
+    sub sp, 8
     push es
     push di
 
-    ; Allocate struct ts_thread
-    mov ax, ts_thread_size
-    push ax
-    call malloc
-    add sp, 2
+    .allocateThread:
+        ; DX:AX = malloc(sizeof(struct ts_thread));
+        mov ax, ts_thread_size
+        push ax
+        call malloc
+        add sp, 2
 
-    ; If malloc returned NULL, then return NULL.
-    cmp dx, 0
-    jz .end
+        ; If the allocation failed, return NULL.
+        mov cx, ax
+        or cx, dx
+        jz .end
 
-    ; Make ES:DI point to the new struct ts_thread.
-    mov es, dx
-    mov di, ax
+        ; Save the pointer to the thread structure
+        mov [l_threadSegment], dx
+        mov [l_threadOffset], ax
 
-    ; Allocate stack
-    mov ax, [p_stackSize]
-    push ax
-    call malloc
-    add sp, 2
+    .allocateListElement:
+        ; DX:AX = malloc(sizeof(struct ts_listElement))
+        mov ax, ts_listElement_size
+        push ax
+        call malloc
+        add sp, 2
 
-    ; If malloc returned NULL, then return NULL.
-    cmp dx, 0
-    jz .failedToAllocateStack
+        ; If the allocation failed, go to the error handler.
+        mov cx, ax
+        or cx, dx
+        jz .failedToAllocateListElement
 
-    ; Save the stack segment and offset for later.
-    mov [l_stackSegment], dx
-    mov [l_stackOffset], ax
+        ; Save the pointer to the list element
+        mov [l_listElementSegment], dx
+        mov [l_listElementOffset], ax
 
-    ; Set the thread state
-    mov word es:[di + ts_thread.m_status], E_THREADSTATUS_INITIALIZING
+    .allocateMemoryAllocation:
+        ; DX:AX = malloc(sizeof(struct ts_memoryAllocation))
+        mov ax, ts_memoryAllocation_size
+        push ax
+        call malloc
+        add sp, 2
 
-    ; Create a new task
-    push es
-    push di
-    push word [p_processSegment]
-    push word [p_processOffset]
-    call task_new
-    add sp, 8
+        ; If the allocation failed, go to the error handler.
+        mov cx, ax
+        or cx, dx
+        jz .failedToAllocateMemoryAllocation
 
-    ; If task_new() returned NULL, abort.
-    cmp dx, 0
-    jz .failedToCreateTask
+        ; Make ES:DI point to the memory allocation.
+        mov es, dx
+        mov di, ax
 
-    ; Initialize task context
-    mov es:[di + ts_thread.m_taskSegment], dx
-    mov es:[di + ts_thread.m_taskOffset], ax
+    .allocateStack:
+        ; Determine the size of the stack in segments.
+        mov ax, [p_stackSize]
+        add ax, 15
+        rcr ax, 1
+        shr ax, 1
+        shr ax, 1
+        shr ax, 1
 
-    push es
-    push di
+        ; Save the stack segment count
+        push ax
 
-    mov es, dx
-    mov di, ax
+        ; Allocate the stack
+        push ax
+        call mm_alloc
+        add sp, 2
 
-    mov ax, [l_stackSegment]
-    mov es:[di + ts_task.m_context + ts_taskContext.m_ss], ax
-    mov ax, [l_stackOffset]
-    add ax, [p_stackSize]
-    mov es:[di + ts_task.m_context + ts_taskContext.m_sp], ax
-    mov word es:[di + ts_task.m_context + ts_taskContext.m_flags], 0x0200
-    mov ax, [p_codeSegment]
-    mov es:[di + ts_task.m_context + ts_taskContext.m_cs], ax
-    mov es:[di + ts_task.m_context + ts_taskContext.m_ds], ax
-    mov es:[di + ts_task.m_context + ts_taskContext.m_es], ax
-    mov ax, [p_codeOffset]
-    mov es:[di + ts_task.m_context + ts_taskContext.m_ip], ax
+        ; If the allocation failed, go to the error handler.
+        test ax, ax
+        jz .failedToAllocateStack
 
-    pop ax
-    pop dx
+    .initializeMemoryAllocation:
+        ; Mark the stack in the memory allocation structure
+        mov es:[di + ts_memoryAllocation.m_segment], ax
+        pop ax
+        mov es:[di + ts_memoryAllocation.m_segmentCount], ax
 
-.end:
-    pop di
-    pop es
-    add sp, 4
-    pop bp
-    ret
-    
-.failedToCreateTask:
-    push word [l_stackSegment]
-    push word [l_stackOffset]
-    call free
-    add sp, 4
+    .initializeListEntry:
+        ; Initialize the list entry
+        mov dx, es
+        mov ax, di
+        les di, [l_listElementOffset]
+        mov es:[di + ts_listElement.m_dataSegment], dx
+        mov es:[di + ts_listElement.m_dataOffset], ax
+        xor ax, ax
+        mov es:[di + ts_listElement.m_nextSegment], ax
+        mov es:[di + ts_listElement.m_nextOffset], ax
 
-.failedToAllocateStack:
-    ; Free the allocated struct ts_thread
-    push es
-    push di
-    call free
-    add sp, 4
-    jmp .end
+    .initializeThread:
+        mov dx, es
+        mov ax, di
+        les di, [l_threadOffset]
+        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_INITIALIZING
+        mov es:[di + ts_thread.m_memoryAllocationListSegment], dx
+        mov es:[di + ts_thread.m_memoryAllocationListOffset], ax
 
-    %undef p_processSegment
+    .createTask:
+        push es
+        push di
+        push word [p_processSegment]
+        push word [p_processOffset]
+        call task_new
+        add sp, 8
+
+        ; If the task creation failed, go to the error handler.
+        mov cx, ax
+        or cx, dx
+        jz .failedToCreateTask
+
+        ; Save the pointer to the task
+        mov es:[di + ts_thread.m_taskSegment], dx
+        mov es:[di + ts_thread.m_taskOffset], ax
+
+    .end:
+        pop di
+        pop es
+        add sp, 8
+        pop bp
+        ret
+
+    .failedToCreateTask:
+        ; Free the stack
+        les di, [l_listElementOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+
+        xor ax, ax
+        push ax
+        push word es:[di + ts_memoryAllocation.m_segmentCount]
+        push word es:[di + ts_memoryAllocation.m_segment]
+        call mm_mark
+        add sp, 6
+
+    .failedToAllocateStack:
+        ; Free the memory allocation
+        push es
+        push di
+        call free
+        add sp, 4
+
+    .failedToAllocateMemoryAllocation:
+        ; Free the list element
+        push word [l_listElementSegment]
+        push word [l_listElementOffset]
+        call free
+        add sp, 4
+
+    .failedToAllocateListElement:
+        ; Free the thread
+        push word [l_threadSegment]
+        push word [l_threadOffset]
+        call free
+        add sp, 4
+        
+        ; Return NULL
+        xor ax, ax
+        xor dx, dx
+        jmp .end
+
     %undef p_processOffset
+    %undef p_processSegment
     %undef p_codeOffset
+    %undef p_codeSegment
     %undef p_stackSize
-    %undef l_codeSegment
-    %undef l_stackSegment
-    %undef l_stackOffset
+    %undef l_threadSegment
+    %undef l_threadOffset
+    %undef l_listElementSegment
+    %undef l_listElementOffset
 
 ; void thread_start(struct ts_thread *p_thread)
 thread_start:
