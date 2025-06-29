@@ -181,7 +181,7 @@ thread_new:
         push word [l_threadOffset]
         call free
         add sp, 4
-        
+
         ; Return NULL
         xor ax, ax
         xor dx, dx
@@ -217,6 +217,63 @@ thread_start:
 
     pop bp
     ret
+
+    %undef p_threadSegment
+    %undef p_threadOffset
+
+; void thread_destroy(struct ts_thread *p_thread)
+thread_destroy:
+    %define p_threadOffset (bp + 4)
+    %define p_threadSegment (bp + 6)
+
+    push bp
+    mov bp, sp
+
+    push es
+    push di
+
+    .destroyStack:
+        les di, [p_threadOffset]
+        les di, es:[di + ts_thread.m_memoryAllocationListOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        xor ax, ax
+        push ax
+        push word es:[di + ts_memoryAllocation.m_segmentCount]
+        push word es:[di + ts_memoryAllocation.m_segment]
+        call mm_mark
+        add sp, 6
+
+    .destroyMemoryAllocation:
+        push es
+        push di
+        call free
+        add sp, 4
+
+    .destroyListElement:
+        les di, [p_threadOffset]
+        push word es:[di + ts_thread.m_memoryAllocationListSegment]
+        push word es:[di + ts_thread.m_memoryAllocationListOffset]
+        call free
+        add sp, 4
+
+    .destroyTask:
+        push word es:[di + ts_thread.m_taskSegment]
+        push word es:[di + ts_thread.m_taskOffset]
+        call task_destroy
+        add sp, 4
+
+    .destroyThread:
+        push word [p_threadSegment]
+        push word [p_threadOffset]
+        call free
+        add sp, 4
+
+    .end:
+        pop di
+        pop es
+
+        pop bp
+        ret
 
     %undef p_threadSegment
     %undef p_threadOffset
