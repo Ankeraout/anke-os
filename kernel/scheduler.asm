@@ -187,6 +187,45 @@ scheduler_add:
     %undef p_taskSegment
     %undef p_taskOffset
 
+; void scheduler_remove(struct ts_task *p_task)
+scheduler_remove:
+    %define p_taskOffset (bp + 4)
+    %define p_taskSegment (bp + 6)
+
+    push bp
+    mov bp, sp
+
+    ; If the task is the current running task, stop it.
+    .checkCurrentTask:
+        mov dx, [p_taskSegment]
+        mov ax, [p_taskOffset]
+        cmp dx, [g_scheduler_currentTaskSegment]
+        jnz .removeFromTaskList
+        cmp ax, [g_scheduler_currentTaskOffset]
+        jz .stopCurrentTask
+
+    .removeFromTaskList:
+        push word [p_taskSegment]
+        push word [p_taskOffset]
+        push cs
+        mov ax, g_scheduler_taskListOffset
+        push ax
+        call list_remove
+        add sp, 8
+
+    .end:
+        pop bp
+        ret
+
+    .stopCurrentTask:
+        xor ax, ax
+        mov [g_scheduler_currentTaskSegment], ax
+        mov [g_scheduler_currentTaskOffset], ax
+        jmp .removeFromTaskList
+
+    %undef p_taskSegment
+    %undef p_taskOffset
+
 section .data
 g_scheduler_taskListOffset: dw 0
 g_scheduler_taskListSegment: dw 0
