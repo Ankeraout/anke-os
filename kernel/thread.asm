@@ -24,10 +24,12 @@ thread_new:
     %define l_threadOffset (bp - 4)
     %define l_listElementSegment (bp - 6)
     %define l_listElementOffset (bp - 8)
+    %define l_stackSegment (bp - 10)
+    %define l_stackSegmentCount (bp - 12)
 
     push bp
     mov bp, sp
-    sub sp, 8
+    sub sp, 12
     push es
     push di
 
@@ -88,6 +90,8 @@ thread_new:
         shr ax, 1
         shr ax, 1
 
+        mov [l_stackSegmentCount], ax
+
         ; Save the stack segment count
         push ax
 
@@ -99,6 +103,9 @@ thread_new:
         ; If the allocation failed, go to the error handler.
         test ax, ax
         jz .failedToAllocateStack
+
+        ; Save the stack segment
+        mov [l_stackSegment], ax
 
     .initializeMemoryAllocation:
         ; Mark the stack in the memory allocation structure
@@ -142,10 +149,27 @@ thread_new:
         mov es:[di + ts_thread.m_taskSegment], dx
         mov es:[di + ts_thread.m_taskOffset], ax
 
+    .initializeTaskContext:
+        les di, es:[di + ts_thread.m_taskOffset]
+        mov ax, [l_stackSegment]
+        mov es:[di + ts_task.m_context + ts_taskContext.m_ss], ax
+        mov ax, [p_stackSize]
+        inc ax
+        mov es:[di + ts_task.m_context + ts_taskContext.m_sp], ax
+        mov word es:[di + ts_task.m_context + ts_taskContext.m_flags], 0x0200
+        mov ax, [p_codeSegment]
+        mov word es:[di + ts_task.m_context + ts_taskContext.m_cs], ax
+        mov word es:[di + ts_task.m_context + ts_taskContext.m_ds], ax
+        mov word es:[di + ts_task.m_context + ts_taskContext.m_es], ax
+        mov ax, [p_codeOffset]
+        mov word es:[di + ts_task.m_context + ts_taskContext.m_ip], ax
+
     .end:
+        mov ax, [l_threadOffset]
+        mov dx, [l_threadSegment]
         pop di
         pop es
-        add sp, 8
+        add sp, 12
         pop bp
         ret
 
