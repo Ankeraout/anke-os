@@ -172,6 +172,33 @@ task_clear:
     mov word [g_task_currentTaskOffset], ax
     ret
 
+; void task_destroy(struct ts_task *p_task)
+task_destroy:
+    %define p_taskOffset (bp + 4)
+    %define p_taskSegment (bp + 6)
+
+    push bp
+    mov bp, sp
+
+    .unscheduleTask:
+        push word [p_taskSegment]
+        push word [p_taskOffset]
+        call scheduler_remove
+        add sp, 4
+
+    .destroyTask:
+        push word [p_taskSegment]
+        push word [p_taskOffset]
+        call free
+        add sp, 4
+    
+    .end:
+        pop bp
+        ret
+
+    %undef p_taskSegment
+    %undef p_taskOffset
+
 section .bss
 g_task_currentTaskOffset: resw 1
 g_task_currentTaskSegment: resw 1
