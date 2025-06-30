@@ -1,4 +1,5 @@
 %define C_KERNEL_SEGMENT 0x1000
+%define C_KERNEL_OFFSET 0x0010
 
 bits 16
 cpu 8086
@@ -182,7 +183,7 @@ fileFound:
 
     .end:
         mov dl, [bpb.driveNumber]
-        jmp C_KERNEL_SEGMENT:0x0000
+        jmp C_KERNEL_SEGMENT:C_KERNEL_OFFSET
 
 ; Summary:
 ; Reads sectors.

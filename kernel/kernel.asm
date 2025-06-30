@@ -4,6 +4,9 @@ cpu 8086
 %define C_KERNEL_STACK_SIZE 0x1000
 %define C_KERNEL_SEGMENT_SIZE 65536
 %define C_KERNEL_MAX_SIZE C_KERNEL_SEGMENT_SIZE
+%define C_KERNEL_OFFSET 0x10
+
+times C_KERNEL_OFFSET-($-$$) nop
 
 section .text
 _start:
@@ -12,6 +15,7 @@ _start:
 %include "kernel/thread_constants.asm"
 %include "kernel/task_macros.asm"
 
+%include "kernel/a20.asm"
 %include "kernel/critical_section.asm"
 %include "kernel/list.asm"
 %include "kernel/memory_allocation.asm"
@@ -55,6 +59,7 @@ g_kernel_msg_boot:
     db "AnkeOS kernel x86_16 0.1.0 (", __DATE__, " ", __TIME__, ")", 13, 10, 0
 
 g_kernel_sequence_init_name: db "Kernel initialization sequence", 0
+g_kernel_sequence_init_a20_name: db "A20 line initialization", 0
 g_kernel_sequence_init_mm_name: db "Memory manager initialization", 0
 g_kernel_sequence_init_syscall_name: db "System call initialization", 0
 g_kernel_sequence_init_test_name: db "Kernel test", 0
@@ -62,7 +67,11 @@ g_kernel_sequence_init_test_name: db "Kernel test", 0
 g_kernel_sequence_init:
 istruc ts_sequence
     at .m_name, dw g_kernel_sequence_init_name
-    at .m_count, dw 3
+    at .m_count, dw 4
+iend
+istruc ts_sequenceElement
+    at .m_name, dw g_kernel_sequence_init_a20_name
+    at .m_func, dw a20_relocateKernel
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_mm_name
