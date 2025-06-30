@@ -30,6 +30,11 @@ mm_init:
     call mm_mark
     add sp, 6
 
+    ; If the kernel is in high memory, do not mark as used.
+    mov ax, cs
+    cmp ax, 0xffff
+    jz .skipKernelMarking
+
     ; Mark the kernel as used
     mov ax, 1
     push ax
@@ -50,29 +55,30 @@ mm_init:
     call mm_mark
     add sp, 6
 
-    ; Get the amount of memory from BIOS
-    int 0x12
+    .skipKernelMarking:
+        ; Get the amount of memory from BIOS
+        int 0x12
 
-    ; Convert KB to segments
-    mov cl, 6
-    shl ax, cl
+        ; Convert KB to segments
+        mov cl, 6
+        shl ax, cl
 
-    mov dx, 1
-    push dx
+        mov dx, 1
+        push dx
 
-    ; Determine the number of unusable segments in memory.
-    mov dx, C_MM_TOTAL_SEGMENT_COUNT
-    sub dx, ax
-    push dx
+        ; Determine the number of unusable segments in memory.
+        mov dx, C_MM_TOTAL_SEGMENT_COUNT
+        sub dx, ax
+        push dx
 
-    push ax
-    call mm_mark
-    add sp, 6
+        push ax
+        call mm_mark
+        add sp, 6
 
-    xor ax, ax
+        xor ax, ax
 
-    pop bp
-    ret
+        pop bp
+        ret
 
 ; void mm_mark(uint16_t p_firstSegment, uint16_t p_nbSegments, bool p_used)
 mm_mark:
