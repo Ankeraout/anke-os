@@ -1,7 +1,9 @@
 bits 16
 cpu 8086
 
-%define C_KERNEL_SEGMENT 0x1000
+%define C_KERNEL_STACK_SIZE 0x1000
+%define C_KERNEL_SEGMENT_SIZE 65536
+%define C_KERNEL_MAX_SIZE C_KERNEL_SEGMENT_SIZE
 
 section .text
 _start:
@@ -28,12 +30,11 @@ _start:
 section .text
 
 main:
-    mov ax, C_KERNEL_SEGMENT
+    mov ax, cs
     mov ds, ax
     mov es, ax
-    mov ax, 0x7000
     mov ss, ax
-    xor sp, sp
+    mov sp, g_kernel_stackBottom
 
     mov ax, g_kernel_msg_boot
     push ds
@@ -75,3 +76,10 @@ istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_test_name
     at .m_func, dw test
 iend
+
+section .bss
+align 2
+g_kernel_stackTop:
+    resb C_KERNEL_STACK_SIZE
+g_kernel_stackBottom:
+g_kernel_end:

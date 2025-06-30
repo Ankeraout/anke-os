@@ -3,7 +3,7 @@
     push ds
     push ax
     push bp
-    mov ax, C_KERNEL_SEGMENT
+    mov ax, cs
     mov ds, ax
 
     ; Prepare access to the stack

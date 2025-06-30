@@ -1,3 +1,5 @@
+%define C_KERNEL_SEGMENT 0x1000
+
 bits 16
 cpu 8086
 
@@ -126,7 +128,7 @@ findFileEntry:
 
 fileFound:
     ; Read file
-    mov ax, 0x1000
+    mov ax, C_KERNEL_SEGMENT
     mov es, ax
     xor bx, bx
 
@@ -180,7 +182,7 @@ fileFound:
 
     .end:
         mov dl, [bpb.driveNumber]
-        jmp 0x1000:0x0000
+        jmp C_KERNEL_SEGMENT:0x0000
 
 ; Summary:
 ; Reads sectors.

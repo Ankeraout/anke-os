@@ -1,5 +1,9 @@
 ; 640 KB / 16 bytes per segment / 8 bits per byte = 5120 bytes
-%define C_MM_MMAP_SIZE 5120
+%define C_MM_BITS_PER_BYTE 8
+%define C_MM_SEGMENT_SIZE_BYTES 16
+%define C_MM_LOW_MEMORY_SIZE_BYTES 655360
+%define C_MM_TOTAL_SEGMENT_COUNT (C_MM_LOW_MEMORY_SIZE_BYTES / C_MM_SEGMENT_SIZE_BYTES)
+%define C_MM_MMAP_SIZE (C_MM_TOTAL_SEGMENT_COUNT / C_MM_BITS_PER_BYTE)
 
 section .text
 ; int mm_init()
@@ -7,23 +11,41 @@ mm_init:
     push bp
     mov bp, sp
     
-    ; Mark all the memory as used
-    mov ax, C_MM_MMAP_SIZE
-    push ax
-    mov al, 0xff
-    push ax
-    mov ax, g_mm_bitmap
-    push ds
-    push ax
-    call memset
-    add sp, 8
-
-    ; Mark 0x500-0xffff as free
+    ; Mark all the memory as free
     xor ax, ax
     push ax
-    mov ax, (0x10000 - 0x500) >> 4
+    mov dx, C_MM_TOTAL_SEGMENT_COUNT
+    push dx
+    push ax
+    call mm_mark
+    add sp, 6
+
+    ; Mark 0x00000-0x00500 as used (IVT + BDA)
+    mov ax, 1
     push ax
     mov ax, 0x50
+    push ax
+    xor ax, ax
+    push ax
+    call mm_mark
+    add sp, 6
+
+    ; Mark the kernel as used
+    mov ax, 1
+    push ax
+
+    ; Convert the kernel size to segments
+    mov ax, g_kernel_end
+    add ax, 15
+    rcr ax, 1
+    mov cl, 3
+    shr ax, cl
+    push ax
+
+    ; Get kernel first segment
+    mov ax, cs
+    mov cl, 4
+    shr ax, cl
     push ax
     call mm_mark
     add sp, 6
@@ -35,12 +57,14 @@ mm_init:
     mov cl, 6
     shl ax, cl
 
-    ; Mark 0x20000-0x((ax << 4) + 0x0f) as free
-    xor dx, dx
+    mov dx, 1
     push dx
-    sub ax, 0x2000
-    push ax
-    mov ax, 0x2000
+
+    ; Determine the number of unusable segments in memory.
+    mov dx, C_MM_TOTAL_SEGMENT_COUNT
+    sub dx, ax
+    push dx
+
     push ax
     call mm_mark
     add sp, 6

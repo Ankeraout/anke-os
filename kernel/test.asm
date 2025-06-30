@@ -76,7 +76,7 @@ test:
     xor ax, ax
     mov es, ax
     mov word es:[0x0020], isr_irq0
-    mov word es:[0x0022], C_KERNEL_SEGMENT
+    mov word es:[0x0022], cs
 
     call criticalSection_leave
 
