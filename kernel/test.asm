@@ -70,16 +70,6 @@ test:
     call thread_start
     add sp, 4
 
-.installIsr0:
-    call criticalSection_enter
-
-    xor ax, ax
-    mov es, ax
-    mov word es:[0x0020], isr_irq0
-    mov word es:[0x0022], cs
-
-    call criticalSection_leave
-
 .startRunning:
     call scheduler_run
 
@@ -142,11 +132,3 @@ thread_2_main:
         cmp al, '0'
         jz .reset
         jmp .loop
-
-isr_irq0:
-    M_TASK_SAVE_CONTEXT
-
-    mov al, 0x20
-    out 0x20, al
-
-    jmp scheduler_run

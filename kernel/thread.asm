@@ -154,7 +154,6 @@ thread_new:
         mov ax, [l_stackSegment]
         mov es:[di + ts_task.m_context + ts_taskContext.m_ss], ax
         mov ax, [p_stackSize]
-        inc ax
         mov es:[di + ts_task.m_context + ts_taskContext.m_sp], ax
         mov word es:[di + ts_task.m_context + ts_taskContext.m_flags], 0x0200
         mov ax, [p_codeSegment]

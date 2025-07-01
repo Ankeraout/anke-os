@@ -17,6 +17,8 @@ _start:
 
 %include "kernel/a20.asm"
 %include "kernel/critical_section.asm"
+%include "kernel/irq.asm"
+%include "kernel/isr.asm"
 %include "kernel/list.asm"
 %include "kernel/memory_allocation.asm"
 %include "kernel/mm.asm"
@@ -62,12 +64,13 @@ g_kernel_sequence_init_name: db "Kernel initialization sequence", 0
 g_kernel_sequence_init_a20_name: db "A20 line initialization", 0
 g_kernel_sequence_init_mm_name: db "Memory manager initialization", 0
 g_kernel_sequence_init_syscall_name: db "System call initialization", 0
+g_kernel_sequence_init_irq_name: db "IRQ initialization", 0
 g_kernel_sequence_init_test_name: db "Kernel test", 0
 
 g_kernel_sequence_init:
 istruc ts_sequence
     at .m_name, dw g_kernel_sequence_init_name
-    at .m_count, dw 4
+    at .m_count, dw 5
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_a20_name
@@ -82,12 +85,16 @@ istruc ts_sequenceElement
     at .m_func, dw syscall_init
 iend
 istruc ts_sequenceElement
+    at .m_name, dw g_kernel_sequence_init_irq_name
+    at .m_func, dw irq_init
+iend
+istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_test_name
     at .m_func, dw test
 iend
 
 section .bss
-align 2
+align 2, resb 1
 g_kernel_stackTop:
     resb C_KERNEL_STACK_SIZE
 g_kernel_stackBottom:
