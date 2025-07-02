@@ -53,8 +53,8 @@ main:
     call sequence_run
     add sp, 2
 
-    cli
-    hlt
+    call scheduler_switch
+    jmp scheduler_run
 
 section .rodata
 g_kernel_msg_boot:

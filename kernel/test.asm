@@ -70,11 +70,9 @@ test:
     call thread_start
     add sp, 4
 
-.startRunning:
-    call scheduler_run
-
 .end:
-    add sp, 8
+    xor ax, ax
+    add sp, 12
     pop bp
     ret
 

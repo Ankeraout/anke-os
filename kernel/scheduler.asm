@@ -1,132 +1,172 @@
 section .text
 
-; void scheduler_run()
-scheduler_run:
-    %define l_loopStopTaskSegment (bp - 2)
-    %define l_loopStopTaskOffset (bp - 4)
+; void scheduler_switch()
+scheduler_switch:
+    %define l_stopConditionSegment (bp - 2)
+    %define l_stopConditionOffset (bp - 4)
+    %define l_currentElementSegment (bp - 6)
+    %define l_currentElementOffset (bp - 8)
+    %define l_newElementSegment (bp - 10)
+    %define l_newElementOffset (bp - 12)
 
+    push bp
     mov bp, sp
-    sub sp, 4
+    sub sp, 12
+    push es
+    push di
 
-    ; We do not want to be interrupted during a task selection.
-    call criticalSection_enter
+    .checkTaskListEmpty:
+        mov ax, [g_scheduler_taskListSegment]
+        or ax, [g_scheduler_taskListOffset]
+        jz .taskListEmpty
 
-    ; If there are no tasks to run, simply halt.
-    mov ax, [g_scheduler_taskListSegment]
-    or ax, [g_scheduler_taskListOffset]
-    jz .halt
+    .checkCurrentTask:
+        mov ax, [g_scheduler_currentTaskSegment]
+        or ax, [g_scheduler_currentTaskOffset]
+        jz .loopInitNoCurrentTask
 
-    ; Check if a task is currently running
-    mov ax, [g_scheduler_currentTaskSegment]
-    or ax, [g_scheduler_currentTaskOffset]
-
-    ; If there is no running task, then the next task that needs to be
-    ; checked is the first one.
-    jz .initializeLoopFirstTask
-
-    ; If there is already a task running, the first task that needs to be
-    ; checked is the next one.
-    call task_unload
-
-    ; If the current task is RUNNING, make it READY.
-    les di, [g_scheduler_currentTaskOffset]
-    les di, es:[di + ts_listElement.m_dataOffset]
-    les di, es:[di + ts_task.m_threadOffset]
-
-    cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
-    jnz .initializeLoopNextTask
-
-    mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
-
-    .initializeLoopNextTask:
-        ; Load the current task
+    .loopInitCurrentTask:
         les di, [g_scheduler_currentTaskOffset]
-
-        ; If there is no next task, start looking from the first task.
-        mov ax, es:[di + ts_listElement.m_nextSegment]
-        or ax, es:[di + ts_listElement.m_nextOffset]
-        jz .initializeLoopFirstTask
-
-        ; If there is a next task, start looking from it.
+        mov [l_stopConditionSegment], es
+        mov [l_stopConditionOffset], di
         les di, es:[di + ts_listElement.m_nextOffset]
-    
-    .initializeLoop:
-        ; Save the first checked task for stopping later
-        mov [l_loopStopTaskSegment], es
-        mov [l_loopStopTaskOffset], di
+
+        mov ax, es
+        or ax, di
+        jz .loopInitCurrentTaskGetFirstTask
+        mov [l_currentElementSegment], es
+        mov [l_currentElementOffset], di
+
+    .loopInit:
+        xor ax, ax
+        mov [l_newElementSegment], ax
+        mov [l_newElementOffset], ax
 
     .loop:
-        ; Save pointer to the task list element
-        push es
-        push di
-
-        ; Get the task object
+        les di, [l_currentElementOffset]
         les di, es:[di + ts_listElement.m_dataOffset]
-
-        ; Get the thread object
         les di, es:[di + ts_task.m_threadOffset]
-
-        ; If the thread is ready, run it.
         cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
-        jz .foundThread
+        jnz .loopGetNextElement
 
-        ; Otherwise, restore the task list element
-        pop di
-        pop es
+    .loopFound:
+        les di, [l_currentElementOffset]
+        mov [l_newElementSegment], es
+        mov [l_newElementOffset], di
+        jmp .loopEnd
 
-        ; Check if the task list element is the last element to check
-        ; (stop condition)
-        mov ax, es
-        xor ax, [l_loopStopTaskSegment]
-        mov dx, di
-        xor dx, [l_loopStopTaskOffset]
-        or ax, dx
-        jz .exitLoop
-
-        ; There are more elements to check: get the next task list element.
+    .loopGetNextElement:
+        les di, [l_currentElementOffset]
         les di, es:[di + ts_listElement.m_nextOffset]
-        jmp .loop
+        mov [l_currentElementSegment], es
+        mov [l_currentElementOffset], di
+        mov ax, es
+        or ax, di
+        jnz .loopCheckStopCondition
 
-    .foundThread:
-        ; Set the thread state to RUNNING
-        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
+    .loopGetFirstElement:
+        les di, [g_scheduler_taskListOffset]
+        mov [l_currentElementSegment], es
+        mov [l_currentElementOffset], di
 
-        ; Restore the task list element
-        pop di
-        pop es
+    .loopCheckStopCondition:
+        mov ax, [l_currentElementSegment]
+        sub ax, [l_stopConditionSegment]
+        mov dx, [l_currentElementOffset]
+        sub dx, [l_stopConditionOffset]
+        or ax, dx
+        jnz .loop
 
-        ; Make ES:DI point to the task object
-        ; Load the task
+    .loopEnd:
+        mov ax, [l_newElementSegment]
+        sub ax, [g_scheduler_currentTaskSegment]
+        mov dx, [l_newElementOffset]
+        sub dx, [g_scheduler_currentTaskOffset]
+        or ax, dx
+        jz .end
+
+    .loadNewTask:
+        mov ax, [g_scheduler_currentTaskSegment]
+        or ax, [g_scheduler_currentTaskOffset]
+        jz .loadNewTaskCheckNewElement
+
+    .loadNewTaskUnloadCurrentTask:
+        call task_save
+
+    .loadNewTaskCheckNewElement:
+        les di, [l_newElementOffset]
+        mov [g_scheduler_currentTaskSegment], es
+        mov [g_scheduler_currentTaskOffset], di
+        mov ax, es
+        or ax, di
+        jz .end
+
+    .loadNewTaskLoadNewTask:
         push word es:[di + ts_listElement.m_dataSegment]
         push word es:[di + ts_listElement.m_dataOffset]
         call task_load
+        add sp, 4
 
-        ; Save the new running task
-        mov [g_scheduler_currentTaskSegment], es
-        mov [g_scheduler_currentTaskOffset], di
+    .end:
+        pop di
+        pop es
+        add sp, 12
+        pop bp
+        ret
 
-        ; We are no longer in a critical section.
-        call criticalSection_leave
+    .taskListEmpty:
+        mov ax, [g_scheduler_currentTaskSegment]
+        or ax, [g_scheduler_currentTaskOffset]
+        jz .end
+    
+    .taskListEmptyUnloadCurrentTask:
+        les di, [g_scheduler_currentTaskOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        les di, es:[di + ts_task.m_threadOffset]
 
-        ; Resume the task
-        call task_resume
+        cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
+        jnz .taskListEmptyUnloadCurrentTaskFinalize
 
-    .exitLoop:
-    .halt:
-        ; No task can be run: just halt and loop again.
-        ; When an interrupt occurs, the scheduler will be unblocked.
-        xor ax, ax
+    .taskListEmptyUnloadCurrentTaskSetThreadReady:
+        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
+
+    .taskListEmptyUnloadCurrentTaskFinalize:
+        call task_unload
         mov [g_scheduler_currentTaskSegment], ax
         mov [g_scheduler_currentTaskOffset], ax
-        call task_clear
-        call criticalSection_leave
-        hlt
-        jmp scheduler_run
+        jmp .end
 
-    .initializeLoopFirstTask:
-        ; Load the first task
+    .loopInitNoCurrentTask:
         les di, [g_scheduler_taskListOffset]
-        jmp .initializeLoop
+        mov [l_currentElementSegment], es
+        mov [l_currentElementOffset], di
+        mov [l_stopConditionSegment], es
+        mov [l_stopConditionOffset], di
+        jmp .loopInit
+
+    .loopInitCurrentTaskGetFirstTask:
+        les di, [g_scheduler_taskListOffset]
+        mov [l_currentElementSegment], es
+        mov [l_currentElementOffset], di
+        jmp .loopInit
+
+    %undef l_stopConditionSegment
+    %undef l_stopConditionOffset
+    %undef l_currentElementSegment
+    %undef l_currentElementOffset
+    %undef l_newElementSegment
+    %undef l_newElementOffset
+
+; void scheduler_run(void)
+scheduler_run:
+    mov ax, [g_scheduler_currentTaskSegment]
+    or ax, [g_scheduler_currentTaskOffset]
+    jnz task_resume
+
+    .halt:
+        hlt
+        call scheduler_switch
+        jmp scheduler_run
 
 ; int scheduler_add(struct ts_task *p_task)
 scheduler_add:
@@ -218,6 +258,7 @@ scheduler_remove:
         ret
 
     .stopCurrentTask:
+        call task_unload
         xor ax, ax
         mov [g_scheduler_currentTaskSegment], ax
         mov [g_scheduler_currentTaskOffset], ax
