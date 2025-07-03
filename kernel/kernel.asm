@@ -13,7 +13,6 @@ _start:
     jmp main
 
 %include "kernel/thread_constants.asm"
-%include "kernel/task_macros.asm"
 
 %include "kernel/a20.asm"
 %include "kernel/critical_section.asm"
@@ -65,12 +64,13 @@ g_kernel_sequence_init_a20_name: db "A20 line initialization", 0
 g_kernel_sequence_init_mm_name: db "Memory manager initialization", 0
 g_kernel_sequence_init_syscall_name: db "System call initialization", 0
 g_kernel_sequence_init_irq_name: db "IRQ initialization", 0
+g_kernel_sequence_init_scheduler_name: db "Scheduler initialization", 0
 g_kernel_sequence_init_test_name: db "Kernel test", 0
 
 g_kernel_sequence_init:
 istruc ts_sequence
     at .m_name, dw g_kernel_sequence_init_name
-    at .m_count, dw 5
+    at .m_count, dw 6
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_a20_name
@@ -87,6 +87,10 @@ iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_irq_name
     at .m_func, dw irq_init
+iend
+istruc ts_sequenceElement
+    at .m_name, dw g_kernel_sequence_init_scheduler_name
+    at .m_func, dw scheduler_init
 iend
 istruc ts_sequenceElement
     at .m_name, dw g_kernel_sequence_init_test_name

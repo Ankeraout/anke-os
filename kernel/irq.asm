@@ -100,6 +100,22 @@ irq_init:
     %undef l_listEntryOffset
 
 irq_service:
+    ; Save context
+    mov [g_task_currentTaskContext + ts_taskContext.m_ax], ax
+    mov [g_task_currentTaskContext + ts_taskContext.m_bx], bx
+    mov [g_task_currentTaskContext + ts_taskContext.m_cx], cx
+    mov [g_task_currentTaskContext + ts_taskContext.m_dx], dx
+    mov [g_task_currentTaskContext + ts_taskContext.m_bp], bp
+    mov [g_task_currentTaskContext + ts_taskContext.m_si], si
+    mov [g_task_currentTaskContext + ts_taskContext.m_ds], ds
+    mov [g_task_currentTaskContext + ts_taskContext.m_di], di
+    mov [g_task_currentTaskContext + ts_taskContext.m_es], es
+    mov [g_task_currentTaskContext + ts_taskContext.m_ss], ss
+    pop word [g_task_currentTaskContext + ts_taskContext.m_ip]
+    pop word [g_task_currentTaskContext + ts_taskContext.m_cs]
+    pop word [g_task_currentTaskContext + ts_taskContext.m_flags]
+    mov [g_task_currentTaskContext + ts_taskContext.m_sp], sp
+
     ; Call all ISRs
     push bp
     mov bp, sp
@@ -119,33 +135,21 @@ irq_service:
         or ax, di
         jz .end
 
-        push es
-        push di
         pushf
-        push cs
-        mov ax, .next
-        push ax
-        jmp far [es:di + ts_listElement.m_dataOffset]
+        call far [es:di + ts_listElement.m_dataOffset]
     
     .next:
-        pop di
-        pop es
-
         les di, [es:di + ts_listElement.m_nextOffset]
         jmp .loop
 
     .end:
-        pop di
-        pop es
-        pop ax
-        pop bp
-        iret
+        call task_resume
 
 ; int irq_addHandler(int p_irq, void *p_handler)
 irq_addHandler:
-    %define p_irq (bp - 2)
-    %define p_handlerSegment (bp - 4)
-    %define p_handlerOffset (bp - 6)
+    %define p_irq (bp + 4)
+    %define p_handlerOffset (bp + 6)
+    %define p_handlerSegment (bp + 8)
 
     push bp
     mov bp, sp

@@ -1,5 +1,16 @@
 section .text
 
+; int scheduler_init()
+scheduler_init:
+    push cs
+    mov ax, scheduler_tick
+    push ax
+    xor ax, ax
+    push ax
+    call irq_addHandler
+    add sp, 6
+    ret
+
 ; void scheduler_switch()
 scheduler_switch:
     %define l_stopConditionSegment (bp - 2)
@@ -266,6 +277,11 @@ scheduler_remove:
 
     %undef p_taskSegment
     %undef p_taskOffset
+
+; void scheduler_tick(void)
+scheduler_tick:
+    call scheduler_switch
+    iret
 
 section .data
 g_scheduler_taskListOffset: dw 0
