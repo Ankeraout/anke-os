@@ -16,7 +16,7 @@ main:
     mov ds, ax
     mov es, ax
     mov ss, ax
-    xor sp, sp
+    mov sp, 0x8400
 
     ; Set CS to 0x7c0 and jump to the next instructions
     jmp 0x7c0:saveDriveNumber
@@ -40,6 +40,7 @@ saveDriveNumber:
     and cx, 0x003f
     mov [bpb.sectorsPerTrack], cx
 
+    mov dl, dh
     xor dh, dh
     inc dx
     mov [bpb.heads], dx
@@ -62,16 +63,14 @@ saveDriveNumber:
     mov [rootDirectoryLba + 2], dx
 
     ; Compute first cluster LBA
-    mov cx, [bpb.rootDirectoryEntries]
-    shr cx, 1
-    shr cx, 1
-    shr cx, 1
-    shr cx, 1
-    add ax, cx
+    mov bx, [bpb.rootDirectoryEntries]
+    mov cl, 4
+    shr bx, cl
+    add ax, bx
     adc dx, 0
     mov [firstClusterLba], ax
     mov [firstClusterLba + 2], dx
-    mov [rootDirectorySectors], cx
+    mov [rootDirectorySectors], bx
 
     ; Load FAT in memory
     mov si, fatLba
@@ -100,9 +99,8 @@ findFileEntry:
         call readSector
 
         mov ax, [bpb.bytesPerSector]
-        mov cx, 32
-        xor dx, dx
-        div cx
+        mov cl, 5
+        shr ax, cl
         mov cx, ax
 
         mov si, rootDirectoryBuffer
@@ -156,9 +154,8 @@ fileFound:
         mov al, [bpb.sectorsPerCluster]
         xor ah, ah
         mul word [bpb.bytesPerSector]
-        xor dx, dx
-        mov cx, 16
-        div cx
+        mov cl, 4
+        shr ax, cl
         mov dx, es
         add dx, ax
         mov es, dx
@@ -174,8 +171,7 @@ fileFound:
         jz .even
 
     .odd:
-        xor dx, dx
-        div cx
+        shr ax, cl
 
     .even:
         and ax, 0xfff
@@ -209,9 +205,8 @@ readSectors:
 
         ; Compute ES increment: bytes_per_sector / 16
         mov ax, [bpb.bytesPerSector]
-        xor dx, dx
-        mov cx, 16
-        div cx
+        mov cl, 4
+        shr ax, cl
 
         ; Increment ES
         mov dx, es
