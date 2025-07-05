@@ -177,4 +177,5 @@ process_destroy:
     %undef p_processSegment
 
 section .data
+align 2
 g_process_nextPid: dw 1

@@ -46,7 +46,9 @@ criticalSection_leave:
     ret
 
 section .data
+align 2
 g_criticalSection_reentrantCount: dw 0
 
 section .bss
+align 2, resb 1
 g_criticalSection_wereInterruptsEnabled: resw 1

@@ -204,4 +204,5 @@ free:
     %undef p_offset
 
 section .rodata
+align 2
 g_utoa_baseString db "0123456789abcdefghijklmnopqrstuvwxyz"

@@ -287,6 +287,7 @@ scheduler_tick:
     iret
 
 section .data
+align 2
 g_scheduler_taskListOffset: dw 0
 g_scheduler_taskListSegment: dw 0
 g_scheduler_currentTaskOffset: dw 0

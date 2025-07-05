@@ -119,6 +119,7 @@ sequence_run:
     %undef p_sequence
 
 section .rodata
+align 2
 g_sequence_msg_runningSequence1: db "Running sequence ", '"', 0
 g_sequence_msg_runningSequence2: db '"', "...", 13, 10, 0
 g_sequence_msg_runningElement1: db "  - Running element ", '"', 0

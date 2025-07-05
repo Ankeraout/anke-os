@@ -14,4 +14,5 @@ M_DEFINE_ISR_IRQ l_irqNumber
 %undef l_irqNumber
 
 section .bss
+align 2, resb 1
 g_isr_irq: resb 1

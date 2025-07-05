@@ -20,7 +20,3 @@ syscall_init:
 isr_int80:
     add ax, cx
     iret
-
-section .rodata
-g_syscall_jump_table:
-

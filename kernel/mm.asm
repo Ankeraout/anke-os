@@ -262,4 +262,5 @@ mm_alloc:
     %undef p_nbSegments
 
 section .bss
+align 2, resb 1
 g_mm_bitmap resb C_MM_MMAP_SIZE

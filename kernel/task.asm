@@ -200,6 +200,7 @@ task_destroy:
     %undef p_taskOffset
 
 section .bss
+align 2, resb 1
 g_task_currentTaskOffset: resw 1
 g_task_currentTaskSegment: resw 1
 g_task_currentTaskContext: resb ts_taskContext_size
