@@ -45,6 +45,8 @@ criticalSection_leave:
     pop bp
     ret
 
+section .data
+g_criticalSection_reentrantCount: dw 0
+
 section .bss
 g_criticalSection_wereInterruptsEnabled: resw 1
-g_criticalSection_reentrantCount: resw 1

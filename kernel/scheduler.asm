@@ -26,6 +26,8 @@ scheduler_switch:
     push es
     push di
 
+    call criticalSection_enter
+
     .checkTaskListEmpty:
         mov ax, [g_scheduler_taskListSegment]
         or ax, [g_scheduler_taskListOffset]
@@ -119,6 +121,7 @@ scheduler_switch:
         add sp, 4
 
     .end:
+        call criticalSection_leave
         pop di
         pop es
         add sp, 12

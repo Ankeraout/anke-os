@@ -16,7 +16,7 @@ main:
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov sp, 0x8400
+    mov sp, stackBottom
 
     ; Set CS to 0x7c0 and jump to the next instructions
     jmp 0x7c0:saveDriveNumber
@@ -278,6 +278,8 @@ bootSignature:
 section .bss
 fat: resb 6144
 rootDirectoryBuffer: resb 4096
+stackTop: resb 4096
+stackBottom:
 fatLba: resd 1
 rootDirectoryLba: resd 1
 firstClusterLba: resd 1

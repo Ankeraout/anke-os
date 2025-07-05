@@ -35,6 +35,8 @@ _start:
 section .text
 
 main:
+    cli
+
     mov ax, cs
     mov ds, ax
     mov es, ax
