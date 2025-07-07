@@ -1,9 +1,8 @@
 struc ts_thread
     .m_status: resw 1
-    .m_taskOffset: resw 1
-    .m_taskSegment: resw 1
     .m_memoryAllocationListOffset: resw 1
     .m_memoryAllocationListSegment: resw 1
+    .m_context: resb ts_taskContext_size
 endstruc
 
 section .text
@@ -132,36 +131,26 @@ thread_new:
         mov es:[di + ts_thread.m_memoryAllocationListSegment], dx
         mov es:[di + ts_thread.m_memoryAllocationListOffset], ax
 
-    .createTask:
+    .initializeContext:
+        mov ax, [l_stackSegment]
+        mov es:[di + ts_thread.m_context + ts_taskContext.m_ss], ax
+        mov ax, [p_stackSize]
+        mov es:[di + ts_thread.m_context + ts_taskContext.m_sp], ax
+        mov word es:[di + ts_thread.m_context + ts_taskContext.m_flags], 0x0200
+        mov ax, [p_codeSegment]
+        mov word es:[di + ts_thread.m_context + ts_taskContext.m_cs], ax
+        mov word es:[di + ts_thread.m_context + ts_taskContext.m_ds], ax
+        mov word es:[di + ts_thread.m_context + ts_taskContext.m_es], ax
+        mov ax, [p_codeOffset]
+        mov word es:[di + ts_thread.m_context + ts_taskContext.m_ip], ax
+
+    .registerThread:
         push es
         push di
-        push word [p_processSegment]
-        push word [p_processOffset]
-        call task_new
-        add sp, 8
-
-        ; If the task creation failed, go to the error handler.
-        mov cx, ax
-        or cx, dx
-        jz .failedToCreateTask
-
-        ; Save the pointer to the task
-        mov es:[di + ts_thread.m_taskSegment], dx
-        mov es:[di + ts_thread.m_taskOffset], ax
-
-    .initializeTaskContext:
-        les di, es:[di + ts_thread.m_taskOffset]
-        mov ax, [l_stackSegment]
-        mov es:[di + ts_task.m_context + ts_taskContext.m_ss], ax
-        mov ax, [p_stackSize]
-        mov es:[di + ts_task.m_context + ts_taskContext.m_sp], ax
-        mov word es:[di + ts_task.m_context + ts_taskContext.m_flags], 0x0200
-        mov ax, [p_codeSegment]
-        mov word es:[di + ts_task.m_context + ts_taskContext.m_cs], ax
-        mov word es:[di + ts_task.m_context + ts_taskContext.m_ds], ax
-        mov word es:[di + ts_task.m_context + ts_taskContext.m_es], ax
-        mov ax, [p_codeOffset]
-        mov word es:[di + ts_task.m_context + ts_taskContext.m_ip], ax
+        call scheduler_add
+        add sp, 4
+        test ax, ax
+        jnz .failedToRegisterThread
 
     .end:
         mov ax, [l_threadOffset]
@@ -172,7 +161,7 @@ thread_new:
         pop bp
         ret
 
-    .failedToCreateTask:
+    .failedToRegisterThread:
         ; Free the stack
         les di, [l_listElementOffset]
         les di, es:[di + ts_listElement.m_dataOffset]
@@ -207,7 +196,8 @@ thread_new:
 
         ; Return NULL
         xor ax, ax
-        xor dx, dx
+        mov [l_threadOffset], ax
+        mov [l_threadSegment], ax
         jmp .end
 
     %undef p_processOffset
@@ -277,12 +267,6 @@ thread_destroy:
         push word es:[di + ts_thread.m_memoryAllocationListSegment]
         push word es:[di + ts_thread.m_memoryAllocationListOffset]
         call free
-        add sp, 4
-
-    .destroyTask:
-        push word es:[di + ts_thread.m_taskSegment]
-        push word es:[di + ts_thread.m_taskOffset]
-        call task_destroy
         add sp, 4
 
     .destroyThread:

@@ -143,7 +143,7 @@ irq_service:
         jmp .loop
 
     .end:
-        call task_resume
+        jmp task_resume
 
 ; int irq_addHandler(int p_irq, void *p_handler)
 irq_addHandler:

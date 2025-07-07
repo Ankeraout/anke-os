@@ -28,97 +28,139 @@ scheduler_switch:
 
     call criticalSection_enter
 
-    .checkTaskListEmpty:
-        mov ax, [g_scheduler_taskListSegment]
-        or ax, [g_scheduler_taskListOffset]
-        jz .taskListEmpty
+    .checkThreadListEmpty:
+        mov ax, [g_scheduler_threadListOffset]
+        or ax, [g_scheduler_threadListSegment]
+        jz .end
 
-    .checkCurrentTask:
-        mov ax, [g_scheduler_currentTaskSegment]
-        or ax, [g_scheduler_currentTaskOffset]
-        jz .loopInitNoCurrentTask
+    .determineStopCondition:
+        mov ax, [g_scheduler_currentThreadOffset]
+        or ax, [g_scheduler_currentThreadSegment]
+        jnz .determineStopCondition.currentThreadNotNull
 
-    .loopInitCurrentTask:
-        les di, [g_scheduler_currentTaskOffset]
-        mov [l_stopConditionSegment], es
+    .determineStopCondition.currentThreadNull:
+        les di, [g_scheduler_threadListOffset]
         mov [l_stopConditionOffset], di
+        mov [l_stopConditionSegment], es
+        jmp .determineCurrentElement
+    
+    .determineStopCondition.currentThreadNotNull:
+        les di, [g_scheduler_currentThreadOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
+        jnz .determineStopCondition.setStopCondition
+
+    .determineStopCondition.currentThreadRunning:
+        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
+
+    .determineStopCondition.setStopCondition:
+        les di, [g_scheduler_currentThreadOffset]
+        mov [l_stopConditionOffset], di
+        mov [l_stopConditionSegment], es
+
+    .determineCurrentElement:
+        ; les di, [l_stopConditionOffset]
+        mov ax, es:[di + ts_listElement.m_nextOffset]
+        or ax, es:[di + ts_listElement.m_nextSegment]
+        jnz .determineCurrentElement.nextNotNull
+
+    .determineCurrentElement.nextNull:
+        les di, [g_scheduler_threadListOffset]
+        jmp .initializeNewElement
+
+    .determineCurrentElement.nextNotNull:
         les di, es:[di + ts_listElement.m_nextOffset]
 
-        mov ax, es
-        or ax, di
-        jz .loopInitCurrentTaskGetFirstTask
-        mov [l_currentElementSegment], es
+    .initializeNewElement:
         mov [l_currentElementOffset], di
-
-    .loopInit:
+        mov [l_currentElementSegment], es
         xor ax, ax
-        mov [l_newElementSegment], ax
-        mov [l_newElementOffset], ax
+        mov word [l_newElementOffset], ax
+        mov word [l_newElementSegment], ax
 
     .loop:
+    .loop.loadCurrentElement:
         les di, [l_currentElementOffset]
         les di, es:[di + ts_listElement.m_dataOffset]
-        les di, es:[di + ts_task.m_threadOffset]
+
+    .loop.checkThreadStatus:
         cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
-        jnz .loopGetNextElement
-
-    .loopFound:
         les di, [l_currentElementOffset]
-        mov [l_newElementSegment], es
+        jz .loop.threadReady
+
+    .loop.threadNotReady:
+        mov ax, es:[di + ts_listElement.m_nextOffset]
+        or ax, es:[di + ts_listElement.m_nextSegment]
+        jz .loop.threadNotReady.nextNotNull
+
+    .loop.threadNotReady.nextNull:
+        les di, [g_scheduler_threadListOffset]
+        mov [l_currentElementOffset], di
+        mov [l_currentElementSegment], es
+        jmp .loop.end
+
+    .loop.threadReady:
         mov [l_newElementOffset], di
-        jmp .loopEnd
+        mov [l_newElementSegment], es
+        jmp .loop.checkCondition
 
-    .loopGetNextElement:
-        les di, [l_currentElementOffset]
+    .loop.threadNotReady.nextNotNull:
         les di, es:[di + ts_listElement.m_nextOffset]
-        mov [l_currentElementSegment], es
         mov [l_currentElementOffset], di
-        mov ax, es
-        or ax, di
-        jnz .loopCheckStopCondition
-
-    .loopGetFirstElement:
-        les di, [g_scheduler_taskListOffset]
         mov [l_currentElementSegment], es
-        mov [l_currentElementOffset], di
 
-    .loopCheckStopCondition:
-        mov ax, [l_currentElementSegment]
-        sub ax, [l_stopConditionSegment]
-        mov dx, [l_currentElementOffset]
-        sub dx, [l_stopConditionOffset]
+    .loop.checkCondition:
+        mov ax, [l_newElementOffset]
+        or ax, [l_newElementSegment]
+        jnz .loop.end
+
+        mov ax, [l_currentElementOffset]
+        sub ax, [l_stopConditionOffset]
+        mov dx, [l_currentElementSegment]
+        sub dx, [l_stopConditionSegment]
         or ax, dx
         jnz .loop
 
-    .loopEnd:
-        mov ax, [l_newElementSegment]
-        sub ax, [g_scheduler_currentTaskSegment]
-        mov dx, [l_newElementOffset]
-        sub dx, [g_scheduler_currentTaskOffset]
+    .loop.end:
+        mov ax, [l_newElementOffset]
+        sub ax, [g_scheduler_currentThreadOffset]
+        mov dx, [l_newElementSegment]
+        sub dx, [g_scheduler_currentThreadSegment]
         or ax, dx
-        jz .end
+        jz .checkNewElementNull
+
+    .savePreviousTask:
+        mov ax, [g_scheduler_currentThreadOffset]
+        or ax, [g_scheduler_currentThreadSegment]
+        jz .checkNewElementNull
+        
+        les di, [g_scheduler_currentThreadOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        push es
+        lea ax, [di + ts_thread.m_context]
+        push ax
+        call task_save
+        add sp, 4
+
+    .checkNewElementNull:
+        mov ax, [l_newElementOffset]
+        or ax, [l_newElementSegment]
+        jz .setCurrentThread
 
     .loadNewTask:
-        mov ax, [g_scheduler_currentTaskSegment]
-        or ax, [g_scheduler_currentTaskOffset]
-        jz .loadNewTaskCheckNewElement
-
-    .loadNewTaskUnloadCurrentTask:
-        call task_save
-
-    .loadNewTaskCheckNewElement:
-        les di, [l_newElementOffset]
-        mov [g_scheduler_currentTaskSegment], es
-        mov [g_scheduler_currentTaskOffset], di
-        mov ax, es
-        or ax, di
-        jz .end
-
-    .loadNewTaskLoadNewTask:
-        push word es:[di + ts_listElement.m_dataSegment]
-        push word es:[di + ts_listElement.m_dataOffset]
+        les di, [l_currentElementOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        push es
+        lea ax, [di + ts_thread.m_context]
+        push ax
         call task_load
         add sp, 4
+        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
+
+    .setCurrentThread:
+        les di, [l_newElementOffset]
+        mov [g_scheduler_currentThreadOffset], di
+        mov [g_scheduler_currentThreadSegment], es
 
     .end:
         call criticalSection_leave
@@ -127,42 +169,6 @@ scheduler_switch:
         add sp, 12
         pop bp
         ret
-
-    .taskListEmpty:
-        mov ax, [g_scheduler_currentTaskSegment]
-        or ax, [g_scheduler_currentTaskOffset]
-        jz .end
-    
-    .taskListEmptyUnloadCurrentTask:
-        les di, [g_scheduler_currentTaskOffset]
-        les di, es:[di + ts_listElement.m_dataOffset]
-        les di, es:[di + ts_task.m_threadOffset]
-
-        cmp word es:[di + ts_thread.m_status], E_THREADSTATUS_RUNNING
-        jnz .taskListEmptyUnloadCurrentTaskFinalize
-
-    .taskListEmptyUnloadCurrentTaskSetThreadReady:
-        mov word es:[di + ts_thread.m_status], E_THREADSTATUS_READY
-
-    .taskListEmptyUnloadCurrentTaskFinalize:
-        call task_unload
-        mov [g_scheduler_currentTaskSegment], ax
-        mov [g_scheduler_currentTaskOffset], ax
-        jmp .end
-
-    .loopInitNoCurrentTask:
-        les di, [g_scheduler_taskListOffset]
-        mov [l_currentElementSegment], es
-        mov [l_currentElementOffset], di
-        mov [l_stopConditionSegment], es
-        mov [l_stopConditionOffset], di
-        jmp .loopInit
-
-    .loopInitCurrentTaskGetFirstTask:
-        les di, [g_scheduler_taskListOffset]
-        mov [l_currentElementSegment], es
-        mov [l_currentElementOffset], di
-        jmp .loopInit
 
     %undef l_stopConditionSegment
     %undef l_stopConditionOffset
@@ -173,8 +179,8 @@ scheduler_switch:
 
 ; void scheduler_run(void)
 scheduler_run:
-    mov ax, [g_scheduler_currentTaskSegment]
-    or ax, [g_scheduler_currentTaskOffset]
+    mov ax, [g_scheduler_currentThreadSegment]
+    or ax, [g_scheduler_currentThreadOffset]
     jnz task_resume
 
     .halt:
@@ -182,10 +188,10 @@ scheduler_run:
         call scheduler_switch
         jmp scheduler_run
 
-; int scheduler_add(struct ts_task *p_task)
+; int scheduler_add(struct ts_thread *p_thread)
 scheduler_add:
-    %define p_taskOffset (bp + 4)
-    %define p_taskSegment (bp + 6)
+    %define p_threadOffset (bp + 4)
+    %define p_threadSegment (bp + 6)
 
     push bp
     mov bp, sp
@@ -208,20 +214,20 @@ scheduler_add:
     mov di, ax
 
     ; Initialize list element
-    mov ax, [p_taskSegment]
+    mov ax, [p_threadSegment]
     mov es:[di + ts_listElement.m_dataSegment], ax
-    mov ax, [p_taskOffset]
+    mov ax, [p_threadOffset]
     mov es:[di + ts_listElement.m_dataOffset], ax
 
     ; next = first
-    mov ax, [g_scheduler_taskListSegment]
+    mov ax, [g_scheduler_threadListSegment]
     mov es:[di + ts_listElement.m_nextSegment], ax
-    mov ax, [g_scheduler_taskListOffset]
+    mov ax, [g_scheduler_threadListOffset]
     mov es:[di + ts_listElement.m_nextOffset], ax
     
     ; first = new
-    mov [g_scheduler_taskListSegment], es
-    mov [g_scheduler_taskListOffset], di
+    mov [g_scheduler_threadListSegment], es
+    mov [g_scheduler_threadListOffset], di
 
     call criticalSection_leave
 
@@ -238,31 +244,31 @@ scheduler_add:
     mov ax, 1
     jmp .end
 
-    %undef p_taskSegment
-    %undef p_taskOffset
+    %undef p_threadSegment
+    %undef p_threadOffset
 
-; void scheduler_remove(struct ts_task *p_task)
+; void scheduler_remove(struct ts_thread *p_thread)
 scheduler_remove:
-    %define p_taskOffset (bp + 4)
-    %define p_taskSegment (bp + 6)
+    %define p_threadOffset (bp + 4)
+    %define p_threadSegment (bp + 6)
 
     push bp
     mov bp, sp
 
     ; If the task is the current running task, stop it.
     .checkCurrentTask:
-        mov dx, [p_taskSegment]
-        mov ax, [p_taskOffset]
-        cmp dx, [g_scheduler_currentTaskSegment]
+        mov dx, [p_threadSegment]
+        mov ax, [p_threadOffset]
+        cmp dx, [g_scheduler_currentThreadSegment]
         jnz .removeFromTaskList
-        cmp ax, [g_scheduler_currentTaskOffset]
+        cmp ax, [g_scheduler_currentThreadOffset]
         jz .stopCurrentTask
 
     .removeFromTaskList:
-        push word [p_taskSegment]
-        push word [p_taskOffset]
+        push word [p_threadSegment]
+        push word [p_threadOffset]
         push cs
-        mov ax, g_scheduler_taskListOffset
+        mov ax, g_scheduler_threadListOffset
         push ax
         call list_remove
         add sp, 8
@@ -272,14 +278,21 @@ scheduler_remove:
         ret
 
     .stopCurrentTask:
-        call task_unload
+        les di, [g_scheduler_currentThreadOffset]
+        les di, es:[di + ts_listElement.m_dataOffset]
+        push di
+        lea ax, [di + ts_thread.m_context]
+        push ax
+        call task_save
+        add sp, 4
+
         xor ax, ax
-        mov [g_scheduler_currentTaskSegment], ax
-        mov [g_scheduler_currentTaskOffset], ax
+        mov [g_scheduler_currentThreadSegment], ax
+        mov [g_scheduler_currentThreadOffset], ax
         jmp .removeFromTaskList
 
-    %undef p_taskSegment
-    %undef p_taskOffset
+    %undef p_threadSegment
+    %undef p_threadOffset
 
 ; void scheduler_tick(void)
 scheduler_tick:
@@ -288,7 +301,7 @@ scheduler_tick:
 
 section .data
 align 2
-g_scheduler_taskListOffset: dw 0
-g_scheduler_taskListSegment: dw 0
-g_scheduler_currentTaskOffset: dw 0
-g_scheduler_currentTaskSegment: dw 0
+g_scheduler_threadListOffset: dw 0
+g_scheduler_threadListSegment: dw 0
+g_scheduler_currentThreadOffset: dw 0
+g_scheduler_currentThreadSegment: dw 0
