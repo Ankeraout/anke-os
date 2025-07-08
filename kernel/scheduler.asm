@@ -202,7 +202,8 @@ scheduler_add:
     call malloc
     add sp, 2
 
-    test dx, dx
+    mov cx, ax
+    or cx, dx
     jz .allocationError
 
     call criticalSection_enter

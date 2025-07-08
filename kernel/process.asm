@@ -17,63 +17,101 @@ section .text
 process_new:
     %define p_parentOffset (bp + 4)
     %define p_parentSegment (bp + 6)
+    %define l_processSegment (bp - 2)
+    %define l_processOffset (bp - 4)
+    %define l_listElementSegment (bp - 6)
+    %define l_listElementOffset (bp - 8)
 
     push bp
     mov bp, sp
-
-    mov ax, ts_process_size
-    push ax
-    call malloc
-    add sp, 2
-
-    ; If malloc() failed, return NULL.
-    test dx, dx
-    jz .end
-
+    sub sp, 4
     push es
     push di
-    push dx
-    push ax
-    mov es, dx
-    mov di, ax
 
-    ; Set the PID
     call criticalSection_enter
 
-    mov ax, [g_process_nextPid]
-    inc word [g_process_nextPid]
-    
-    call criticalSection_leave
+    .allocateProcess:
+        mov ax, ts_process_size
+        push ax
+        call malloc
+        add sp, 2
 
-    mov es:[di + ts_process.m_id], ax
+        mov cx, ax
+        or cx, dx
+        jz .end
 
-    ; Set the parent
-    mov ax, [p_parentSegment]
-    mov es:[di + ts_process.m_parentSegment], ax
-    mov ax, [p_parentOffset]
-    mov es:[di + ts_process.m_parentOffset], ax
+        mov [l_processSegment], dx
+        mov [l_processOffset], ax
 
-    ; Initialize the thread list
-    xor ax, ax
-    mov es:[di + ts_process.m_threadListSegment], ax
-    mov es:[di + ts_process.m_threadListOffset], ax
+    .allocateListElement:
+        mov ax, ts_listElement_size
+        push ax
+        call malloc
+        add sp, 2
 
-    ; Initialize the memory allocation list
-    mov es:[di + ts_process.m_memoryAllocationListSegment], ax
-    mov es:[di + ts_process.m_memoryAllocationListOffset], ax
+        mov cx, ax
+        or cx, dx
+        jz .failedToAllocateListElement
 
-    ; Initialize the child list
-    mov es:[di + ts_process.m_childListSegment], ax
-    mov es:[di + ts_process.m_childListOffset], ax
+        mov [l_listElementSegment], dx
+        mov [l_listElementOffset], ax
 
-    pop ax
-    pop dx
-    pop di
-    pop es
+    .initializeListElement:
+        les di, [p_parentOffset]
+        xchg ax, es:[di + ts_process.m_childListOffset]
+        xchg dx, es:[di + ts_process.m_childListSegment]
+        les di, [l_listElementOffset]
+        mov es:[di + ts_listElement.m_nextOffset], ax
+        mov es:[di + ts_listElement.m_nextSegment], dx
+        mov ax, [l_processOffset]
+        mov es:[di + ts_listElement.m_dataOffset], ax
+        mov ax, [l_processSegment]
+        mov es:[di + ts_listElement.m_dataSegment], ax
 
-.end:
-    pop bp
-    ret
+    .setProcessId:
+        mov ax, [g_process_nextPid]
+        inc word [g_process_nextPid]
+        les di, [l_processOffset]
+        mov es:[di + ts_process.m_id], ax
+
+    .setParentProcess:
+        mov ax, [p_parentOffset]
+        mov es:[di + ts_process.m_parentOffset], ax
+        mov ax, [p_parentSegment]
+        mov es:[di + ts_process.m_parentSegment], ax
+
+    .initializeThreadList:
+        xor ax, ax
+        mov es:[di + ts_process.m_threadListSegment], ax
+        mov es:[di + ts_process.m_threadListOffset], ax
+
+    .initializeMemoryAllocationList:
+        mov es:[di + ts_process.m_memoryAllocationListSegment], ax
+        mov es:[di + ts_process.m_memoryAllocationListOffset], ax
+
+    .initializeChildList:
+        mov es:[di + ts_process.m_childListSegment], ax
+        mov es:[di + ts_process.m_childListOffset], ax
+
+    .end:
+        call criticalSection_leave
+        mov ax, [l_processOffset]
+        mov dx, [l_processSegment]
+        pop di
+        pop es
+        add sp, 4
+        pop bp
+        ret
+
+    .failedToAllocateListElement:
+        push word [l_processSegment]
+        push word [l_processOffset]
+        call free
+        add sp, 4
+        xor ax, ax
+        mov [l_processSegment], ax
+        mov [l_processOffset], ax
+        jmp .end
     
     %undef p_parentSegment
     %undef p_parentOffset
