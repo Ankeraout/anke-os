@@ -86,6 +86,8 @@ process_destroy:
     push bp
     mov bp, sp
 
+    call criticalSection_enter
+
     ; Destroy threads
     .initThreadDestroyLoop:
         les di, [p_processOffset]
@@ -170,6 +172,7 @@ process_destroy:
         add sp, 4
 
     .end:
+        call criticalSection_leave
         pop bp
         ret
 

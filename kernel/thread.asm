@@ -25,12 +25,16 @@ thread_new:
     %define l_listElementOffset (bp - 8)
     %define l_stackSegment (bp - 10)
     %define l_stackSegmentCount (bp - 12)
+    %define l_listElementSegment2 (bp - 14)
+    %define l_listElementOffset2 (bp - 16)
 
     push bp
     mov bp, sp
-    sub sp, 12
+    sub sp, 16
     push es
     push di
+
+    call criticalSection_enter
 
     .allocateThread:
         ; DX:AX = malloc(sizeof(struct ts_thread));
@@ -106,6 +110,21 @@ thread_new:
         ; Save the stack segment
         mov [l_stackSegment], ax
 
+    .allocateListElement2:
+        ; DX:AX = malloc(sizeof(struct ts_memoryAllocation))
+        mov ax, ts_memoryAllocation_size
+        push ax
+        call malloc
+        add sp, 2
+
+        ; If the allocation failed, go to the error handler.
+        mov cx, ax
+        or cx, dx
+        jz .failedToAllocateListElement2
+
+        mov [l_listElementOffset2], ax
+        mov [l_listElementSegment2], dx
+
     .initializeMemoryAllocation:
         ; Mark the stack in the memory allocation structure
         mov es:[di + ts_memoryAllocation.m_segment], ax
@@ -144,24 +163,54 @@ thread_new:
         mov ax, [p_codeOffset]
         mov word es:[di + ts_thread.m_context + ts_taskContext.m_ip], ax
 
-    .registerThread:
+    .initializeListElement2:
         push es
         push di
+        les di, [p_processOffset]
+        mov ax, [l_listElementOffset2]
+        mov dx, [l_listElementSegment2]
+        xchg ax, es:[di + ts_process.m_threadListOffset]
+        xchg dx, es:[di + ts_process.m_threadListSegment]
+        les di, [l_listElementOffset2]
+        mov es:[di + ts_listElement.m_nextOffset], ax
+        mov es:[di + ts_listElement.m_nextSegment], dx
+        pop word es:[di + ts_listElement.m_dataOffset]
+        pop word es:[di + ts_listElement.m_dataSegment]
+
+    .registerThread:
+        push word [l_threadSegment]
+        push word [l_threadOffset]
         call scheduler_add
         add sp, 4
         test ax, ax
         jnz .failedToRegisterThread
 
     .end:
+        call criticalSection_leave
         mov ax, [l_threadOffset]
         mov dx, [l_threadSegment]
         pop di
         pop es
-        add sp, 12
+        add sp, 16
         pop bp
         ret
 
     .failedToRegisterThread:
+        ; Unregister the list element
+        les di, [l_listElementOffset2]
+        mov ax, es:[di + ts_listElement.m_nextOffset]
+        mov dx, es:[di + ts_listElement.m_nextSegment]
+        les di, [p_processOffset]
+        mov es:[di + ts_process.m_threadListOffset], ax
+        mov es:[di + ts_process.m_threadListSegment], dx
+
+        ; Free list element 2
+        push word [l_listElementSegment2]
+        push word [l_listElementOffset2]
+        call malloc
+        add sp, 4
+
+    .failedToAllocateListElement2:
         ; Free the stack
         les di, [l_listElementOffset]
         les di, es:[di + ts_listElement.m_dataOffset]
@@ -209,6 +258,10 @@ thread_new:
     %undef l_threadOffset
     %undef l_listElementSegment
     %undef l_listElementOffset
+    %undef l_stackSegment
+    %undef l_stackSegmentCount
+    %undef l_listElementSegment2
+    %undef l_listElementOffset2
 
 ; void thread_start(struct ts_thread *p_thread)
 thread_start:
@@ -245,6 +298,8 @@ thread_destroy:
     push es
     push di
 
+    call criticalSection_enter
+
     .destroyStack:
         les di, [p_threadOffset]
         les di, es:[di + ts_thread.m_memoryAllocationListOffset]
@@ -276,6 +331,8 @@ thread_destroy:
         add sp, 4
 
     .end:
+        call criticalSection_leave
+
         pop di
         pop es
 
