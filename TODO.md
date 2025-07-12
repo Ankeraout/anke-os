@@ -1,0 +1,12 @@
+- kernel/process.asm: Add a new process to its parent's child list.
+- Design VFS
+- Implement VFS
+- Implement floppy disk driver
+- Implement FAT12 file system driver
+- Implement PS/2 controller driver
+- Implement PS/2 keyboard driver
+- Implement PS/2 mouse driver
+- Implement PIC driver
+- Implement PIT driver
+- Implement IDE hard disk driver
+- Implement MZ executable loading
