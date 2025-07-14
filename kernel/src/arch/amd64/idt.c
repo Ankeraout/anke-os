@@ -7,7 +7,7 @@
 
 #define C_IDT_ENTRY_COUNT 256
 
-struct ts_idtEntry {
+struct ts_idt_entry {
     uint64_t m_offset_0_15 : 16;
     uint64_t m_segment : 16;
     uint64_t m_ist : 3;
@@ -21,92 +21,92 @@ struct ts_idtEntry {
     uint64_t m_reserved_1 : 32;
 } __attribute__((packed));
 
-enum te_idtGateType {
+enum te_idt_gateType {
     E_IDT_GATETYPE_INT64 = 0xe,
     E_IDT_GATETYPE_TRAP64 = 0xf
 };
 
-static __attribute__((aligned(sizeof(struct ts_idtEntry)))) struct ts_idtEntry s_idt[C_IDT_ENTRY_COUNT];
+static __attribute__((aligned(sizeof(struct ts_idt_entry)))) struct ts_idt_entry s_idt[C_IDT_ENTRY_COUNT];
 
-static void idtInitEntry(
-    struct ts_idtEntry *p_entry,
+static void idt_initEntry(
+    struct ts_idt_entry *p_entry,
     void (*p_handler)(void),
     uint16_t p_segmentSelector,
     uint8_t p_interruptStackTable,
-    enum te_idtGateType p_gateType,
+    enum te_idt_gateType p_gateType,
     int p_dpl,
     bool p_present
 );
 
-void idtInit(void) {
+void idt_init(void) {
     // By default, all entries are absent.
     for(int l_index = 0; l_index < C_IDT_ENTRY_COUNT; l_index++) {
-        idtInitEntry(&s_idt[l_index], 0, 0, 0, 0, 0, false);
+        idt_initEntry(&s_idt[l_index], 0, 0, 0, 0, 0, false);
     }
 
     // Set exception handlers
-    idtInitEntry(&s_idt[0], isrException0, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[1], isrException1, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[2], isrException2, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[3], isrException3, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[4], isrException4, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[5], isrException5, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[6], isrException6, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[7], isrException7, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[8], isrException8, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[9], isrException9, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[10], isrException10, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[11], isrException11, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[12], isrException12, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[13], isrException13, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[14], isrException14, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[15], isrException15, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[16], isrException16, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[17], isrException17, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[18], isrException18, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[19], isrException19, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[20], isrException20, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[21], isrException21, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[22], isrException22, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[23], isrException23, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[24], isrException24, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[25], isrException25, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[26], isrException26, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[27], isrException27, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[28], isrException28, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[29], isrException29, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[30], isrException30, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
-    idtInitEntry(&s_idt[31], isrException31, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[0], isr_exception0, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[1], isr_exception1, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[2], isr_exception2, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[3], isr_exception3, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[4], isr_exception4, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[5], isr_exception5, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[6], isr_exception6, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[7], isr_exception7, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[8], isr_exception8, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[9], isr_exception9, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[10], isr_exception10, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[11], isr_exception11, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[12], isr_exception12, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[13], isr_exception13, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[14], isr_exception14, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[15], isr_exception15, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[16], isr_exception16, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[17], isr_exception17, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[18], isr_exception18, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[19], isr_exception19, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[20], isr_exception20, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[21], isr_exception21, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[22], isr_exception22, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[23], isr_exception23, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[24], isr_exception24, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[25], isr_exception25, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[26], isr_exception26, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[27], isr_exception27, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[28], isr_exception28, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[29], isr_exception29, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[30], isr_exception30, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
+    idt_initEntry(&s_idt[31], isr_exception31, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
 
     // Set IRQ handlers
-    idtInitEntry(&s_idt[32], isrIrq0, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[33], isrIrq1, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[34], isrIrq2, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[35], isrIrq3, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[36], isrIrq4, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[37], isrIrq5, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[38], isrIrq6, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[39], isrIrq7, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[40], isrIrq8, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[41], isrIrq9, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[42], isrIrq10, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[43], isrIrq11, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[44], isrIrq12, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[45], isrIrq13, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[46], isrIrq14, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[47], isrIrq15, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[32], isr_irq0, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[33], isr_irq1, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[34], isr_irq2, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[35], isr_irq3, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[36], isr_irq4, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[37], isr_irq5, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[38], isr_irq6, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[39], isr_irq7, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[40], isr_irq8, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[41], isr_irq9, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[42], isr_irq10, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[43], isr_irq11, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[44], isr_irq12, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[45], isr_irq13, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[46], isr_irq14, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idt_initEntry(&s_idt[47], isr_irq15, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
 
-    lidt(s_idt, sizeof(s_idt) - 1);
+    asm_lidt(s_idt, sizeof(s_idt) - 1);
 
     pr_info("idt: IDT loaded.\n");
 }
 
-static void idtInitEntry(
-    struct ts_idtEntry *p_entry,
+static void idt_initEntry(
+    struct ts_idt_entry *p_entry,
     void (*p_handler)(void),
     uint16_t p_segmentSelector,
     uint8_t p_interruptStackTable,
-    enum te_idtGateType p_gateType,
+    enum te_idt_gateType p_gateType,
     int p_dpl,
     bool p_present
 ) {

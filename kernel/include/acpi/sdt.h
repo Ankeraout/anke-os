@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct ts_acpiSdtHeader {
+struct ts_acpi_sdtHeader {
     uint8_t m_signature[4];
     uint32_t m_length;
     uint8_t m_revision;
@@ -15,6 +15,6 @@ struct ts_acpiSdtHeader {
     uint32_t m_creatorRevision;
 } __attribute__((packed));
 
-uint8_t acpiSdtComputeChecksum(const struct ts_acpiSdtHeader *p_sdt);
+uint8_t acpi_sdtComputeChecksum(const struct ts_acpi_sdtHeader *p_sdt);
 
 #endif

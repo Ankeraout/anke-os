@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct ts_acpiGenericAddressStructure {
+struct ts_acpi_genericAddressStructure {
     uint8_t m_addressSpace;
     uint8_t m_bitWidth;
     uint8_t m_bitOffset;

@@ -5,34 +5,34 @@
 
 #define C_MM_PAGE_SIZE 4096
 
-struct ts_mmMemoryMapEntry {
+struct ts_mm_memoryMapEntry {
     void *m_base;
     size_t m_size;
 };
 
-struct ts_mmMemoryMapEntryListNode {
-    struct ts_mmMemoryMapEntryListNode *m_next;
-    struct ts_mmMemoryMapEntry m_data;
+struct ts_mm_memoryMapEntryListNode {
+    struct ts_mm_memoryMapEntryListNode *m_next;
+    struct ts_mm_memoryMapEntry m_data;
 };
 
-size_t mmRoundDownPage(size_t p_size);
-size_t mmRoundUpPage(size_t p_size);
-void *mmGetEntryEndAddress(const struct ts_mmMemoryMapEntry *p_entry);
-void mmTryMergeNodes(
-    struct ts_mmMemoryMapEntryListNode *p_node,
+size_t mm_roundDownPage(size_t p_size);
+size_t mm_roundUpPage(size_t p_size);
+void *mm_getEntryEndAddress(const struct ts_mm_memoryMapEntry *p_entry);
+void mm_tryMergeNodes(
+    struct ts_mm_memoryMapEntryListNode *p_node,
     void (*p_freeNode)(
         void *p_context,
-        struct ts_mmMemoryMapEntryListNode *p_node
+        struct ts_mm_memoryMapEntryListNode *p_node
     ),
     void *p_freeNodeContext
 );
-void *mmAlloc(struct ts_mmMemoryMapEntryListNode **p_map, size_t p_size);
-void mmAddNodeToMap(
-    struct ts_mmMemoryMapEntryListNode **p_map,
-    struct ts_mmMemoryMapEntryListNode *p_node,
+void *mm_alloc(struct ts_mm_memoryMapEntryListNode **p_map, size_t p_size);
+void mm_addNodeToMap(
+    struct ts_mm_memoryMapEntryListNode **p_map,
+    struct ts_mm_memoryMapEntryListNode *p_node,
     void (*p_freeNode)(
         void *p_context,
-        struct ts_mmMemoryMapEntryListNode *p_node
+        struct ts_mm_memoryMapEntryListNode *p_node
     ),
     void *p_freeNodeContext
 );

@@ -462,11 +462,11 @@ const unsigned char AmlCode[] =
     0x5F,0x12,0x06,0x04,0x00,0x00,0x00,0x00   /* 00000E30    "_......." */
 };
 
-int acpiDsdtParse(struct ts_acpi *p_acpi) {
+int acpi_dsdtParse(struct ts_acpi *p_acpi) {
     // Validate DSDT
-    if(acpiSdtComputeChecksum(&p_acpi->m_dsdt->m_header) != 0U) {
+    if(acpi_sdtComputeChecksum(&p_acpi->m_dsdt->m_header) != 0U) {
         return 1;
     }
 
-    return acpiParseAml(p_acpi, (const struct ts_acpiDsdt *)AmlCode);
+    return acpi_parseAml(p_acpi, (const struct ts_acpi_sdt *)AmlCode);
 }

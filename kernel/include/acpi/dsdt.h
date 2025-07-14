@@ -4,11 +4,11 @@
 #include "acpi/acpi.h"
 #include "acpi/sdt.h"
 
-struct ts_acpiDsdt {
-    struct ts_acpiSdtHeader m_header;
+struct ts_acpi_sdt {
+    struct ts_acpi_sdtHeader m_header;
     uint8_t m_data[];
 } __attribute__((packed));
 
-int acpiDsdtParse(struct ts_acpi *p_acpi);
+int acpi_dsdtParse(struct ts_acpi *p_acpi);
 
 #endif

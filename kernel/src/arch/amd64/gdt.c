@@ -3,7 +3,7 @@
 #include "arch/amd64/asm.h"
 #include "printk.h"
 
-struct ts_gdtEntry {
+struct ts_gdt_entry {
     uint64_t m_limit_0_15 : 16;
     uint64_t m_base_0_23 : 24;
     uint64_t m_access : 8;
@@ -12,25 +12,25 @@ struct ts_gdtEntry {
     uint64_t m_base_24_31 : 8;
 } __attribute__((packed));
 
-static void gdtInitEntry(
-    struct ts_gdtEntry *p_entry,
+static void gdt_initEntry(
+    struct ts_gdt_entry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
     uint8_t p_access,
     uint8_t p_flags
 );
 
-static __attribute__((aligned(sizeof(struct ts_gdtEntry)))) struct ts_gdtEntry
+static __attribute__((aligned(sizeof(struct ts_gdt_entry)))) struct ts_gdt_entry
     s_gdt[5];
 
-void gdtInit(void) {
-    gdtInitEntry(&s_gdt[0], 0, 0, 0, 0); // Null entry
-    gdtInitEntry(&s_gdt[1], 0, 0, 0x9a, 0x02); // 64-bit kernel code
-    gdtInitEntry(&s_gdt[2], 0, 0, 0x92, 0x02); // 64-bit kernel data
-    gdtInitEntry(&s_gdt[3], 0, 0, 0xfa, 0x02); // 64-bit user code
-    gdtInitEntry(&s_gdt[4], 0, 0, 0xf2, 0x02); // 64-bit user data
+void gdt_init(void) {
+    gdt_initEntry(&s_gdt[0], 0, 0, 0, 0); // Null entry
+    gdt_initEntry(&s_gdt[1], 0, 0, 0x9a, 0x02); // 64-bit kernel code
+    gdt_initEntry(&s_gdt[2], 0, 0, 0x92, 0x02); // 64-bit kernel data
+    gdt_initEntry(&s_gdt[3], 0, 0, 0xfa, 0x02); // 64-bit user code
+    gdt_initEntry(&s_gdt[4], 0, 0, 0xf2, 0x02); // 64-bit user data
 
-    lgdt(s_gdt, sizeof(s_gdt) - 1);
+    asm_lgdt(s_gdt, sizeof(s_gdt) - 1);
 
     asm(
         "movw $0x10, %ax \n"
@@ -48,8 +48,8 @@ void gdtInit(void) {
     pr_info("gdt: GDT loaded.\n");
 }
 
-static void gdtInitEntry(
-    struct ts_gdtEntry *p_entry,
+static void gdt_initEntry(
+    struct ts_gdt_entry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
     uint8_t p_access,

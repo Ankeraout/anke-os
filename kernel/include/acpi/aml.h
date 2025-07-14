@@ -9,7 +9,7 @@
 
 #define C_ACPI_NAME_LENGTH 4
 
-enum te_acpiObjectType {
+enum te_acpi_objectType {
     E_ACPI_OBJECT_TYPE_SCOPE,
     E_ACPI_OBJECT_TYPE_DEVICE,
     E_ACPI_OBJECT_TYPE_NAME,
@@ -25,7 +25,7 @@ enum te_acpiObjectType {
     E_ACPI_OBJECT_TYPE_SEMAPHORE
 };
 
-enum te_acpiDataObjectType {
+enum te_acpi_dataObjectType {
     E_ACPI_DATA_OBJECT_TYPE_INTEGER,
     E_ACPI_DATA_OBJECT_TYPE_STRING,
     E_ACPI_DATA_OBJECT_TYPE_BUFFER,
@@ -33,14 +33,14 @@ enum te_acpiDataObjectType {
     E_ACPI_DATA_OBJECT_TYPE_REFERENCE
 };
 
-struct ts_acpiNode {
+struct ts_acpi_node {
     char m_name[C_ACPI_NAME_LENGTH + 1];
-    enum te_acpiObjectType m_type;
-    struct ts_acpiNode *m_parent;
-    struct ts_acpiNode *m_next;
-    struct ts_acpiNode *m_children;
+    enum te_acpi_objectType m_type;
+    struct ts_acpi_node *m_parent;
+    struct ts_acpi_node *m_next;
+    struct ts_acpi_node *m_children;
 };
 
-int acpiParseAml(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt);
+int acpi_parseAml(struct ts_acpi *p_acpi, const struct ts_acpi_sdt *p_sdt);
 
 #endif

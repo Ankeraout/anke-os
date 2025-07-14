@@ -7,19 +7,19 @@
 #include "printk.h"
 
 void arch_init(void) {
-    if(vmmInit() != 0) {
+    if(vmm_init() != 0) {
         pr_crit("arch_init: Failed to initialize VMM.\n");
         
         while(1) {
-            cli();
-            hlt();
+            asm_cli();
+            asm_hlt();
         }
     }
 
-    gdtInit();
+    gdt_init();
     irq_init();
-    picInit();
-    idtInit();
+    pic_init();
+    idt_init();
 
-    sti();
+    asm_sti();
 }

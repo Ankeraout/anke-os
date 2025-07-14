@@ -1,7 +1,7 @@
 %ifndef __INCLUDE_ARCH_AMD64_TASK_INC__
 %define __INCLUDE_ARCH_AMD64_TASK_INC__
 
-struc ts_taskContext
+struc ts_task_context
     .m_rax: resq 1
     .m_rbx: resq 1
     .m_rcx: resq 1

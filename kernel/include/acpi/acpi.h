@@ -14,17 +14,17 @@ struct ts_acpi;
 #include "acpi/xsdt.h"
 
 struct ts_acpi {
-    const struct ts_acpiRsdp *m_rsdp;
-    const struct ts_acpiFadt *m_fadt;
-    const struct ts_acpiXsdt *m_xsdt;
-    const struct ts_acpiRsdt *m_rsdt;
-    const struct ts_acpiMadt *m_madt;
-    const struct ts_acpiDsdt *m_dsdt;
+    const struct ts_acpi_rsdp *m_rsdp;
+    const struct ts_acpi_fadt *m_fadt;
+    const struct ts_acpi_xsdt *m_xsdt;
+    const struct ts_acpi_rsdt *m_rsdt;
+    const struct ts_acpi_madt *m_madt;
+    const struct ts_acpi_sdt *m_dsdt;
     bool m_acpi2;
-    struct ts_acpiNode *m_root;
+    struct ts_acpi_node *m_root;
 };
 
-int acpiInit(void);
-void acpiSetRsdpLocation(const struct ts_acpiRsdp *p_rsdp);
+int acpi_init(void);
+void acpi_setRsdpLocation(const struct ts_acpi_rsdp *p_rsdp);
 
 #endif

@@ -14,10 +14,10 @@
 
 #define C_VMM_ALLOC_FLAG_KERNEL (1 << 0)
 
-struct ts_vmmContext {
-    struct ts_mmMemoryMapEntryListNode *m_map;
+struct ts_vmm_context {
+    struct ts_mm_memoryMapEntryListNode *m_map;
     uintptr_t m_pagingContext;
-    struct ts_mmMemoryMapEntryListNode *m_mapEntryPool;
+    struct ts_mm_memoryMapEntryListNode *m_mapEntryPool;
 };
 
 /**
@@ -26,7 +26,7 @@ struct ts_vmmContext {
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
 */
-int vmmInit(void);
+int vmm_init(void);
 
 /**
  * @brief Allocates some space in the virtual memory space.
@@ -38,7 +38,7 @@ int vmmInit(void);
  * @returns The pointer to the allocated zone.
  * @retval NULL if the allocation operation failed.
 */
-void *vmmAlloc(struct ts_vmmContext *p_context, size_t p_size, int p_flags);
+void *vmm_alloc(struct ts_vmm_context *p_context, size_t p_size, int p_flags);
 
 /**
  * @brief Frees some space in the virtual memory space.
@@ -52,7 +52,7 @@ void *vmmAlloc(struct ts_vmmContext *p_context, size_t p_size, int p_flags);
  * 
  * @note Freeing a part of a previously allocated zone is undefined behavior.
 */
-int vmmFree(struct ts_vmmContext *p_context, void *p_ptr, size_t p_size);
+int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size);
 
 /**
  * @brief Maps a physical memory zone to a virtual memory zone.
@@ -68,8 +68,8 @@ int vmmFree(struct ts_vmmContext *p_context, void *p_ptr, size_t p_size);
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
 */
-int vmmMap(
-    struct ts_vmmContext *p_context,
+int vmm_map(
+    struct ts_vmm_context *p_context,
     void *p_vptr,
     void *p_pptr,
     size_t p_size,
@@ -86,8 +86,8 @@ int vmmMap(
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
 */
-int vmmUnmap(
-    struct ts_vmmContext *p_context,
+int vmm_unmap(
+    struct ts_vmm_context *p_context,
     void *p_ptr,
     size_t p_size
 );
@@ -97,12 +97,12 @@ int vmmUnmap(
  * 
  * @returns The kernel VMM context.
 */
-struct ts_vmmContext *vmmGetKernelContext(void);
+struct ts_vmm_context *vmm_getKernelContext(void);
 
-void *vmmGetPhysicalAddress(void *p_vptr);
+void *vmm_getPhysicalAddress(void *p_vptr);
 
-void *vmmGetPhysicalAddress2(
-    struct ts_vmmContext *p_context,
+void *vmm_getPhysicalAddress2(
+    struct ts_vmm_context *p_context,
     void *p_vptr
 );
 

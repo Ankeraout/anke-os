@@ -29,7 +29,7 @@ void irq_service(int p_irq) {
         l_node = l_node->m_next;
     }
 
-    irq_endOfInterrupt();
+    irq_endOfInterrupt(p_irq);
 
     task_resume();
 }

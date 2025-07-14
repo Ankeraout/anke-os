@@ -5,8 +5,8 @@
 #include "acpi/gas.h"
 #include "acpi/sdt.h"
 
-struct ts_acpiFadt {
-    struct ts_acpiSdtHeader m_header;
+struct ts_acpi_fadt {
+    struct ts_acpi_sdtHeader m_header;
     uint32_t m_firmwareCtrl;
     uint32_t m_dsdt;
     uint8_t m_reserved;
@@ -45,21 +45,21 @@ struct ts_acpiFadt {
     uint16_t m_bootArchitectureFlags;
     uint8_t m_reserved2;
     uint32_t m_flags;
-    struct ts_acpiGenericAddressStructure m_resetRegister;
+    struct ts_acpi_genericAddressStructure m_resetRegister;
     uint8_t m_resetValue;
     uint8_t m_reserved3[3];
     uint64_t m_xFirmwareControl;
     uint64_t m_xDsdt;
-    struct ts_acpiGenericAddressStructure m_xPm1aEventBlock;
-    struct ts_acpiGenericAddressStructure m_xPm1bEventBlock;
-    struct ts_acpiGenericAddressStructure m_xPm1aControlBlock;
-    struct ts_acpiGenericAddressStructure m_xPm1bControlBlock;
-    struct ts_acpiGenericAddressStructure m_xPm2ControlBlock;
-    struct ts_acpiGenericAddressStructure m_xPmTimerBlock;
-    struct ts_acpiGenericAddressStructure m_xGpe0Block;
-    struct ts_acpiGenericAddressStructure m_xGpe1Block;
+    struct ts_acpi_genericAddressStructure m_xPm1aEventBlock;
+    struct ts_acpi_genericAddressStructure m_xPm1bEventBlock;
+    struct ts_acpi_genericAddressStructure m_xPm1aControlBlock;
+    struct ts_acpi_genericAddressStructure m_xPm1bControlBlock;
+    struct ts_acpi_genericAddressStructure m_xPm2ControlBlock;
+    struct ts_acpi_genericAddressStructure m_xPmTimerBlock;
+    struct ts_acpi_genericAddressStructure m_xGpe0Block;
+    struct ts_acpi_genericAddressStructure m_xGpe1Block;
 } __attribute__((packed));
 
-int acpiFadtInit(struct ts_acpi *p_acpi);
+int acpi_fadtInit(struct ts_acpi *p_acpi);
 
 #endif

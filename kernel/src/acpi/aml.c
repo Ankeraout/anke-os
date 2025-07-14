@@ -134,8 +134,8 @@ enum te_acpiAmlOpcode {
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiAmlParseDefScope(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseDefScope(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t *p_length
 );
@@ -149,7 +149,7 @@ static int acpiAmlParseDefScope(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiAmlParseNameSeg(
+static int acpi_amlParseNameSeg(
     const uint8_t *p_buffer,
     char *p_name,
     size_t *p_length
@@ -164,7 +164,7 @@ static int acpiAmlParseNameSeg(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiAmlParseNameString(
+static int acpi_amlParseNameString(
     const uint8_t *p_buffer,
     char *p_name,
     size_t *p_length
@@ -178,7 +178,7 @@ static int acpiAmlParseNameString(
  * 
  * @returns The number of bytes read.
  */
-static size_t acpiAmlParsePkgLength(
+static size_t acpi_amlParsePkgLength(
     const uint8_t *p_buffer,
     size_t *p_pkgLength
 );
@@ -192,8 +192,8 @@ static size_t acpiAmlParsePkgLength(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiAmlParseTermList(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseTermList(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t p_length
 );
@@ -207,8 +207,8 @@ static int acpiAmlParseTermList(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiAmlParseTermObj(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseTermObj(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t *p_length
 );
@@ -221,9 +221,9 @@ static int acpiAmlParseTermObj(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiCreateNode(
-    struct ts_acpiNode *p_parent,
-    struct ts_acpiNode **p_node
+static int acpi_createNode(
+    struct ts_acpi_node *p_parent,
+    struct ts_acpi_node **p_node
 );
 
 /**
@@ -235,10 +235,10 @@ static int acpiCreateNode(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiGetChildByName(
-    struct ts_acpiNode *p_node,
+static int acpi_getChildByName(
+    struct ts_acpi_node *p_node,
     const char *p_name,
-    struct ts_acpiNode **p_child
+    struct ts_acpi_node **p_child
 );
 
 /**
@@ -250,10 +250,10 @@ static int acpiGetChildByName(
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiGetNode(
-    struct ts_acpiNode *p_baseNode,
+static int acpi_getNode(
+    struct ts_acpi_node *p_baseNode,
     const char *p_path,
-    struct ts_acpiNode **p_node
+    struct ts_acpi_node **p_node
 );
 
 /**
@@ -262,7 +262,7 @@ static int acpiGetNode(
  * @param[in] p_path The path.
  * @param[out] p_name A pointer to the name.
  */
-static void acpiGetPathName(const char *p_path, char *p_name);
+static void acpi_getPathName(const char *p_path, char *p_name);
 
 /**
  * @brief Gets a parent node by path.
@@ -273,10 +273,10 @@ static void acpiGetPathName(const char *p_path, char *p_name);
  * 
  * @returns 0 on success, -1 on failure.
  */
-static int acpiGetParentByPath(
-    struct ts_acpiNode *p_baseNode,
+static int acpi_getParentByPath(
+    struct ts_acpi_node *p_baseNode,
     const char *p_path,
-    struct ts_acpiNode **p_node
+    struct ts_acpi_node **p_node
 );
 
 /**
@@ -286,12 +286,12 @@ static int acpiGetParentByPath(
  * 
  * @returns A pointer to the root node.
  */
-static struct ts_acpiNode *acpiGetRootNode(struct ts_acpiNode *p_baseNode);
+static struct ts_acpi_node *acpi_getRootNode(struct ts_acpi_node *p_baseNode);
 
-int acpiParseAml(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt) {
+int acpi_parseAml(struct ts_acpi *p_acpi, const struct ts_acpi_sdt *p_sdt) {
     // Initialize root node
     if(p_acpi->m_root == NULL) {
-        int l_result = acpiCreateNode(NULL, &p_acpi->m_root);
+        int l_result = acpi_createNode(NULL, &p_acpi->m_root);
 
         if(l_result != 0) {
             return l_result;
@@ -300,15 +300,15 @@ int acpiParseAml(struct ts_acpi *p_acpi, const struct ts_acpiDsdt *p_sdt) {
         p_acpi->m_root->m_name[0] = '\\';
     }
 
-    return acpiAmlParseTermList(
+    return acpi_amlParseTermList(
         p_acpi->m_root,
         p_sdt->m_data,
-        p_sdt->m_header.m_length - sizeof(struct ts_acpiSdtHeader)
+        p_sdt->m_header.m_length - sizeof(struct ts_acpi_sdtHeader)
     );
 }
 
-static int acpiAmlParseDefScope(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseDefScope(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t *p_length
 ) {
@@ -321,14 +321,14 @@ static int acpiAmlParseDefScope(
 
     // Parse package length
     size_t l_pkgLength;
-    l_offset += acpiAmlParsePkgLength(&p_buffer[l_offset], &l_pkgLength);
+    l_offset += acpi_amlParsePkgLength(&p_buffer[l_offset], &l_pkgLength);
 
     // Parse name
     char l_name[C_ACPI_MAX_PATH_LENGTH];
     size_t l_nameLength;
 
     int l_result =
-        acpiAmlParseNameString(&p_buffer[l_offset], l_name, &l_nameLength);
+        acpi_amlParseNameString(&p_buffer[l_offset], l_name, &l_nameLength);
 
     if(l_result != 0) {
         return l_result;
@@ -337,18 +337,18 @@ static int acpiAmlParseDefScope(
     l_offset += l_nameLength;
 
     // Get parent node
-    struct ts_acpiNode *l_parentNode;
-    l_result = acpiGetParentByPath(p_node, l_name, &l_parentNode);
+    struct ts_acpi_node *l_parentNode;
+    l_result = acpi_getParentByPath(p_node, l_name, &l_parentNode);
 
     if(l_result != 0) {
         return l_result;
     }
 
-    struct ts_acpiNode *l_node;
+    struct ts_acpi_node *l_node;
     
     // Get the existing node, and if it does not exist, create it.
-    if(acpiGetChildByName(l_parentNode, l_name, &l_node) != 0) {
-        l_result = acpiCreateNode(l_parentNode, &l_node);
+    if(acpi_getChildByName(l_parentNode, l_name, &l_node) != 0) {
+        l_result = acpi_createNode(l_parentNode, &l_node);
 
         if(l_node == NULL) {
             return -1;
@@ -356,11 +356,11 @@ static int acpiAmlParseDefScope(
 
         l_node->m_type = E_ACPI_OBJECT_TYPE_SCOPE;
         
-        acpiGetPathName(l_name, l_node->m_name);
+        acpi_getPathName(l_name, l_node->m_name);
     }
 
     // Parse term list
-    l_result = acpiAmlParseTermList(
+    l_result = acpi_amlParseTermList(
         l_node,
         &p_buffer[l_offset],
         l_pkgLength - l_offset + 1
@@ -376,7 +376,7 @@ static int acpiAmlParseDefScope(
     return 0;
 }
 
-static int acpiAmlParseNameSeg(
+static int acpi_amlParseNameSeg(
     const uint8_t *p_buffer,
     char *p_name,
     size_t *p_length
@@ -405,7 +405,7 @@ static int acpiAmlParseNameSeg(
     return 0;
 }
 
-static int acpiAmlParseNameString(
+static int acpi_amlParseNameString(
     const uint8_t *p_buffer,
     char *p_name,
     size_t *p_length
@@ -431,7 +431,7 @@ static int acpiAmlParseNameString(
                     }
 
                     if(
-                        acpiAmlParseNameSeg(
+                        acpi_amlParseNameSeg(
                             &p_buffer[l_offset],
                             &p_name[l_length],
                             &l_segmentLength
@@ -457,7 +457,7 @@ static int acpiAmlParseNameString(
                     }
 
                     if(
-                        acpiAmlParseNameSeg(
+                        acpi_amlParseNameSeg(
                             &p_buffer[l_offset],
                             &p_name[l_length],
                             &l_segmentLength
@@ -507,7 +507,7 @@ static int acpiAmlParseNameString(
             case 'Z':
             case '_':
                 if(
-                    acpiAmlParseNameSeg(
+                    acpi_amlParseNameSeg(
                         &p_buffer[l_offset],
                         &p_name[l_length],
                         &l_segmentLength
@@ -541,7 +541,7 @@ static int acpiAmlParseNameString(
     return 0;
 }
 
-static size_t acpiAmlParsePkgLength(
+static size_t acpi_amlParsePkgLength(
     const uint8_t *p_buffer,
     size_t *p_pkgLength
 ) {
@@ -563,8 +563,8 @@ static size_t acpiAmlParsePkgLength(
     return l_byteCount;
 }
 
-static int acpiAmlParseTermList(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseTermList(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t p_length
 ) {
@@ -573,7 +573,7 @@ static int acpiAmlParseTermList(
     while(l_offset <= p_length) {
         size_t l_termObjectLength;
         
-        int l_result = acpiAmlParseTermObj(
+        int l_result = acpi_amlParseTermObj(
             p_node,
             &p_buffer[l_offset],
             &l_termObjectLength
@@ -589,14 +589,14 @@ static int acpiAmlParseTermList(
     return 0;
 }
 
-static int acpiAmlParseTermObj(
-    struct ts_acpiNode *p_node,
+static int acpi_amlParseTermObj(
+    struct ts_acpi_node *p_node,
     const uint8_t *p_buffer,
     size_t *p_length
 ) {
     switch(p_buffer[0]) {
         case E_ACPI_AML_OPCODE_SCOPE_OP:
-            return acpiAmlParseDefScope(p_node, p_buffer, p_length);
+            return acpi_amlParseDefScope(p_node, p_buffer, p_length);
     }
 
     // Undefined opcode
@@ -608,24 +608,24 @@ static int acpiAmlParseTermObj(
     return -1;
 }
 
-static int acpiCreateNode(
-    struct ts_acpiNode *p_parent,
-    struct ts_acpiNode **p_node
+static int acpi_createNode(
+    struct ts_acpi_node *p_parent,
+    struct ts_acpi_node **p_node
 ) {
-    struct ts_acpiNode *l_node = malloc(sizeof(struct ts_acpiNode));
+    struct ts_acpi_node *l_node = malloc(sizeof(struct ts_acpi_node));
 
     if (l_node == NULL) {
         printk("acpi: failed to allocate memory for node\n");
         return -1;
     }
 
-    memset(l_node, 0, sizeof(struct ts_acpiNode));
+    memset(l_node, 0, sizeof(struct ts_acpi_node));
     
     if(p_parent != NULL) {
         if(p_parent->m_children == NULL) {
             p_parent->m_children = l_node;
         } else {
-            struct ts_acpiNode *l_child = p_parent->m_children;
+            struct ts_acpi_node *l_child = p_parent->m_children;
 
             while(l_child->m_next != NULL) {
                 l_child = l_child->m_next;
@@ -642,12 +642,12 @@ static int acpiCreateNode(
     return 0;
 }
 
-static int acpiGetChildByName(
-    struct ts_acpiNode *p_node,
+static int acpi_getChildByName(
+    struct ts_acpi_node *p_node,
     const char *p_name,
-    struct ts_acpiNode **p_child
+    struct ts_acpi_node **p_child
 ) {
-    struct ts_acpiNode *l_child = p_node->m_children;
+    struct ts_acpi_node *l_child = p_node->m_children;
 
     while(l_child != NULL) {
         if(strcmp(l_child->m_name, p_name) == 0) {
@@ -661,12 +661,12 @@ static int acpiGetChildByName(
     return -1;
 }
 
-static int acpiGetNode(
-    struct ts_acpiNode *p_baseNode,
+static int acpi_getNode(
+    struct ts_acpi_node *p_baseNode,
     const char *p_path,
-    struct ts_acpiNode **p_node
+    struct ts_acpi_node **p_node
 ) {
-    struct ts_acpiNode *l_node = p_baseNode;
+    struct ts_acpi_node *l_node = p_baseNode;
 
     if(p_path[0] == '\\') {
         p_path++;
@@ -696,7 +696,7 @@ static int acpiGetNode(
 
         l_name[l_index] = '\0';
 
-        struct ts_acpiNode *l_child = l_node->m_children;
+        struct ts_acpi_node *l_child = l_node->m_children;
 
         while(l_child != NULL) {
             if(strcmp(l_child->m_name, l_name) == 0) {
@@ -718,7 +718,7 @@ static int acpiGetNode(
     return 0;
 }
 
-static void acpiGetPathName(const char *p_path, char *p_name) {
+static void acpi_getPathName(const char *p_path, char *p_name) {
     const char *l_lastDot = strrchr(p_path, '.');
 
     if(l_lastDot == NULL) {
@@ -741,12 +741,12 @@ static void acpiGetPathName(const char *p_path, char *p_name) {
     return;
 }
 
-static int acpiGetParentByPath(
-    struct ts_acpiNode *p_baseNode,
+static int acpi_getParentByPath(
+    struct ts_acpi_node *p_baseNode,
     const char *p_path,
-    struct ts_acpiNode **p_node
+    struct ts_acpi_node **p_node
 ) {
-    struct ts_acpiNode *l_node = p_baseNode;
+    struct ts_acpi_node *l_node = p_baseNode;
     size_t l_pathIndex = 0U;
     char l_name[C_ACPI_NAME_LENGTH + 1];
     size_t l_nameIndex = 0U;
@@ -763,7 +763,7 @@ static int acpiGetParentByPath(
         if(p_path[l_pathIndex] == '.') {
             l_name[l_nameIndex] = '\0';
 
-            int l_result = acpiGetChildByName(l_node, l_name, &l_node);
+            int l_result = acpi_getChildByName(l_node, l_name, &l_node);
 
             if(l_result != 0) {
                 return l_result;
@@ -780,8 +780,8 @@ static int acpiGetParentByPath(
     return 0;
 }
 
-static struct ts_acpiNode *acpiGetRootNode(struct ts_acpiNode *p_baseNode) {
-    struct ts_acpiNode *l_node = p_baseNode;
+static struct ts_acpi_node *acpi_getRootNode(struct ts_acpi_node *p_baseNode) {
+    struct ts_acpi_node *l_node = p_baseNode;
 
     while(l_node->m_parent != NULL) {
         l_node = l_node->m_parent;

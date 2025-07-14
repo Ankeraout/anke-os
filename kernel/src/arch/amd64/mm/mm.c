@@ -3,12 +3,12 @@
 
 #include "mm/mm.h"
 
-size_t mmRoundDownPage(size_t p_size) {
+size_t mm_roundDownPage(size_t p_size) {
     return p_size & ~(C_MM_PAGE_SIZE - 1);
 }
 
-size_t mmRoundUpPage(size_t p_size) {
-    size_t l_roundedDownSize = mmRoundDownPage(p_size);
+size_t mm_roundUpPage(size_t p_size) {
+    size_t l_roundedDownSize = mm_roundDownPage(p_size);
 
     if(l_roundedDownSize != p_size) {
         return l_roundedDownSize + C_MM_PAGE_SIZE;
@@ -17,15 +17,15 @@ size_t mmRoundUpPage(size_t p_size) {
     return p_size;
 }
 
-void *mmGetEntryEndAddress(const struct ts_mmMemoryMapEntry *p_entry) {
+void *mm_getEntryEndAddress(const struct ts_mm_memoryMapEntry *p_entry) {
     return (void *)((uintptr_t)p_entry->m_base + p_entry->m_size);
 }
 
-void mmTryMergeNodes(
-    struct ts_mmMemoryMapEntryListNode *p_node,
+void mm_tryMergeNodes(
+    struct ts_mm_memoryMapEntryListNode *p_node,
     void (*p_freeNode)(
         void *p_context,
-        struct ts_mmMemoryMapEntryListNode *p_node
+        struct ts_mm_memoryMapEntryListNode *p_node
     ),
     void *p_freeNodeContext
 ) {
@@ -34,12 +34,12 @@ void mmTryMergeNodes(
         return;
     }
 
-    struct ts_mmMemoryMapEntryListNode *l_nextNode = p_node->m_next;
+    struct ts_mm_memoryMapEntryListNode *l_nextNode = p_node->m_next;
 
-    void *l_entryEndAddress = mmGetEntryEndAddress(&p_node->m_data);
+    void *l_entryEndAddress = mm_getEntryEndAddress(&p_node->m_data);
 
     if(l_entryEndAddress == p_node->m_next) {
-        struct ts_mmMemoryMapEntryListNode *l_nodeToFree = p_node->m_next;
+        struct ts_mm_memoryMapEntryListNode *l_nodeToFree = p_node->m_next;
 
         p_node->m_data.m_size += l_nextNode->m_data.m_size;
         p_node->m_next = p_node->m_next->m_next;
@@ -50,11 +50,11 @@ void mmTryMergeNodes(
     }
 }
 
-void *mmAlloc(struct ts_mmMemoryMapEntryListNode **p_map, size_t p_size) {
-    size_t l_size = mmRoundUpPage(p_size);
+void *mm_alloc(struct ts_mm_memoryMapEntryListNode **p_map, size_t p_size) {
+    size_t l_size = mm_roundUpPage(p_size);
 
-    struct ts_mmMemoryMapEntryListNode *l_previousNode = NULL;
-    struct ts_mmMemoryMapEntryListNode *l_node = *p_map;
+    struct ts_mm_memoryMapEntryListNode *l_previousNode = NULL;
+    struct ts_mm_memoryMapEntryListNode *l_node = *p_map;
 
     while(l_node != NULL) {
         if(l_node->m_data.m_size < l_size) {
@@ -83,17 +83,17 @@ void *mmAlloc(struct ts_mmMemoryMapEntryListNode **p_map, size_t p_size) {
     return NULL;
 }
 
-void mmAddNodeToMap(
-    struct ts_mmMemoryMapEntryListNode **p_map,
-    struct ts_mmMemoryMapEntryListNode *p_node,
+void mm_addNodeToMap(
+    struct ts_mm_memoryMapEntryListNode **p_map,
+    struct ts_mm_memoryMapEntryListNode *p_node,
     void (*p_freeNode)(
         void *p_context,
-        struct ts_mmMemoryMapEntryListNode *p_node
+        struct ts_mm_memoryMapEntryListNode *p_node
     ),
     void *p_freeNodeContext
 ) {
-    struct ts_mmMemoryMapEntryListNode *l_node = *p_map;
-    struct ts_mmMemoryMapEntryListNode *l_previousNode = NULL;
+    struct ts_mm_memoryMapEntryListNode *l_node = *p_map;
+    struct ts_mm_memoryMapEntryListNode *l_previousNode = NULL;
 
     while(l_node != NULL && l_node->m_data.m_base < p_node->m_data.m_base) {
         l_previousNode = l_node;
@@ -109,10 +109,10 @@ void mmAddNodeToMap(
     }
 
     // Try to merge the next node with the new node
-    mmTryMergeNodes(p_node, p_freeNode, p_freeNodeContext);
+    mm_tryMergeNodes(p_node, p_freeNode, p_freeNodeContext);
 
     if(l_previousNode != NULL) {
         // Try to merge the previous node with the new node
-        mmTryMergeNodes(l_previousNode, p_freeNode, p_freeNodeContext);
+        mm_tryMergeNodes(l_previousNode, p_freeNode, p_freeNodeContext);
     }
 }

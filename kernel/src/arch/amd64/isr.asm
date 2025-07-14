@@ -3,25 +3,25 @@ bits 64
 %include "arch/amd64/task.inc"
 
 %macro M_DEFINE_EXCEPTION 1
-    global isrException%1
-    isrException%1:
+    global isr_exception%1
+    isr_exception%1:
         push 0 ; No error code
         push %1 ; Interrupt number
-        jmp isrExceptionCommon
+        jmp isr_exceptionCommon
 %endmacro
 
 %macro M_DEFINE_EXCEPTION_ERRCODE 1
-    global isrException%1
-    isrException%1:
+    global isr_exception%1
+    isr_exception%1:
         push %1 ; Interrupt number
-        jmp isrExceptionCommon
+        jmp isr_exceptionCommon
 %endmacro
 
 %macro M_DEFINE_IRQ 1
-    global isrIrq%1
-    isrIrq%1:
+    global isr_irq%1
+    isr_irq%1:
         push %1 ; Interrupt number
-        jmp isrIrqCommon
+        jmp isr_irqCommon
 %endmacro
 
 extern irq_service
@@ -78,7 +78,7 @@ M_DEFINE_IRQ 13
 M_DEFINE_IRQ 14
 M_DEFINE_IRQ 15
 
-isrExceptionCommon:; Set the value of DS
+isr_exceptionCommon:; Set the value of DS
     push rax
     mov ax, ds
     push rax
@@ -86,25 +86,25 @@ isrExceptionCommon:; Set the value of DS
     mov ds, ax
     
     ; Save the context
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_ds]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rax]
-    mov [g_task_currentTaskContext + ts_taskContext.m_rbx], rbx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rcx], rcx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rdx], rdx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rbp], rbp
-    mov [g_task_currentTaskContext + ts_taskContext.m_rsi], rsi
-    mov [g_task_currentTaskContext + ts_taskContext.m_rdi], rdi
-    mov [g_task_currentTaskContext + ts_taskContext.m_r8], r8
-    mov [g_task_currentTaskContext + ts_taskContext.m_r9], r9
-    mov [g_task_currentTaskContext + ts_taskContext.m_r10], r10
-    mov [g_task_currentTaskContext + ts_taskContext.m_r11], r11
-    mov [g_task_currentTaskContext + ts_taskContext.m_r12], r12
-    mov [g_task_currentTaskContext + ts_taskContext.m_r13], r13
-    mov [g_task_currentTaskContext + ts_taskContext.m_r14], r14
-    mov [g_task_currentTaskContext + ts_taskContext.m_r15], r15
-    mov [g_task_currentTaskContext + ts_taskContext.m_es], es
-    mov [g_task_currentTaskContext + ts_taskContext.m_fs], fs
-    mov [g_task_currentTaskContext + ts_taskContext.m_gs], gs
+    pop qword [g_task_currentTaskContext + ts_task_context.m_ds]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rax]
+    mov [g_task_currentTaskContext + ts_task_context.m_rbx], rbx
+    mov [g_task_currentTaskContext + ts_task_context.m_rcx], rcx
+    mov [g_task_currentTaskContext + ts_task_context.m_rdx], rdx
+    mov [g_task_currentTaskContext + ts_task_context.m_rbp], rbp
+    mov [g_task_currentTaskContext + ts_task_context.m_rsi], rsi
+    mov [g_task_currentTaskContext + ts_task_context.m_rdi], rdi
+    mov [g_task_currentTaskContext + ts_task_context.m_r8], r8
+    mov [g_task_currentTaskContext + ts_task_context.m_r9], r9
+    mov [g_task_currentTaskContext + ts_task_context.m_r10], r10
+    mov [g_task_currentTaskContext + ts_task_context.m_r11], r11
+    mov [g_task_currentTaskContext + ts_task_context.m_r12], r12
+    mov [g_task_currentTaskContext + ts_task_context.m_r13], r13
+    mov [g_task_currentTaskContext + ts_task_context.m_r14], r14
+    mov [g_task_currentTaskContext + ts_task_context.m_r15], r15
+    mov [g_task_currentTaskContext + ts_task_context.m_es], es
+    mov [g_task_currentTaskContext + ts_task_context.m_fs], fs
+    mov [g_task_currentTaskContext + ts_task_context.m_gs], gs
     
     ; Exception number
     pop rdi
@@ -113,15 +113,15 @@ isrExceptionCommon:; Set the value of DS
     pop rsi
 
     ; IRETQ stack layout
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rip]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_cs]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rflags]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rsp]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_ss]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rip]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_cs]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rflags]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rsp]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_ss]
 
     jmp isr_exception
 
-isrIrqCommon:
+isr_irqCommon:
     ; Set the value of DS
     push rax
     mov ax, ds
@@ -130,34 +130,34 @@ isrIrqCommon:
     mov ds, ax
     
     ; Save the context
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_ds]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rax]
-    mov [g_task_currentTaskContext + ts_taskContext.m_rbx], rbx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rcx], rcx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rdx], rdx
-    mov [g_task_currentTaskContext + ts_taskContext.m_rbp], rbp
-    mov [g_task_currentTaskContext + ts_taskContext.m_rsi], rsi
-    mov [g_task_currentTaskContext + ts_taskContext.m_rdi], rdi
-    mov [g_task_currentTaskContext + ts_taskContext.m_r8], r8
-    mov [g_task_currentTaskContext + ts_taskContext.m_r9], r9
-    mov [g_task_currentTaskContext + ts_taskContext.m_r10], r10
-    mov [g_task_currentTaskContext + ts_taskContext.m_r11], r11
-    mov [g_task_currentTaskContext + ts_taskContext.m_r12], r12
-    mov [g_task_currentTaskContext + ts_taskContext.m_r13], r13
-    mov [g_task_currentTaskContext + ts_taskContext.m_r14], r14
-    mov [g_task_currentTaskContext + ts_taskContext.m_r15], r15
-    mov [g_task_currentTaskContext + ts_taskContext.m_es], es
-    mov [g_task_currentTaskContext + ts_taskContext.m_fs], fs
-    mov [g_task_currentTaskContext + ts_taskContext.m_gs], gs
+    pop qword [g_task_currentTaskContext + ts_task_context.m_ds]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rax]
+    mov [g_task_currentTaskContext + ts_task_context.m_rbx], rbx
+    mov [g_task_currentTaskContext + ts_task_context.m_rcx], rcx
+    mov [g_task_currentTaskContext + ts_task_context.m_rdx], rdx
+    mov [g_task_currentTaskContext + ts_task_context.m_rbp], rbp
+    mov [g_task_currentTaskContext + ts_task_context.m_rsi], rsi
+    mov [g_task_currentTaskContext + ts_task_context.m_rdi], rdi
+    mov [g_task_currentTaskContext + ts_task_context.m_r8], r8
+    mov [g_task_currentTaskContext + ts_task_context.m_r9], r9
+    mov [g_task_currentTaskContext + ts_task_context.m_r10], r10
+    mov [g_task_currentTaskContext + ts_task_context.m_r11], r11
+    mov [g_task_currentTaskContext + ts_task_context.m_r12], r12
+    mov [g_task_currentTaskContext + ts_task_context.m_r13], r13
+    mov [g_task_currentTaskContext + ts_task_context.m_r14], r14
+    mov [g_task_currentTaskContext + ts_task_context.m_r15], r15
+    mov [g_task_currentTaskContext + ts_task_context.m_es], es
+    mov [g_task_currentTaskContext + ts_task_context.m_fs], fs
+    mov [g_task_currentTaskContext + ts_task_context.m_gs], gs
     
     ; IRQ number
     pop rdi
 
     ; IRETQ stack layout
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rip]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_cs]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rflags]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_rsp]
-    pop qword [g_task_currentTaskContext + ts_taskContext.m_ss]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rip]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_cs]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rflags]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_rsp]
+    pop qword [g_task_currentTaskContext + ts_task_context.m_ss]
 
     jmp irq_service

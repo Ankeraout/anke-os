@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct ts_taskContext {
+struct ts_task_context {
     uint64_t m_rax;
     uint64_t m_rbx;
     uint64_t m_rcx;
@@ -30,10 +30,10 @@ struct ts_taskContext {
     uint64_t m_rflags;
 };
 
-void task_save(struct ts_taskContext *p_context);
-void task_load(struct ts_taskContext *p_context);
+void task_save(struct ts_task_context *p_context);
+void task_load(struct ts_task_context *p_context);
 void task_resume(void);
 
-extern struct ts_taskContext g_task_currentTaskContext;
+extern struct ts_task_context g_task_currentTaskContext;
 
 #endif

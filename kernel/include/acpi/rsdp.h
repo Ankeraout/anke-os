@@ -6,7 +6,7 @@
 
 #include "acpi/acpi.h"
 
-struct ts_acpiRsdp {
+struct ts_acpi_rsdp {
     uint8_t m_signature[8];
     uint8_t m_checksum;
     uint8_t m_oemId[6];
@@ -18,7 +18,7 @@ struct ts_acpiRsdp {
     uint8_t m_reserved[3];
 } __attribute__((packed));
 
-void acpiRsdpParse(struct ts_acpi *p_acpi, const struct ts_acpiRsdp *p_rsdp);
-const struct ts_acpiRsdp *acpiRsdpLocate(const void *p_buffer, size_t p_size);
+void acpi_rsdpParse(struct ts_acpi *p_acpi, const struct ts_acpi_rsdp *p_rsdp);
+const struct ts_acpi_rsdp *acpi_rsdpLocate(const void *p_buffer, size_t p_size);
 
 #endif

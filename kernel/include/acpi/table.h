@@ -4,9 +4,9 @@
 #include "acpi/acpi.h"
 #include "acpi/sdt.h"
 
-void acpiTableRegister(
+void acpi_tableRegister(
     struct ts_acpi *p_acpi,
-    const struct ts_acpiSdtHeader *p_table
+    const struct ts_acpi_sdtHeader *p_table
 );
 
 #endif

@@ -33,15 +33,15 @@ struct limine_framebuffer_request g_framebufferRequest = {
     .response = NULL
 };
 
-static struct ts_mmMemoryMapEntry s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
+static struct ts_mm_memoryMapEntry s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
 
 void bootstrap(void) {
     if(g_memoryMapRequest.response == NULL) {
         pr_crit("bootstrap: No memory map provided by the bootloader.\n");
         
         while(1) {
-            cli();
-            hlt();
+            asm_cli();
+            asm_hlt();
         }
     }
 
@@ -70,18 +70,18 @@ void bootstrap(void) {
         }
     }
 
-    if(pmmInit(s_memoryMap, l_memoryMapEntryCount) != 0) {
+    if(pmm_init(s_memoryMap, l_memoryMapEntryCount) != 0) {
         pr_crit("bootstrap: pmmInit() failed.\n");
         
         while(1) {
-            cli();
-            hlt();
+            asm_cli();
+            asm_hlt();
         }
     }
 
     if(g_rsdpRequest.response != NULL) {
         pr_info("bootstrap: RSDP at %p\n", g_rsdpRequest.response->address);
-        acpiSetRsdpLocation(g_rsdpRequest.response->address);
+        acpi_setRsdpLocation(g_rsdpRequest.response->address);
     } else {
         pr_info("bootstrap: No RSDP provided by the bootloader.\n");
     }

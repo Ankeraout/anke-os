@@ -5,7 +5,7 @@
 #include "tree.h"
 #include "vfs/vfs.h"
 
-static struct ts_vfsVnode *s_rootNode;
+static struct ts_vfs_vnode *s_rootNode;
 static struct ts_listNode *s_fileSystemList;
 
 int vfs_init(void) {
@@ -15,12 +15,12 @@ int vfs_init(void) {
 }
 
 int vfs_mount(
-    struct ts_vfsInode *p_inode,
-    struct ts_vfsVnode *p_target,
-    struct ts_vfsFileSystem *p_fileSystem,
+    struct ts_vfs_inode *p_inode,
+    struct ts_vfs_vnode *p_target,
+    struct ts_vfs_fileSystem *p_fileSystem,
     int p_flags
 ) {
-    struct ts_vfsVnode *l_target;
+    struct ts_vfs_vnode *l_target;
 
     if(p_target == NULL) {
         // We're trying to mount root
@@ -30,7 +30,7 @@ int vfs_mount(
             return -EBUSY;
         }
 
-        l_target = malloc(sizeof(struct ts_vfsVnode));
+        l_target = malloc(sizeof(struct ts_vfs_vnode));
 
         if(l_target == NULL) {
             return -ENOMEM;
@@ -43,7 +43,7 @@ int vfs_mount(
             return -ENOMEM;
         }
 
-        memset(l_target, 0, sizeof(struct ts_vfsVnode));
+        memset(l_target, 0, sizeof(struct ts_vfs_vnode));
         memset(l_treeNode, 0, sizeof(struct ts_treeNode));
         
         l_target->m_treeNode = l_treeNode;
@@ -70,16 +70,16 @@ int vfs_mount(
     return l_result;
 }
 
-int vfs_registerFileSystem(struct ts_vfsFileSystem *p_fileSystem) {
+int vfs_registerFileSystem(struct ts_vfs_fileSystem *p_fileSystem) {
     return list_insertBeginning(&s_fileSystemList, p_fileSystem);
 }
 
-struct ts_vfsFileSystem *vfs_getFileSystemByName(const char *p_name) {
+struct ts_vfs_fileSystem *vfs_getFileSystemByName(const char *p_name) {
     struct ts_listNode *l_node = s_fileSystemList;
 
     while(l_node != NULL) {
-        struct ts_vfsFileSystem *l_fileSystem =
-            (struct ts_vfsFileSystem *)l_node->m_data;
+        struct ts_vfs_fileSystem *l_fileSystem =
+            (struct ts_vfs_fileSystem *)l_node->m_data;
 
         if(strcmp(l_fileSystem->m_name, p_name) == 0) {
             return l_fileSystem;

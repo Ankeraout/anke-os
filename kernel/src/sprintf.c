@@ -4,7 +4,7 @@
 #include "sprintf.h"
 #include "string.h"
 
-enum te_parserState {
+enum te_vsprintf_parserState {
     E_PARSERSTATE_START,
     E_PARSERSTATE_ESCAPE,
     E_PARSERSTATE_MINLEN,
@@ -12,7 +12,7 @@ enum te_parserState {
     E_PARSERSTATE_ACTION_L
 };
 
-struct ts_vsprintfContext {
+struct ts_vsprintf_context {
     char *m_buffer;
     size_t m_index;
     bool m_flagPrefix;
@@ -22,7 +22,7 @@ struct ts_vsprintfContext {
     bool m_flagLong;
     int m_minimumLength;
     int m_maximumLength;
-    enum te_parserState m_state;
+    enum te_vsprintf_parserState m_state;
     size_t m_sizeLimit;
     bool m_sizeLimitEnabled;
 };
@@ -30,15 +30,15 @@ struct ts_vsprintfContext {
 static int vsprintf_generic(
     const char *p_format,
     va_list p_args,
-    struct ts_vsprintfContext *p_context
+    struct ts_vsprintf_context *p_context
 );
 static void vsprintf_generic_checkAction(
-    struct ts_vsprintfContext *p_context,
+    struct ts_vsprintf_context *p_context,
     char p_character,
     va_list p_argList
 );
 static void vsprintf_generic_out(
-    struct ts_vsprintfContext *p_context,
+    struct ts_vsprintf_context *p_context,
     char p_character
 );
 
@@ -75,7 +75,7 @@ int vsnprintf(
     const char *p_format,
     va_list p_args
 ) {
-    struct ts_vsprintfContext l_context;
+    struct ts_vsprintf_context l_context;
 
     memset(&l_context, 0, sizeof(l_context));
 
@@ -87,7 +87,7 @@ int vsnprintf(
 }
 
 int vsprintf(char *p_buffer, const char *p_format, va_list p_args) {
-    struct ts_vsprintfContext l_context;
+    struct ts_vsprintf_context l_context;
 
     memset(&l_context, 0, sizeof(l_context));
 
@@ -99,7 +99,7 @@ int vsprintf(char *p_buffer, const char *p_format, va_list p_args) {
 static int vsprintf_generic(
     const char *p_format,
     va_list p_args,
-    struct ts_vsprintfContext *p_context
+    struct ts_vsprintf_context *p_context
 ) {
     size_t l_index = 0;
 
@@ -182,7 +182,7 @@ static int vsprintf_generic(
 }
 
 static void vsprintf_generic_checkAction(
-    struct ts_vsprintfContext *p_context,
+    struct ts_vsprintf_context *p_context,
     char p_character,
     va_list p_argList
 ) {
@@ -382,7 +382,7 @@ static void vsprintf_generic_checkAction(
 }
 
 static void vsprintf_generic_out(
-    struct ts_vsprintfContext *p_context,
+    struct ts_vsprintf_context *p_context,
     char p_character
 ) {
     if(

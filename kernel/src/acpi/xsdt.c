@@ -3,9 +3,9 @@
 #include "acpi/table.h"
 #include "acpi/xsdt.h"
 
-int acpiXsdtParse(struct ts_acpi *p_acpi, const struct ts_acpiXsdt *p_xsdt) {
+int acpi_xsdtParse(struct ts_acpi *p_acpi, const struct ts_acpi_xsdt *p_xsdt) {
     // Validate RSDT
-    if(acpiSdtComputeChecksum(&p_xsdt->m_header) != 0U) {
+    if(acpi_sdtComputeChecksum(&p_xsdt->m_header) != 0U) {
         return 1;
     }
 
@@ -13,13 +13,13 @@ int acpiXsdtParse(struct ts_acpi *p_acpi, const struct ts_acpiXsdt *p_xsdt) {
 
     // Parse pointers
     size_t l_dataLength =
-        p_xsdt->m_header.m_length - sizeof(struct ts_acpiSdtHeader);
+        p_xsdt->m_header.m_length - sizeof(struct ts_acpi_sdtHeader);
     size_t l_entryCount = l_dataLength / sizeof(p_xsdt->m_tablePointers[0]);
 
     for(size_t l_i = 0; l_i < l_entryCount; l_i++) {
-        acpiTableRegister(
+        acpi_tableRegister(
             p_acpi,
-            (struct ts_acpiSdtHeader *)(uintptr_t)p_xsdt->m_tablePointers[l_i]
+            (struct ts_acpi_sdtHeader *)(uintptr_t)p_xsdt->m_tablePointers[l_i]
         );
     }
 

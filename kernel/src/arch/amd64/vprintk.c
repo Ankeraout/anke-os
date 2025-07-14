@@ -16,6 +16,6 @@ void vprintk(const char *p_format, va_list p_args) {
     }
 
     for(; l_i < l_length; l_i++) {
-        outb(0xe9, l_buffer[l_i]);
+        asm_outb(0xe9, l_buffer[l_i]);
     }
 }

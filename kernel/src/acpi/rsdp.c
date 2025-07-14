@@ -1,14 +1,14 @@
 #include "string.h"
 #include "acpi/rsdp.h"
 
-static uint8_t acpiRsdpComputeChecksum(const struct ts_acpiRsdp *p_rsdp);
-static uint8_t acpiRsdpComputeExtendedChecksum(
-    const struct ts_acpiRsdp *p_rsdp
+static uint8_t acpi_rsdpComputeChecksum(const struct ts_acpi_rsdp *p_rsdp);
+static uint8_t acpi_rsdpComputeExtendedChecksum(
+    const struct ts_acpi_rsdp *p_rsdp
 );
 
-void acpiRsdpParse(struct ts_acpi *p_acpi, const struct ts_acpiRsdp *p_rsdp) {
+void acpi_rsdpParse(struct ts_acpi *p_acpi, const struct ts_acpi_rsdp *p_rsdp) {
     // Validate RSDP
-    if(acpiRsdpComputeChecksum(p_rsdp) != 0U) {
+    if(acpi_rsdpComputeChecksum(p_rsdp) != 0U) {
         // TODO: Error: RSDP checksum error
         return;
     }
@@ -18,29 +18,29 @@ void acpiRsdpParse(struct ts_acpi *p_acpi, const struct ts_acpiRsdp *p_rsdp) {
 
     // If ACPI version is 2.0, check the extended checksum
     if(p_acpi->m_acpi2) {
-        p_acpi->m_acpi2 &= acpiRsdpComputeExtendedChecksum(p_rsdp) == 0U;
+        p_acpi->m_acpi2 &= acpi_rsdpComputeExtendedChecksum(p_rsdp) == 0U;
     }
 
     if(p_acpi->m_acpi2) {
-        acpiXsdtParse(
+        acpi_xsdtParse(
             p_acpi,
-            (const struct ts_acpiXsdt *)((uintptr_t)p_rsdp->m_xsdtAddress)
+            (const struct ts_acpi_xsdt *)((uintptr_t)p_rsdp->m_xsdtAddress)
         );
     } else {
-        acpiRsdtParse(
+        acpi_rsdtParse(
             p_acpi,
-            (const struct ts_acpiRsdt *)((uintptr_t)p_rsdp->m_rsdtAddress)
+            (const struct ts_acpi_rsdt *)((uintptr_t)p_rsdp->m_rsdtAddress)
         );
     }
 }
 
-const struct ts_acpiRsdp *acpiRsdpLocate(const void *p_buffer, size_t p_size) {
+const struct ts_acpi_rsdp *acpi_rsdpLocate(const void *p_buffer, size_t p_size) {
     const uint8_t *l_buffer = (const uint8_t *)p_buffer;
     size_t l_offset = 0;
 
     while(l_offset < p_size) {
-        const struct ts_acpiRsdp *l_rsdp =
-            (const struct ts_acpiRsdp *)&l_buffer[l_offset];
+        const struct ts_acpi_rsdp *l_rsdp =
+            (const struct ts_acpi_rsdp *)&l_buffer[l_offset];
 
         if(memcmp(l_rsdp->m_signature, "RSD PTR ", 8U) == 0) {
             return l_rsdp;
@@ -52,7 +52,7 @@ const struct ts_acpiRsdp *acpiRsdpLocate(const void *p_buffer, size_t p_size) {
     return NULL;
 }
 
-static uint8_t acpiRsdpComputeChecksum(const struct ts_acpiRsdp *p_rsdp) {
+static uint8_t acpi_rsdpComputeChecksum(const struct ts_acpi_rsdp *p_rsdp) {
     const uint8_t *l_rsdp = (const uint8_t *)p_rsdp;
 
     uint8_t l_checksum = 0;
@@ -64,8 +64,8 @@ static uint8_t acpiRsdpComputeChecksum(const struct ts_acpiRsdp *p_rsdp) {
     return l_checksum;
 }
 
-static uint8_t acpiRsdpComputeExtendedChecksum(
-    const struct ts_acpiRsdp *p_rsdp
+static uint8_t acpi_rsdpComputeExtendedChecksum(
+    const struct ts_acpi_rsdp *p_rsdp
 ) {
     const uint8_t *l_rsdp = (const uint8_t *)p_rsdp;
 

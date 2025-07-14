@@ -5,10 +5,10 @@
 #include "acpi/rsdt.h"
 #include "acpi/xsdt.h"
 
-static const struct ts_acpiRsdp *s_rsdp = NULL;
+static const struct ts_acpi_rsdp *s_rsdp = NULL;
 static struct ts_acpi s_acpi;
 
-int acpiInit(void) {
+int acpi_init(void) {
     if(s_rsdp == NULL) {
         return -1;
     }
@@ -20,16 +20,16 @@ int acpiInit(void) {
     // TODO
 
     // Parse RSDP
-    acpiRsdpParse(&s_acpi, s_rsdp);
+    acpi_rsdpParse(&s_acpi, s_rsdp);
 
     // Parse present tables
     if(s_acpi.m_dsdt != NULL) {
-        return acpiDsdtParse(&s_acpi);
+        return acpi_dsdtParse(&s_acpi);
     }
 
     return 0;
 }
 
-void acpiSetRsdpLocation(const struct ts_acpiRsdp *p_rsdp) {
+void acpi_setRsdpLocation(const struct ts_acpi_rsdp *p_rsdp) {
     s_rsdp = p_rsdp;
 }

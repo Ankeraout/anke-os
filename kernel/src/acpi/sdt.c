@@ -1,6 +1,6 @@
 #include "acpi/sdt.h"
 
-uint8_t acpiSdtComputeChecksum(const struct ts_acpiSdtHeader *p_sdt) {
+uint8_t acpi_sdtComputeChecksum(const struct ts_acpi_sdtHeader *p_sdt) {
     const uint8_t *l_sdt = (const uint8_t *)p_sdt;
 
     uint8_t l_checksum = 0;
