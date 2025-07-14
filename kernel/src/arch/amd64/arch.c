@@ -1,8 +1,8 @@
 #include "arch/amd64/asm.h"
 #include "arch/amd64/gdt.h"
 #include "arch/amd64/idt.h"
-#include "arch/amd64/isr.h"
 #include "arch/amd64/pic.h"
+#include "irq.h"
 #include "mm/vmm.h"
 #include "printk.h"
 
@@ -17,7 +17,7 @@ void arch_init(void) {
     }
 
     gdtInit();
-    isrInit();
+    irq_init();
     picInit();
     idtInit();
 

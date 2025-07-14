@@ -5,7 +5,7 @@ ASM := nasm
 MKDIR := mkdir -p
 RM := rm -rf
 
-ASMFLAGS := -f elf64
+ASMFLAGS := -f elf64 -Iinclude
 CFLAGS := \
 	-c \
 	-MMD -MP \

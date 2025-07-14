@@ -3,6 +3,7 @@
 #include "list.h"
 #include "stdlib.h"
 #include "string.h"
+#include "task.h"
 
 struct ts_irqHandler {
     tf_irqHandler *m_handler;
@@ -13,9 +14,10 @@ struct ts_listNode *s_handlerList[C_IRQ_MAX];
 
 int irq_init(void) {
     memset(s_handlerList, 0, sizeof(s_handlerList));
+    return 0;
 }
 
-int irq_service(int p_irq) {
+void irq_service(int p_irq) {
     struct ts_listNode *l_node = s_handlerList[p_irq];
 
     while(l_node != NULL) {
@@ -27,7 +29,9 @@ int irq_service(int p_irq) {
         l_node = l_node->m_next;
     }
 
-    return 0;
+    irq_endOfInterrupt();
+
+    task_resume();
 }
 
 int irq_addHandler(int p_irq, tf_irqHandler *p_handler, void *p_arg) {

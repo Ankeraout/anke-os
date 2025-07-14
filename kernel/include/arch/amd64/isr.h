@@ -4,20 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct ts_isrRegisters {
-    uint64_t m_gs, m_fs, m_es, m_ds;
-    uint64_t m_r11, m_r10, m_r9, m_r8;
-    uint64_t m_rsi, m_rdi, m_rdx, m_rcx, m_rax;
-    uint64_t m_r15, m_r14, m_r13, m_r12, m_rbp, m_rbx;
-    uint64_t m_interruptNumber, m_errorCode;
-    uint64_t m_rip, m_cs, m_rflags, m_rsp, m_ss;
-} __attribute__((packed));
-
-typedef void tf_isrHandler(struct ts_isrRegisters *p_registers, void *p_arg);
-
-void isrInit(void);
-void isrSetHandler(int p_interruptNumber, tf_isrHandler *p_handler, void *p_arg);
-void isrHandler(struct ts_isrRegisters *p_registers);
 void isrException0(void);
 void isrException1(void);
 void isrException2(void);
