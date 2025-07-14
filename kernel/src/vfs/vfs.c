@@ -6,7 +6,7 @@
 #include "vfs/vfs.h"
 
 static struct ts_vfs_vnode *s_rootNode;
-static struct ts_listNode *s_fileSystemList;
+static struct ts_list_node *s_fileSystemList;
 
 int vfs_init(void) {
     s_rootNode = NULL;
@@ -75,7 +75,7 @@ int vfs_registerFileSystem(struct ts_vfs_fileSystem *p_fileSystem) {
 }
 
 struct ts_vfs_fileSystem *vfs_getFileSystemByName(const char *p_name) {
-    struct ts_listNode *l_node = s_fileSystemList;
+    struct ts_list_node *l_node = s_fileSystemList;
 
     while(l_node != NULL) {
         struct ts_vfs_fileSystem *l_fileSystem =

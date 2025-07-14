@@ -10,7 +10,7 @@ struct ts_irqHandler {
     void *m_arg;
 };
 
-struct ts_listNode *s_handlerList[C_IRQ_MAX];
+struct ts_list_node *s_handlerList[C_IRQ_MAX];
 
 int irq_init(void) {
     memset(s_handlerList, 0, sizeof(s_handlerList));
@@ -18,7 +18,7 @@ int irq_init(void) {
 }
 
 void irq_service(int p_irq) {
-    struct ts_listNode *l_node = s_handlerList[p_irq];
+    struct ts_list_node *l_node = s_handlerList[p_irq];
 
     while(l_node != NULL) {
         struct ts_irqHandler *l_handler =
@@ -59,10 +59,10 @@ int irq_removeHandler(int p_irq, tf_irqHandler *p_handler, void *p_arg) {
         .m_arg = p_arg
     };
 
-    struct ts_listNode *l_node = s_handlerList[p_irq];
+    struct ts_list_node *l_node = s_handlerList[p_irq];
 
     while(l_node != NULL) {
-        struct ts_listNode *l_nextNode = l_node->m_next;
+        struct ts_list_node *l_nextNode = l_node->m_next;
 
         if(memcmp(l_node->m_data, &l_handler, sizeof(l_handler)) == 0) {
             list_remove(&s_handlerList[p_irq], l_node->m_data);
