@@ -79,22 +79,22 @@ void idtInit(void) {
     idtInitEntry(&s_idt[31], isrException31, 0x0008, 0, E_IDT_GATETYPE_TRAP64, 0, true);
 
     // Set IRQ handlers
-    idtInitEntry(&s_idt[32], isrIrq32, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[33], isrIrq33, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[34], isrIrq34, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[35], isrIrq35, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[36], isrIrq36, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[37], isrIrq37, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[38], isrIrq38, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[39], isrIrq39, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[40], isrIrq40, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[41], isrIrq41, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[42], isrIrq42, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[43], isrIrq43, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[44], isrIrq44, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[45], isrIrq45, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[46], isrIrq46, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
-    idtInitEntry(&s_idt[47], isrIrq47, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[32], isrIrq0, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[33], isrIrq1, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[34], isrIrq2, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[35], isrIrq3, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[36], isrIrq4, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[37], isrIrq5, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[38], isrIrq6, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[39], isrIrq7, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[40], isrIrq8, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[41], isrIrq9, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[42], isrIrq10, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[43], isrIrq11, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[44], isrIrq12, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[45], isrIrq13, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[46], isrIrq14, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
+    idtInitEntry(&s_idt[47], isrIrq15, 0x0008, 0, E_IDT_GATETYPE_INT64, 0, true);
 
     lidt(s_idt, sizeof(s_idt) - 1);
 
