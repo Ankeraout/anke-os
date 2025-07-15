@@ -100,10 +100,11 @@ int vmm_unmap(
 struct ts_vmm_context *vmm_getKernelContext(void);
 
 void *vmm_getPhysicalAddress(void *p_vptr);
-
 void *vmm_getPhysicalAddress2(
     struct ts_vmm_context *p_context,
     void *p_vptr
 );
+struct ts_vmm_context *vmm_createContext(void);
+void vmm_destroyContext(struct ts_vmm_context *p_context);
 
 #endif

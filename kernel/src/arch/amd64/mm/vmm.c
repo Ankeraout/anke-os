@@ -465,3 +465,12 @@ static int vmm_tryFreePagingStructure(uint64_t *l_pagingStructure) {
 
     return 0;
 }
+
+struct ts_vmm_context *vmm_createContext(void) {
+    // TODO
+    return NULL;
+}
+
+void vmm_destroyContext(struct ts_vmm_context *p_context) {
+    // TODO
+}
