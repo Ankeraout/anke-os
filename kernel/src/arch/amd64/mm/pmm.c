@@ -1,7 +1,9 @@
 #include "mm/mm.h"
 #include "mm/pmm.h"
+#include "spinlock.h"
 
 static struct ts_mm_memoryMapEntryListNode *s_freeMemoryEntryList;
+static t_spinlock s_spinlock;
 
 int pmm_init(
     const struct ts_mm_memoryMapEntry *p_memoryMap,
@@ -29,7 +31,13 @@ int pmm_init(
 }
 
 void *pmm_alloc(size_t p_size) {
-    return mm_alloc(&s_freeMemoryEntryList, p_size);
+    spinlock_acquire(&s_spinlock);
+
+    void *l_returnValue = mm_alloc(&s_freeMemoryEntryList, p_size);
+
+    spinlock_release(&s_spinlock);
+
+    return l_returnValue;
 }
 
 void pmm_free(void *p_ptr, size_t p_size) {
@@ -40,5 +48,9 @@ void pmm_free(void *p_ptr, size_t p_size) {
     l_newNode->m_data.m_base = p_ptr;
     l_newNode->m_data.m_size = l_size;
 
+    spinlock_acquire(&s_spinlock);
+
     mm_addNodeToMap(&s_freeMemoryEntryList, l_newNode, NULL, NULL);
+
+    spinlock_release(&s_spinlock);
 }
