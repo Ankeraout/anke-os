@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "mm/mm.h"
+#include "spinlock.h"
 
 #define C_VMM_PROT_USER (1 << 0)
 #define C_VMM_PROT_KERNEL 0
@@ -15,9 +16,11 @@
 #define C_VMM_ALLOC_FLAG_KERNEL (1 << 0)
 
 struct ts_vmm_context {
+
     struct ts_mm_memoryMapEntryListNode *m_map;
     uintptr_t m_pagingContext;
     struct ts_mm_memoryMapEntryListNode *m_mapEntryPool;
+    t_spinlock m_spinlock;
 };
 
 /**

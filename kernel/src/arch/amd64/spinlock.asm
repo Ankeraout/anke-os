@@ -2,6 +2,11 @@ bits 64
 
 section .text
 
+global spinlock_init
+spinlock_init:
+    mov qword [rdi], 0
+    ret
+
 global spinlock_acquire
 spinlock_acquire:
     test qword [rdi], 1

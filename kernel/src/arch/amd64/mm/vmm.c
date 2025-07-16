@@ -94,13 +94,22 @@ void *vmm_alloc(struct ts_vmm_context *p_context, size_t p_size, int p_flags) {
         l_context = p_context;
     }
 
-    return mm_alloc(&l_context->m_map, p_size);
+    spinlock_acquire(&p_context->m_spinlock);
+    
+    void *l_returnValue = mm_alloc(&l_context->m_map, p_size);
+
+    spinlock_release(&l_context->m_spinlock);
+
+    return l_returnValue;
 }
 
 int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size) {
     size_t l_size = mm_roundUpPage(p_size);
 
+    spinlock_acquire(&p_context->m_spinlock);
+
     if(vmm_ensurePoolNotEmpty(p_context) != 0) {
+        spinlock_release(&p_context->m_spinlock);
         return -1;
     }
 
@@ -113,9 +122,12 @@ int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size) {
 
     mm_addNodeToMap(&p_context->m_map, l_newNode, vmm_freeNode, p_context);
 
+    spinlock_release(&p_context->m_spinlock);
+
     return 0;
 }
 
+// TODO: Fix leaking memory when allocation fails.
 int vmm_map(
     struct ts_vmm_context *p_context,
     void *p_vptr,
@@ -132,14 +144,6 @@ int vmm_map(
     );
 
     // 2. Build the paging structures
-    size_t l_pml4Index = ((uintptr_t)p_vptr >> 39UL) & 0x1ffUL;
-    size_t l_pdptIndex = ((uintptr_t)p_vptr >> 30UL) & 0x1ffUL;
-    size_t l_pdIndex = ((uintptr_t)p_vptr >> 21UL) & 0x1ffUL;
-    size_t l_ptIndex = ((uintptr_t)p_vptr >> 12UL) & 0x1ffUL;
-    uintptr_t l_currentPhysicalAddress =
-        (uintptr_t)p_pptr & 0x000ffffffffff000UL;
-    uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
-
     uint64_t l_flags = 0;
 
     if((p_flags & C_VMM_PROT_USER) != 0UL) {
@@ -150,11 +154,23 @@ int vmm_map(
         l_flags |= C_VMM_PAGING_FLAG_READ_WRITE;
     }
 
+    size_t l_pml4Index = ((uintptr_t)p_vptr >> 39UL) & 0x1ffUL;
+    size_t l_pdptIndex = ((uintptr_t)p_vptr >> 30UL) & 0x1ffUL;
+    size_t l_pdIndex = ((uintptr_t)p_vptr >> 21UL) & 0x1ffUL;
+    size_t l_ptIndex = ((uintptr_t)p_vptr >> 12UL) & 0x1ffUL;
+    uintptr_t l_currentPhysicalAddress =
+        (uintptr_t)p_pptr & 0x000ffffffffff000UL;
+
+    spinlock_acquire(&p_context->m_spinlock);
+
+    uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
+
     while(l_pml4Index < 512 && l_size != 0) {
         if((l_pml4[l_pml4Index] & C_VMM_PAGING_FLAG_PRESENT) == 0UL) {
             uint64_t *l_pdpt = pmm_alloc(C_MM_PAGE_SIZE);
 
             if(l_pdpt == NULL) {
+                spinlock_release(&p_context->m_spinlock);
                 return -1;
             }
 
@@ -172,6 +188,7 @@ int vmm_map(
                 uint64_t *l_pd = pmm_alloc(C_MM_PAGE_SIZE);
 
                 if(l_pd == NULL) {
+                    spinlock_release(&p_context->m_spinlock);
                     return -1;
                 }
 
@@ -189,6 +206,7 @@ int vmm_map(
                     uint64_t *l_pt = pmm_alloc(C_MM_PAGE_SIZE);
 
                     if(l_pt == NULL) {
+                        spinlock_release(&p_context->m_spinlock);
                         return -1;
                     }
 
@@ -223,6 +241,8 @@ int vmm_map(
         l_pdptIndex = 0;
     }
 
+    spinlock_release(&p_context->m_spinlock);
+
     return 0;
 }
 
@@ -244,10 +264,14 @@ int vmm_unmap(
     size_t l_pdptIndex = ((uintptr_t)p_ptr >> 30UL) & 0x1ffUL;
     size_t l_pdIndex = ((uintptr_t)p_ptr >> 21UL) & 0x1ffUL;
     size_t l_ptIndex = ((uintptr_t)p_ptr >> 12UL) & 0x1ffUL;
+
+    spinlock_acquire(&p_context->m_spinlock);
+
     uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
 
     while(l_pml4Index < 512 && l_size != 0) {
         if((l_pml4[l_pml4Index] & C_VMM_PAGING_FLAG_PRESENT) == 0UL) {
+            spinlock_release(&p_context->m_spinlock);
             return -1;
         }
 
@@ -256,6 +280,7 @@ int vmm_unmap(
 
         while(l_pdptIndex < 512 && l_size != 0) {
             if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0UL) {
+                spinlock_release(&p_context->m_spinlock);
                 return -1;
             }
 
@@ -264,6 +289,7 @@ int vmm_unmap(
 
             while(l_pdIndex < 512 && l_size != 0) {
                 if((l_pd[l_pdIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0UL) {
+                    spinlock_release(&p_context->m_spinlock);
                     return -1;
                 }
 
@@ -293,6 +319,8 @@ int vmm_unmap(
 
         vmm_tryFreePagingStructure(l_pdpt);
     }
+    
+    spinlock_release(&p_context->m_spinlock);
 
     return 0;
 }
@@ -313,10 +341,13 @@ void *vmm_getPhysicalAddress2(
     struct ts_vmm_context *p_context,
     void *p_vptr
 ) {
+    spinlock_acquire(&p_context->m_spinlock);
+
     uint64_t *l_pml4 = (uint64_t *)p_context->m_pagingContext;
     int l_pml4Index = ((uintptr_t)p_vptr >> 39UL) & 0x1ff;
 
     if((l_pml4[l_pml4Index] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        spinlock_release(&p_context->m_spinlock);
         return NULL;
     }
 
@@ -325,10 +356,12 @@ void *vmm_getPhysicalAddress2(
     uintptr_t l_pdptAddress = l_pdpt[l_pdptIndex] & 0x000ffffffffff000;
 
     if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        spinlock_release(&p_context->m_spinlock);
         return NULL;
     }
 
     if((l_pdpt[l_pdptIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
+        spinlock_release(&p_context->m_spinlock);
         return (void *)(l_pdptAddress & 0x000fffffc0000000);
     }
 
@@ -341,10 +374,12 @@ void *vmm_getPhysicalAddress2(
         (l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PRESENT)
         == 0
     ) {
+        spinlock_release(&p_context->m_spinlock);
         return NULL;
     }
 
     if((l_pageDirectory[l_pageDirectoryIndex] & C_VMM_PAGING_FLAG_PS) != 0) {
+        spinlock_release(&p_context->m_spinlock);
         return (void *)(l_pageDirectoryAddress & 0x000fffffffe00000);
     }
 
@@ -354,8 +389,11 @@ void *vmm_getPhysicalAddress2(
         l_pageTable[l_pageTableIndex] & 0x000ffffffffff000;
 
     if((l_pageTable[l_pageTableIndex] & C_VMM_PAGING_FLAG_PRESENT) == 0) {
+        spinlock_release(&p_context->m_spinlock);
         return NULL;
     }
+
+    spinlock_release(&p_context->m_spinlock);
 
     return (void *)l_pageTableAddress;
 }
@@ -392,6 +430,8 @@ static int vmm_initKernelContext(void) {
         vmm_freeNode,
         NULL
     );
+
+    spinlock_init(&s_vmmKernelContext.m_spinlock);
 
     return 0;
 }

@@ -5,6 +5,7 @@
 
 typedef size_t t_spinlock;
 
+void spinlock_init(t_spinlock *p_spinlock);
 void spinlock_acquire(t_spinlock *p_spinlock);
 void spinlock_release(t_spinlock *p_spinlock);
 
