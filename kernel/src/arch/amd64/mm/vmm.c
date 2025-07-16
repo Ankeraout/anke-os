@@ -33,6 +33,9 @@ static void vmm_freeNode(
 );
 static int vmm_ensurePoolNotEmpty(struct ts_vmm_context *p_context);
 static int vmm_tryFreePagingStructure(uint64_t *l_pagingStructure);
+static void vmm_destroyPml4(uint64_t *p_pml4);
+static void vmm_destroyPdpt(uint64_t *p_pdpt);
+static void vmm_destroyPd(uint64_t *p_pd);
 
 int vmm_init(void) {
     // 1. Create the kernel VMM context
@@ -507,10 +510,80 @@ static int vmm_tryFreePagingStructure(uint64_t *l_pagingStructure) {
 }
 
 struct ts_vmm_context *vmm_createContext(void) {
-    // TODO
-    return NULL;
+    // Allocate context
+    struct ts_vmm_context *l_context = pmm_alloc(C_MM_PAGE_SIZE);
+
+    if(l_context == NULL) {
+        return NULL;
+    }
+
+    // Allocate a new PML4
+    uint64_t *l_pml4 = pmm_alloc(C_MM_PAGE_SIZE);
+
+    if(l_pml4 == NULL) {
+        pmm_free(l_context, C_MM_PAGE_SIZE);
+        return NULL;
+    }
+
+    l_context->m_map = NULL;
+    l_context->m_mapEntryPool = NULL;
+    l_context->m_pagingContext = (uintptr_t)l_pml4;
+    spinlock_init(&l_context->m_spinlock);
+
+    // Nothing is mapped initially
+    memset(l_pml4, 0, C_MM_PAGE_SIZE - 8UL);
+
+    // Copy the kernel entry from the kernel context
+    memcpy(
+        &l_pml4[511],
+        (void *)(s_vmmKernelContext.m_pagingContext + 4088UL),
+        8UL
+    );
+
+    return l_context;
 }
 
 void vmm_destroyContext(struct ts_vmm_context *p_context) {
-    // TODO
+    vmm_destroyPml4((uint64_t *)p_context->m_pagingContext);
+
+    // TODO: map entries from entry pool are not freed!
+
+    pmm_free(p_context, C_MM_PAGE_SIZE);
+}
+
+static void vmm_destroyPml4(uint64_t *p_pml4) {
+    for(int l_indexPml4 = 0; l_indexPml4 < 511; l_indexPml4++) {
+        if((p_pml4[l_indexPml4] & C_VMM_PAGING_FLAG_PRESENT) != 0) {
+            vmm_destroyPdpt(
+                (uint64_t *)(p_pml4[l_indexPml4] & 0xfffffffffffff000)
+            );
+        }
+    }
+
+    pmm_free(p_pml4, C_MM_PAGE_SIZE);
+}
+
+static void vmm_destroyPdpt(uint64_t *p_pdpt) {
+    for(int l_indexPdpt = 0; l_indexPdpt < 512; l_indexPdpt++) {
+        if((p_pdpt[l_indexPdpt] & C_VMM_PAGING_FLAG_PRESENT) != 0) {
+            vmm_destroyPd(
+                (uint64_t *)(p_pdpt[l_indexPdpt] & 0xfffffffffffff000)
+            );
+        }
+    }
+
+    pmm_free(p_pdpt, C_MM_PAGE_SIZE);
+}
+
+static void vmm_destroyPd(uint64_t *p_pd) {
+    for(int l_indexPd = 0; l_indexPd < 512; l_indexPd++) {
+        if((p_pd[l_indexPd] & C_VMM_PAGING_FLAG_PRESENT) != 0) {
+            pmm_free(
+                (void *)(p_pd[l_indexPd] & 0xfffffffffffff000),
+                C_MM_PAGE_SIZE
+            );
+        }
+    }
+
+    pmm_free(p_pd, C_MM_PAGE_SIZE);
 }

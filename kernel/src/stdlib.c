@@ -3,8 +3,10 @@
 #include "mm/vmm.h"
 
 void *malloc(size_t p_size) {
+    struct ts_vmm_context *l_kernelContext = vmm_getKernelContext();
+
     void *l_virtualPtr = vmm_alloc(
-        vmm_getKernelContext(),
+        l_kernelContext,
         p_size + sizeof(void *),
         C_VMM_ALLOC_FLAG_KERNEL
     );
@@ -16,13 +18,13 @@ void *malloc(size_t p_size) {
     void *l_physicalPtr = pmm_alloc(p_size + sizeof(void *));
 
     if(l_physicalPtr == NULL) {
-        vmm_free(vmm_getKernelContext(), l_virtualPtr, p_size + sizeof(void *));
+        vmm_free(l_kernelContext, l_virtualPtr, p_size + sizeof(void *));
         return NULL;
     }
 
     if(
         vmm_map(
-            vmm_getKernelContext(),
+            l_kernelContext,
             l_virtualPtr,
             l_physicalPtr,
             p_size + sizeof(void *),
@@ -30,7 +32,7 @@ void *malloc(size_t p_size) {
         ) != 0
     ) {
         pmm_free(l_physicalPtr, p_size + sizeof(void *));
-        vmm_free(vmm_getKernelContext(), l_virtualPtr, p_size + sizeof(void *));
+        vmm_free(l_kernelContext, l_virtualPtr, p_size + sizeof(void *));
         return NULL;
     }
 

@@ -65,26 +65,6 @@ void process_destroy(struct ts_process *p_process) {
         l_node = l_nextNode;
     }
 
-    // Destroy virtual memory allocations
-    l_node = p_process->m_virtualMemoryAllocationList;
-
-    while(l_node != NULL) {
-        struct ts_memoryAllocation *l_memoryAllocation =
-            (struct ts_memoryAllocation *)l_node->m_data;
-
-        vmm_free(
-            p_process->m_memoryContext,
-            l_memoryAllocation->m_ptr,
-            l_memoryAllocation->m_size
-        );
-
-        struct ts_list_node *l_nextNode = l_node->m_next;
-
-        free(l_node);
-
-        l_node = l_nextNode;
-    }
-
     // Destroy physical memory allocations
     l_node = p_process->m_physicalMemoryAllocationList;
 

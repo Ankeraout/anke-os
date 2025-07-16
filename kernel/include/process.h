@@ -14,7 +14,7 @@ struct ts_process {
     struct ts_list_node *m_childList;
     struct ts_vmm_context *m_memoryContext;
     struct ts_list_node *m_physicalMemoryAllocationList;
-    struct ts_list_node *m_virtualMemoryAllocationList;
+    size_t m_threadLocalStorageSize;
 };
 
 struct ts_process *process_new(struct ts_process *p_parent);
