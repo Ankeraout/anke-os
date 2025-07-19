@@ -7,7 +7,7 @@
 #include "string.h"
 
 #define C_VMM_ENTRIES_PER_PAGE \
-    (C_MM_PAGE_SIZE / sizeof(struct ts_mm_memoryMapEntryListNode))
+    (C_MM_PAGE_SIZE / sizeof(struct ts_memoryRange_listNode))
 
 #define C_VMM_PAGING_FLAG_PS (1 << 7)
 #define C_VMM_PAGING_FLAG_ACCESSED (1 << 5)
@@ -24,12 +24,12 @@ static struct ts_vmm_context s_vmmKernelContext;
 
 static int vmm_initKernelContext(void);
 static int vmm_refillContextEntryPool(struct ts_vmm_context *p_context);
-static struct ts_mm_memoryMapEntryListNode *vmmAllocateEntryPoolEntry(
+static struct ts_memoryRange_listNode *vmmAllocateEntryPoolEntry(
     struct ts_vmm_context *p_context
 );
 static void vmm_freeNode(
     void *p_context,
-    struct ts_mm_memoryMapEntryListNode *p_node
+    struct ts_memoryRange_listNode *p_node
 );
 static int vmm_ensurePoolNotEmpty(struct ts_vmm_context *p_context);
 static int vmm_tryFreePagingStructure(uint64_t *l_pagingStructure);
@@ -116,12 +116,12 @@ int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size) {
         return -1;
     }
 
-    struct ts_mm_memoryMapEntryListNode *l_newNode = p_context->m_mapEntryPool;
+    struct ts_memoryRange_listNode *l_newNode = p_context->m_mapEntryPool;
 
     p_context->m_mapEntryPool = l_newNode->m_next;
 
-    l_newNode->m_data.m_base = p_ptr;
-    l_newNode->m_data.m_size = l_size;
+    l_newNode->m_memoryRange.m_ptr = p_ptr;
+    l_newNode->m_memoryRange.m_size = l_size;
 
     mm_addNodeToMap(&p_context->m_map, l_newNode, vmm_freeNode, p_context);
 
@@ -416,7 +416,7 @@ static int vmm_initKernelContext(void) {
     // Allocate one entry from the pool to map usable kernel space between
     // [0xffff800000000000-0xffffffff7fffffff] (last PML4 entry - last 2 GiB)
     // The last 2 GiB are reserved for the kernel.
-    struct ts_mm_memoryMapEntryListNode *l_kernelSpaceEntry =
+    struct ts_memoryRange_listNode *l_kernelSpaceEntry =
         vmmAllocateEntryPoolEntry(&s_vmmKernelContext);
 
     if(l_kernelSpaceEntry == NULL) {
@@ -424,8 +424,8 @@ static int vmm_initKernelContext(void) {
     }
 
     l_kernelSpaceEntry->m_next = NULL;
-    l_kernelSpaceEntry->m_data.m_base = (void *)0xffffff8000000000;
-    l_kernelSpaceEntry->m_data.m_size = 0x0000008000000000;
+    l_kernelSpaceEntry->m_memoryRange.m_ptr = (void *)0xffffff8000000000;
+    l_kernelSpaceEntry->m_memoryRange.m_size = 0x0000008000000000;
 
     mm_addNodeToMap(
         &s_vmmKernelContext.m_map,
@@ -440,7 +440,7 @@ static int vmm_initKernelContext(void) {
 }
 
 static int vmm_refillContextEntryPool(struct ts_vmm_context *p_context) {
-    struct ts_mm_memoryMapEntryListNode *l_nodePool = pmm_alloc(C_MM_PAGE_SIZE);
+    struct ts_memoryRange_listNode *l_nodePool = pmm_alloc(C_MM_PAGE_SIZE);
 
     if(l_nodePool == NULL) {
         return -1;
@@ -458,14 +458,14 @@ static int vmm_refillContextEntryPool(struct ts_vmm_context *p_context) {
     return 0;
 }
 
-static struct ts_mm_memoryMapEntryListNode *vmmAllocateEntryPoolEntry(
+static struct ts_memoryRange_listNode *vmmAllocateEntryPoolEntry(
     struct ts_vmm_context *p_context
 ) {
     if(vmm_ensurePoolNotEmpty(p_context) != 0) {
         return NULL;
     }
 
-    struct ts_mm_memoryMapEntryListNode *l_entry = p_context->m_mapEntryPool;
+    struct ts_memoryRange_listNode *l_entry = p_context->m_mapEntryPool;
 
     p_context->m_mapEntryPool = l_entry->m_next;
 
@@ -474,7 +474,7 @@ static struct ts_mm_memoryMapEntryListNode *vmmAllocateEntryPoolEntry(
 
 static void vmm_freeNode(
     void *p_context,
-    struct ts_mm_memoryMapEntryListNode *p_node
+    struct ts_memoryRange_listNode *p_node
 ) {
     struct ts_vmm_context *l_context = (struct ts_vmm_context *)p_context;
 

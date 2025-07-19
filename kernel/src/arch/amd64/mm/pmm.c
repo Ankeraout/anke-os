@@ -2,11 +2,11 @@
 #include "mm/pmm.h"
 #include "spinlock.h"
 
-static struct ts_mm_memoryMapEntryListNode *s_freeMemoryEntryList;
+static struct ts_memoryRange_listNode *s_freeMemoryEntryList;
 static t_spinlock s_spinlock;
 
 int pmm_init(
-    const struct ts_mm_memoryMapEntry *p_memoryMap,
+    const struct ts_memoryRange *p_memoryMap,
     int p_memoryMapEntryCount
 ) {
     s_freeMemoryEntryList = NULL;
@@ -18,11 +18,11 @@ int pmm_init(
         }
 
         // Initialize the corresponding entry in the list
-        struct ts_mm_memoryMapEntryListNode *l_node =
-            (struct ts_mm_memoryMapEntryListNode *)p_memoryMap[l_index].m_base;
+        struct ts_memoryRange_listNode *l_node =
+            (struct ts_memoryRange_listNode *)p_memoryMap[l_index].m_ptr;
 
-        l_node->m_data.m_base = p_memoryMap[l_index].m_base;
-        l_node->m_data.m_size = p_memoryMap[l_index].m_size;
+        l_node->m_memoryRange.m_ptr = p_memoryMap[l_index].m_ptr;
+        l_node->m_memoryRange.m_size = p_memoryMap[l_index].m_size;
         l_node->m_next = s_freeMemoryEntryList;
         s_freeMemoryEntryList = l_node;
     }
@@ -42,11 +42,11 @@ void *pmm_alloc(size_t p_size) {
 
 void pmm_free(void *p_ptr, size_t p_size) {
     size_t l_size = mm_roundUpPage(p_size);
-    struct ts_mm_memoryMapEntryListNode *l_newNode =
-        (struct ts_mm_memoryMapEntryListNode *)p_ptr;
+    struct ts_memoryRange_listNode *l_newNode =
+        (struct ts_memoryRange_listNode *)p_ptr;
 
-    l_newNode->m_data.m_base = p_ptr;
-    l_newNode->m_data.m_size = l_size;
+    l_newNode->m_memoryRange.m_ptr = p_ptr;
+    l_newNode->m_memoryRange.m_size = l_size;
 
     spinlock_acquire(&s_spinlock);
 

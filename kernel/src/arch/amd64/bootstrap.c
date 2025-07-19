@@ -6,6 +6,7 @@
 #include "mm/mm.h"
 #include "mm/pmm.h"
 #include "printk.h"
+#include "memoryRange.h"
 
 #define C_MAX_MEMORY_MAP_ENTRIES 128
 
@@ -33,7 +34,7 @@ struct limine_framebuffer_request g_framebufferRequest = {
     .response = NULL
 };
 
-static struct ts_mm_memoryMapEntry s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
+static struct ts_memoryRange s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
 
 void bootstrap(void) {
     if(g_memoryMapRequest.response == NULL) {
@@ -61,7 +62,7 @@ void bootstrap(void) {
                 break;
             }
 
-            s_memoryMap[l_memoryMapEntryCount].m_base =
+            s_memoryMap[l_memoryMapEntryCount].m_ptr =
                 (void *)g_memoryMapRequest.response->entries[l_i]->base;
             s_memoryMap[l_memoryMapEntryCount].m_size =
                 (size_t)g_memoryMapRequest.response->entries[l_i]->length;

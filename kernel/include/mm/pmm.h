@@ -17,7 +17,7 @@
  * @retval 0 on success
 */
 int pmm_init(
-    const struct ts_mm_memoryMapEntry *p_memoryMap,
+    const struct ts_memoryRange *p_memoryMap,
     int s_memoryMapEntryCount
 );
 

@@ -17,9 +17,9 @@
 
 struct ts_vmm_context {
 
-    struct ts_mm_memoryMapEntryListNode *m_map;
+    struct ts_memoryRange_listNode *m_map;
     uintptr_t m_pagingContext;
-    struct ts_mm_memoryMapEntryListNode *m_mapEntryPool;
+    struct ts_memoryRange_listNode *m_mapEntryPool;
     t_spinlock m_spinlock;
 };
 
