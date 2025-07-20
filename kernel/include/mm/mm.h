@@ -19,6 +19,7 @@ void mm_tryMergeNodes(
     void *p_freeNodeContext
 );
 void *mm_alloc(struct ts_memoryRange_listNode **p_map, size_t p_size);
+void *mm_allocPages(struct ts_memoryRange_listNode **p_map, size_t p_size);
 void mm_addNodeToMap(
     struct ts_memoryRange_listNode **p_map,
     struct ts_memoryRange_listNode *p_node,

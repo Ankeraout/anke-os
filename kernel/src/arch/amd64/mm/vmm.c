@@ -99,7 +99,7 @@ void *vmm_alloc(struct ts_vmm_context *p_context, size_t p_size, int p_flags) {
 
     spinlock_acquire(&p_context->m_spinlock);
     
-    void *l_returnValue = mm_alloc(&l_context->m_map, p_size);
+    void *l_returnValue = mm_allocPages(&l_context->m_map, p_size);
 
     spinlock_release(&l_context->m_spinlock);
 

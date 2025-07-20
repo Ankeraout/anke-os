@@ -51,17 +51,15 @@ void mm_tryMergeNodes(
 }
 
 void *mm_alloc(struct ts_memoryRange_listNode **p_map, size_t p_size) {
-    size_t l_size = mm_roundUpPage(p_size);
-
     struct ts_memoryRange_listNode *l_previousNode = NULL;
     struct ts_memoryRange_listNode *l_node = *p_map;
 
     while(l_node != NULL) {
-        if(l_node->m_memoryRange.m_size < l_size) {
+        if(l_node->m_memoryRange.m_size < p_size) {
             l_previousNode = l_node;
             l_node = l_node->m_next;
             continue;
-        } else if(l_node->m_memoryRange.m_size == l_size) {
+        } else if(l_node->m_memoryRange.m_size == p_size) {
             if(l_node == *p_map) {
                 *p_map = (*p_map)->m_next;
             } else {
@@ -73,15 +71,19 @@ void *mm_alloc(struct ts_memoryRange_listNode **p_map, size_t p_size) {
             uintptr_t l_startAddress =
                 (uintptr_t)l_node->m_memoryRange.m_ptr
                 + l_node->m_memoryRange.m_size
-                - l_size;
+                - p_size;
 
-            l_node->m_memoryRange.m_size -= l_size;
+            l_node->m_memoryRange.m_size -= p_size;
 
             return (void *)l_startAddress;
         }
     }
 
     return NULL;
+}
+
+void *mm_allocPages(struct ts_memoryRange_listNode **p_map, size_t p_size) {
+    return mm_alloc(p_map, mm_roundUpPage(p_size));
 }
 
 void mm_addNodeToMap(

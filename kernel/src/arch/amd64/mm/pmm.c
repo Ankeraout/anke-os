@@ -33,7 +33,7 @@ int pmm_init(
 void *pmm_alloc(size_t p_size) {
     spinlock_acquire(&s_spinlock);
 
-    void *l_returnValue = mm_alloc(&s_freeMemoryEntryList, p_size);
+    void *l_returnValue = mm_allocPages(&s_freeMemoryEntryList, p_size);
 
     spinlock_release(&s_spinlock);
 
