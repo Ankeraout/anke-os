@@ -1,9 +1,11 @@
 #include <stdbool.h>
 
 #include "arch/amd64/asm.h"
+#include "errno.h"
 #include "mm/pmm.h"
 #include "mm/vmm.h"
 #include "printk.h"
+#include "stdlib.h"
 #include "string.h"
 
 #define C_VMM_ENTRIES_PER_PAGE \
@@ -549,6 +551,110 @@ void vmm_destroyContext(struct ts_vmm_context *p_context) {
     // TODO: map entries from entry pool are not freed!
 
     pmm_free(p_context, C_MM_PAGE_SIZE);
+}
+
+void *vmm_allocAndMap(
+    struct ts_vmm_context *p_context,
+    struct ts_memoryRange_listNode **p_memoryRangeList,
+    size_t p_size,
+    int p_allocFlags,
+    int p_mapFlags
+) {
+    void *l_virtualPtr = vmm_alloc(
+        p_context,
+        p_size,
+        p_allocFlags
+    );
+
+    if(l_virtualPtr == NULL) {
+        return NULL;
+    }
+
+    size_t l_allocBlockSize = mm_roundUpPage(p_size);
+    size_t l_allocatedPhysicalMemory = 0;
+    struct ts_memoryRange_listNode *l_memoryRangeList = NULL;
+
+    while(l_allocatedPhysicalMemory < p_size) {
+        void *l_physicalPtr = pmm_alloc(l_allocBlockSize);
+
+        if(l_physicalPtr == NULL) {
+            if(l_allocBlockSize == C_MM_PAGE_SIZE) {
+                break;
+            }
+
+            l_allocBlockSize >>= 1UL;
+
+            continue;
+        }
+
+        struct ts_memoryRange_listNode *l_listNode = NULL;
+        
+        if(p_memoryRangeList != NULL) {
+            l_listNode = malloc(sizeof(struct ts_memoryRange_listNode));
+
+            if(l_listNode == NULL) {
+                pmm_free(l_physicalPtr, l_allocBlockSize);
+                break;
+            }
+        }
+
+        if(
+            vmm_map(
+                p_context,
+                (void *)((uintptr_t)l_virtualPtr + l_allocatedPhysicalMemory),
+                l_physicalPtr,
+                l_allocBlockSize,
+                p_mapFlags
+            ) != 0
+        ) {
+            if(p_memoryRangeList != NULL) {
+                free(l_listNode);
+            }
+
+            pmm_free(l_physicalPtr, l_allocBlockSize);
+            break;
+        }
+
+        if(p_memoryRangeList != NULL) {
+            l_listNode->m_memoryRange.m_ptr = l_physicalPtr;
+            l_listNode->m_memoryRange.m_size = l_allocBlockSize;
+
+            if(l_memoryRangeList == NULL) {
+                l_listNode->m_next = *p_memoryRangeList;
+            } else {
+                l_listNode->m_next = l_memoryRangeList;
+            }
+
+            l_memoryRangeList = l_listNode;
+        }
+
+        l_allocatedPhysicalMemory += l_allocBlockSize;
+    }
+
+    if(l_allocatedPhysicalMemory < p_size) {
+        while(l_allocatedPhysicalMemory != 0UL) {
+            pmm_free(
+                vmm_getPhysicalAddress(
+                    (void *)(
+                        (uintptr_t)l_virtualPtr + l_allocatedPhysicalMemory
+                    )
+                ),
+                C_MM_PAGE_SIZE
+            );
+
+            l_allocatedPhysicalMemory -= C_MM_PAGE_SIZE;
+        }
+
+        vmm_free(p_context, l_virtualPtr, p_size);
+
+        return NULL;
+    }
+
+    if(p_memoryRangeList != NULL) {
+        *p_memoryRangeList = l_memoryRangeList;
+    }
+
+    return l_virtualPtr;
 }
 
 static void vmm_destroyPml4(uint64_t *p_pml4) {

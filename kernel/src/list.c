@@ -22,6 +22,8 @@ void list_remove(struct ts_list_node **p_list, void *p_data) {
     struct ts_list_node *l_node = *p_list;
 
     while(l_node != NULL) {
+        struct ts_list_node *l_nextNode = l_node->m_next;
+
         if(l_node->m_data == p_data) {
             if(l_previousNode == NULL) {
                 *p_list = (*p_list)->m_next;
@@ -32,6 +34,8 @@ void list_remove(struct ts_list_node **p_list, void *p_data) {
             l_previousNode = l_node;
         }
 
-        l_node = l_node->m_next;
+        free(l_node);
+
+        l_node = l_nextNode;
     }
 }

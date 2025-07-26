@@ -16,7 +16,6 @@
 #define C_VMM_ALLOC_FLAG_KERNEL (1 << 0)
 
 struct ts_vmm_context {
-
     struct ts_memoryRange_listNode *m_map;
     uintptr_t m_pagingContext;
     struct ts_memoryRange_listNode *m_mapEntryPool;
@@ -109,5 +108,12 @@ void *vmm_getPhysicalAddress2(
 );
 struct ts_vmm_context *vmm_createContext(void);
 void vmm_destroyContext(struct ts_vmm_context *p_context);
+void *vmm_allocAndMap(
+    struct ts_vmm_context *p_context,
+    struct ts_memoryRange_listNode **p_memoryRangeList,
+    size_t p_size,
+    int p_allocFlags,
+    int p_mapFlags
+);
 
 #endif

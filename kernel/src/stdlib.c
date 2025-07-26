@@ -50,6 +50,10 @@ void *malloc(size_t p_size) {
 }
 
 void free(void *p_ptr) {
+    if(p_ptr == NULL) {
+        return;
+    }
+
     union tu_malloc_blockHeader *l_blockHeader =
         (union tu_malloc_blockHeader *)((uintptr_t)p_ptr - sizeof(size_t));
 
