@@ -12,17 +12,23 @@ int pmm_init(
     s_freeMemoryEntryList = NULL;
 
     for(int l_index = p_memoryMapEntryCount - 1; l_index >= 0; l_index--) {
-        if(p_memoryMap[l_index].m_size < C_MM_PAGE_SIZE) {
+        // Round start to the nearest page
+        size_t l_startAddress =
+            mm_roundUpPage((size_t)p_memoryMap[l_index].m_ptr);
+        size_t l_size = p_memoryMap[l_index].m_size -
+            (l_startAddress - (size_t)p_memoryMap[l_index].m_ptr);
+
+        if(l_size < C_MM_PAGE_SIZE) {
             // We cannot use free memory sections that are smaller than a page.
             continue;
         }
 
         // Initialize the corresponding entry in the list
         struct ts_memoryRange_listNode *l_node =
-            (struct ts_memoryRange_listNode *)p_memoryMap[l_index].m_ptr;
+            (struct ts_memoryRange_listNode *)l_startAddress;
 
-        l_node->m_memoryRange.m_ptr = p_memoryMap[l_index].m_ptr;
-        l_node->m_memoryRange.m_size = p_memoryMap[l_index].m_size;
+        l_node->m_memoryRange.m_ptr = (void *)l_startAddress;
+        l_node->m_memoryRange.m_size = l_size;
         l_node->m_next = s_freeMemoryEntryList;
         s_freeMemoryEntryList = l_node;
     }
