@@ -85,4 +85,8 @@ static inline void asm_hlt(void) {
     asm("hlt");
 }
 
+static inline void asm_ltr(uint16_t p_selector) {
+    asm("ltr %0" :: "r"(p_selector));
+}
+
 #endif
