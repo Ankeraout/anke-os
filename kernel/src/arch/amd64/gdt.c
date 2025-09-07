@@ -12,7 +12,7 @@ struct ts_gdt_entry {
     uint64_t m_base_24_31 : 8;
 } __attribute__((packed));
 
-static void gdt_initEntry(
+static void gdt_initSegmentEntry(
     struct ts_gdt_entry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
@@ -21,19 +21,17 @@ static void gdt_initEntry(
 );
 
 static __attribute__((aligned(sizeof(struct ts_gdt_entry)))) struct ts_gdt_entry
-    s_gdt[5];
+    s_gdt[3];
 
 void gdt_init(void) {
-    gdt_initEntry(&s_gdt[0], 0, 0, 0, 0); // Null entry
-    gdt_initEntry(&s_gdt[1], 0, 0, 0x9a, 0x02); // 64-bit kernel code
-    gdt_initEntry(&s_gdt[2], 0, 0, 0x92, 0x02); // 64-bit kernel data
-    gdt_initEntry(&s_gdt[3], 0, 0, 0xfa, 0x02); // 64-bit user code
-    gdt_initEntry(&s_gdt[4], 0, 0, 0xf2, 0x02); // 64-bit user data
+    gdt_initSegmentEntry(&s_gdt[0], 0, 0, 0, 0); // Null entry
+    gdt_initSegmentEntry(&s_gdt[1], 0, 0, 0x9b, 0x02); // 64-bit kernel code
+    gdt_initSegmentEntry(&s_gdt[2], 0, 0, 0xfb, 0x00); // 64-bit user code
 
     asm_lgdt(s_gdt, sizeof(s_gdt) - 1);
 
     asm(
-        "movw $0x10, %ax \n"
+        "xorw %ax, %ax \n"
         "movw %ax, %ds \n"
         "movw %ax, %es \n"
         "movw %ax, %fs \n"
@@ -48,7 +46,7 @@ void gdt_init(void) {
     pr_info("gdt: GDT loaded.\n");
 }
 
-static void gdt_initEntry(
+static void gdt_initSegmentEntry(
     struct ts_gdt_entry *p_entry,
     uint32_t p_base,
     uint32_t p_limit,
