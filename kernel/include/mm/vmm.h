@@ -53,6 +53,7 @@ void *vmm_alloc(struct ts_vmm_context *p_context, size_t p_size, int p_flags);
  * @retval 0 on success.
  * 
  * @note Freeing a part of a previously allocated zone is undefined behavior.
+ * @note This operation does not unmap memory.
 */
 int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size);
 
@@ -87,6 +88,8 @@ int vmm_map(
  * 
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
+ * 
+ * @note This operation does not free the memory.
 */
 int vmm_unmap(
     struct ts_vmm_context *p_context,
@@ -108,12 +111,5 @@ void *vmm_getPhysicalAddress2(
 );
 struct ts_vmm_context *vmm_createContext(void);
 void vmm_destroyContext(struct ts_vmm_context *p_context);
-void *vmm_allocAndMap(
-    struct ts_vmm_context *p_context,
-    struct ts_memoryRange_listNode **p_memoryRangeList,
-    size_t p_size,
-    int p_allocFlags,
-    int p_mapFlags
-);
 
 #endif
