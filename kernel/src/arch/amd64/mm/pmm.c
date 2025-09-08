@@ -1,6 +1,13 @@
+#include <stdbool.h>
+
 #include "mm/mm.h"
 #include "mm/pmm.h"
 #include "spinlock.h"
+
+static void pmm_tryMergeNodes(
+    struct ts_memoryRange_listNode *p_node,
+    struct ts_memoryRange_listNode *p_nextNode
+);
 
 static struct ts_memoryRange_listNode *s_freeMemoryEntryList;
 static t_spinlock s_spinlock;
@@ -15,17 +22,29 @@ int pmm_init(
         // Round start to the nearest page
         size_t l_startAddress =
             mm_roundUpPage((size_t)p_memoryMap[l_index].m_ptr);
-        size_t l_size = p_memoryMap[l_index].m_size -
-            (l_startAddress - (size_t)p_memoryMap[l_index].m_ptr);
+        size_t l_rangeStartOffset =
+            (size_t)p_memoryMap[l_index].m_ptr - l_startAddress;
 
-        if(l_size < C_MM_PAGE_SIZE) {
-            // We cannot use free memory sections that are smaller than a page.
+        // The entry does not contain a full page.
+        if(p_memoryMap[l_index].m_size < l_rangeStartOffset) {
+            continue;
+        }
+
+        size_t l_size =
+            mm_roundDownPage(
+                p_memoryMap[l_index].m_size
+                - (l_startAddress - (size_t)p_memoryMap[l_index].m_ptr)
+            );
+
+        if(l_size == 0) {
+            // The entry does not contain a full page.
             continue;
         }
 
         // Initialize the corresponding entry in the list
-        struct ts_memoryRange_listNode *l_node =
-            (struct ts_memoryRange_listNode *)l_startAddress;
+        struct ts_memoryRange_listNode *l_node = pmm_physicalToLinear(
+            (struct ts_memoryRange_listNode *)l_startAddress
+        );
 
         l_node->m_memoryRange.m_ptr = (void *)l_startAddress;
         l_node->m_memoryRange.m_size = l_size;
@@ -37,9 +56,43 @@ int pmm_init(
 }
 
 void *pmm_alloc(size_t p_size) {
+    void *l_returnValue = NULL;
+
     spinlock_acquire(&s_spinlock);
 
-    void *l_returnValue = mm_allocPages(&s_freeMemoryEntryList, p_size);
+    size_t l_size = mm_roundUpPage(p_size);
+
+    // Look for entries with size >= l_size.
+
+    bool l_found = false;
+    struct ts_memoryRange_listNode *l_previousNode = NULL;
+    struct ts_memoryRange_listNode *l_node = s_freeMemoryEntryList;
+
+    while((!l_found) && (l_node != NULL)) {
+        if(l_node->m_memoryRange.m_size >= l_size) {
+            l_found = true;
+        } else {
+            l_previousNode = l_node;
+            l_node = l_node->m_next;
+        }
+    }
+
+    if(l_found) {
+        size_t l_startAddress = (size_t)l_node->m_memoryRange.m_ptr
+            + l_node->m_memoryRange.m_size - l_size;
+        
+        if(l_node->m_memoryRange.m_size == l_size) {
+            if(l_previousNode == NULL) {
+                s_freeMemoryEntryList = l_node->m_next;
+            } else {
+                l_previousNode->m_next = l_node->m_next;
+            }
+        } else {
+            l_node->m_memoryRange.m_size -= l_size;
+        }
+
+        l_returnValue = (void *)l_startAddress;
+    }
 
     spinlock_release(&s_spinlock);
 
@@ -48,15 +101,58 @@ void *pmm_alloc(size_t p_size) {
 
 void pmm_free(void *p_ptr, size_t p_size) {
     size_t l_size = mm_roundUpPage(p_size);
-    struct ts_memoryRange_listNode *l_newNode =
-        (struct ts_memoryRange_listNode *)p_ptr;
+    
+    struct ts_memoryRange_listNode *l_newNode = pmm_physicalToLinear(
+        (struct ts_memoryRange_listNode *)p_ptr
+    );
 
     l_newNode->m_memoryRange.m_ptr = p_ptr;
     l_newNode->m_memoryRange.m_size = l_size;
 
     spinlock_acquire(&s_spinlock);
 
-    mm_addNodeToMap(&s_freeMemoryEntryList, l_newNode, NULL, NULL);
+    // Locate the previous and next nodes.
+    struct ts_memoryRange_listNode *l_previousNode = NULL;
+    struct ts_memoryRange_listNode *l_nextNode = s_freeMemoryEntryList;
+
+    while((l_nextNode != NULL) && (l_nextNode->m_memoryRange.m_ptr < p_ptr)) {
+        l_previousNode = l_nextNode;
+        l_nextNode = l_nextNode->m_next;
+    }
+
+    // Add the node to the ordered node list.
+    l_newNode->m_next = l_nextNode;
+
+    if(l_previousNode == NULL) {
+        s_freeMemoryEntryList = l_newNode;
+    } else {
+        l_previousNode->m_next = l_newNode;
+    }
+
+    // Try to merge with the previous node.
+    if(l_previousNode != NULL) {
+        pmm_tryMergeNodes(l_previousNode, l_newNode);
+    }
+
+    // Try to merge with the next node.
+    if(l_nextNode != NULL) {
+        pmm_tryMergeNodes(l_newNode, l_nextNode);
+    }
 
     spinlock_release(&s_spinlock);
+}
+
+static void pmm_tryMergeNodes(
+    struct ts_memoryRange_listNode *p_node,
+    struct ts_memoryRange_listNode *p_nextNode
+) {
+    void *l_endPtr = (void *)(
+        (uintptr_t)p_node->m_memoryRange.m_ptr
+        + p_node->m_memoryRange.m_size
+    );
+
+    if(l_endPtr == p_nextNode->m_memoryRange.m_ptr) {
+        p_node->m_next = p_nextNode->m_next;
+        p_node->m_memoryRange.m_size += p_nextNode->m_memoryRange.m_size;
+    }
 }

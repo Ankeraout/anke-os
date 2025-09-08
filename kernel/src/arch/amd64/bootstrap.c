@@ -34,16 +34,25 @@ struct limine_framebuffer_request g_framebufferRequest = {
     .response = NULL
 };
 
+struct limine_hhdm_request g_hhdmRequest = {
+    .id = LIMINE_HHDM_REQUEST,
+    .revision = 3,
+    .response = NULL
+};
+
 static struct ts_memoryRange s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
+
+static void halt(void);
 
 void bootstrap(void) {
     if(g_memoryMapRequest.response == NULL) {
         pr_crit("bootstrap: No memory map provided by the bootloader.\n");
-        
-        while(1) {
-            asm_cli();
-            asm_hlt();
-        }
+        halt();
+    }
+
+    if(g_hhdmRequest.response == NULL) {
+        pr_crit("bootstrap: No HHDM pointer provided by the bootloader.\n");
+        halt();
     }
 
     int l_memoryMapEntryCount = 0;
@@ -73,11 +82,7 @@ void bootstrap(void) {
 
     if(pmm_init(s_memoryMap, l_memoryMapEntryCount) != 0) {
         pr_crit("bootstrap: pmmInit() failed.\n");
-        
-        while(1) {
-            asm_cli();
-            asm_hlt();
-        }
+        halt();
     }
 
     if(g_rsdpRequest.response != NULL) {
@@ -85,5 +90,12 @@ void bootstrap(void) {
         acpi_setRsdpLocation(g_rsdpRequest.response->address);
     } else {
         pr_info("bootstrap: No RSDP provided by the bootloader.\n");
+    }
+}
+
+static void halt(void) {
+    while(1) {
+        asm_cli();
+        asm_hlt();
     }
 }

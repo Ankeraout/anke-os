@@ -39,4 +39,31 @@ void *pmm_alloc(size_t p_size);
 */
 void pmm_free(void *p_ptr, size_t p_size);
 
+/**
+ * @brief Pointer to the HHDM.
+ */
+extern void *g_pmm_hhdm;
+
+/**
+ * @brief Converts a linear pointer to a physical pointer.
+ * 
+ * @param[in] p_ptr The pointer in linear memory space.
+ * 
+ * @returns The pointer in physical memory space.
+ */
+static inline void *pmm_linearToPhysical(void *p_ptr) {
+    return (void *)((uintptr_t)p_ptr - (uintptr_t)g_pmm_hhdm);
+}
+
+/**
+ * @brief Converts a physical pointer to a linear pointer.
+ * 
+ * @param[in] p_ptr The pointer in physical memory space.
+ * 
+ * @returns The pointer in linear memory space.
+ */
+static inline void *pmm_physicalToLinear(void *p_ptr) {
+    return (void *)((uintptr_t)p_ptr + (uintptr_t)g_pmm_hhdm);
+}
+
 #endif
