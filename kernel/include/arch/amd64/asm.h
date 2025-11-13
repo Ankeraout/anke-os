@@ -89,4 +89,30 @@ static inline void asm_ltr(uint16_t p_selector) {
     asm("ltr %0" :: "r"(p_selector));
 }
 
+static inline uint64_t asm_rdmsr(uint32_t p_msr) {
+    uint32_t l_low;
+    uint32_t l_high;
+
+    asm volatile("rdmsr" : "=a"(l_low), "=d"(l_high) : "c"(p_msr));
+
+    return ((uint64_t)l_high << 32UL) | l_low;
+}
+
+static inline void asm_wrmsr(uint32_t p_msr, uint64_t p_value) {
+    uint32_t l_low = p_value;
+    uint32_t l_high = p_value >> 32;
+
+    asm volatile("wrmsr" :: "a"(l_low), "d"(l_high), "c"(p_msr));
+}
+
+static inline void asm_cpuid(
+    uint32_t p_code,
+    uint32_t *p_eax,
+    uint32_t *p_edx
+) {
+    asm volatile(
+        "cpuid" : "=a"(*p_eax), "=d"(*p_edx) : "a"(p_code) : "ecx", "ebx"
+    );
+}
+
 #endif

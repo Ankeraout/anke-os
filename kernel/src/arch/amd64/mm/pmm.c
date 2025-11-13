@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "bootstrap.h"
 #include "mm/mm.h"
 #include "mm/pmm.h"
 #include "spinlock.h"
@@ -12,28 +13,30 @@ static void pmm_tryMergeNodes(
 static struct ts_memoryRange_listNode *s_freeMemoryEntryList;
 static t_spinlock s_spinlock;
 
-int pmm_init(
-    const struct ts_memoryRange *p_memoryMap,
-    int p_memoryMapEntryCount
-) {
+int pmm_init(void) {
+    struct ts_memoryRange *l_memoryMap;
+    size_t l_memoryMapEntryCount;
+
+    bootstrap_getMemoryMap(&l_memoryMap, &l_memoryMapEntryCount);
+
     s_freeMemoryEntryList = NULL;
 
-    for(int l_index = p_memoryMapEntryCount - 1; l_index >= 0; l_index--) {
+    for(int l_index = l_memoryMapEntryCount - 1; l_index >= 0; l_index--) {
         // Round start to the nearest page
         size_t l_startAddress =
-            mm_roundUpPage((size_t)p_memoryMap[l_index].m_ptr);
+            mm_roundUpPage((size_t)l_memoryMap[l_index].m_ptr);
         size_t l_rangeStartOffset =
-            (size_t)p_memoryMap[l_index].m_ptr - l_startAddress;
+            (size_t)l_memoryMap[l_index].m_ptr - l_startAddress;
 
         // The entry does not contain a full page.
-        if(p_memoryMap[l_index].m_size < l_rangeStartOffset) {
+        if(l_memoryMap[l_index].m_size < l_rangeStartOffset) {
             continue;
         }
 
         size_t l_size =
             mm_roundDownPage(
-                p_memoryMap[l_index].m_size
-                - (l_startAddress - (size_t)p_memoryMap[l_index].m_ptr)
+                l_memoryMap[l_index].m_size
+                - (l_startAddress - (size_t)l_memoryMap[l_index].m_ptr)
             );
 
         if(l_size == 0) {

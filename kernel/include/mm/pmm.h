@@ -9,17 +9,10 @@
 /**
  * @brief Initializes the physical memory manager.
  * 
- * @param[in] p_memoryMap An array of memory map entries, representing the
- * memory map of the system.
- * @param[in] s_memoryMapEntryCount The number of entries in the memory map.
- * 
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success
 */
-int pmm_init(
-    const struct ts_memoryRange *p_memoryMap,
-    int s_memoryMapEntryCount
-);
+int pmm_init(void);
 
 /**
  * @brief Requests a chunk of physical memory.

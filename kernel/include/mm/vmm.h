@@ -6,19 +6,41 @@
 #include "mm/mm.h"
 #include "spinlock.h"
 
-#define C_VMM_PROT_USER (1 << 0)
-#define C_VMM_PROT_KERNEL 0
 #define C_VMM_PROT_READ_ONLY 0
 #define C_VMM_PROT_READ_WRITE (1 << 1)
-#define C_VMM_PROT_DATA 0
 #define C_VMM_PROT_EXEC (1 << 2)
-
-#define C_VMM_ALLOC_FLAG_KERNEL (1 << 0)
+#define C_VMM_PROT_RO 0
+#define C_VMM_PROT_RW C_VMM_PROT_READ_WRITE
+#define C_VMM_PROT_RX C_VMM_PROT_READ_WRITE | C_VMM_PROT_EXEC
+#define C_VMM_PROT_X C_VMM_PROT_EXEC
+#define C_VMM_CACHE_WRITEBACK 0
+#define C_VMM_CACHE_WRITETHROUGH (1 << 3)
+#define C_VMM_CACHE_UNCACHED_MTRR (2 << 3)
+#define C_VMM_CACHE_UNCACHED (3 << 3)
+#define C_VMM_CACHE_WRITEPROTECT (4 << 3)
+#define C_VMM_CACHE_WRITECOMBINING (5 << 3)
 
 struct ts_vmm_context {
+    /**
+     * @brief This list contains the memory ranges (pages) that were allocated.
+     */
+    struct ts_memoryRange_listNode *m_memoryAllocations;
+
+    /**
+     * @brief This list stores the free virtual memory space entries.
+     */
     struct ts_memoryRange_listNode *m_map;
-    uintptr_t m_pagingContext;
+
+    /**
+     * @brief This list stores the free memory range entries of the VMM context.
+     */
     struct ts_memoryRange_listNode *m_mapEntryPool;
+
+    /**
+     * @brief This member contains the pointer to the physical address of the
+     * PML4.
+     */
+    void *m_pagingContext;
     t_spinlock m_spinlock;
 };
 
@@ -66,7 +88,8 @@ int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size);
  * @param[in] p_pptr The address in physical memory of the zone that will be
  * mapped.
  * @param[in] p_size The size of the zone that will be mapped.
- * @param[in] p_flags The flags of the mapping operation.
+ * @param[in] p_flags The flags of the mapping operation (C_VMM_PROT_* and
+ * C_VMM_CACHE_*).
  * 
  * @returns An integer that indicates the result of the operation.
  * @retval 0 on success.
@@ -97,19 +120,48 @@ int vmm_unmap(
     size_t p_size
 );
 
-/**
- * @brief Returns the kernel VMM context.
- * 
- * @returns The kernel VMM context.
-*/
-struct ts_vmm_context *vmm_getKernelContext(void);
-
 void *vmm_getPhysicalAddress(void *p_vptr);
 void *vmm_getPhysicalAddress2(
     struct ts_vmm_context *p_context,
     void *p_vptr
 );
+
+/**
+ * @brief Creates a new user VMM context that can be used for applications.
+ * 
+ * @returns A new user VMM context that can be used for applications.
+ */
 struct ts_vmm_context *vmm_createContext(void);
+
+/**
+ * @brief Destroys a user VMM context.
+ * 
+ * @param[in] p_context The VMM context to destroy.
+ */
 void vmm_destroyContext(struct ts_vmm_context *p_context);
+
+/**
+ * @brief Maps a MMIO space into kernel memory space.
+ * 
+ * @param[in] p_pptr A pointer to the physical address of the MMIO range.
+ * @param[in] p_size The size of the MMIO range in bytes.
+ * @param[in] p_flags Flags (C_VMM_CACHE_* and C_VMM_PROT_*)
+ * 
+ * @returns A pointer to the mapped MMIO range.
+ */
+void *vmm_mapMmio(void *p_pptr, size_t p_size, int p_flags);
+
+/**
+ * @brief Unmaps a MMIO space from kernel memory space.
+ * 
+ * @param[in] p_pptr A pointer to the virtual address of the MMIO range.
+ * @param[in] p_size The size of the MMIO range in bytes.
+ */
+void vmm_unmapMmio(void *p_vptr, size_t p_size);
+
+/**
+ * @brief This variable contains the kernel VMM context.
+ */
+extern struct ts_vmm_context g_vmm_kernelContext;
 
 #endif

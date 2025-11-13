@@ -69,12 +69,10 @@ void free(void *p_ptr) {
 }
 
 static int malloc_refillPhysicalMemoryPool(size_t p_size) {
-    struct ts_vmm_context *l_kernelContext = vmm_getKernelContext();
-
     void *l_virtualPtr = vmm_alloc(
-        l_kernelContext,
+        &g_vmm_kernelContext,
         p_size,
-        C_VMM_ALLOC_FLAG_KERNEL
+        0
     );
 
     if(l_virtualPtr == NULL) {
@@ -99,11 +97,11 @@ static int malloc_refillPhysicalMemoryPool(size_t p_size) {
 
         if(
             vmm_map(
-                l_kernelContext,
+                &g_vmm_kernelContext,
                 (void *)((uintptr_t)l_virtualPtr + l_allocatedPhysicalMemory),
                 l_physicalPtr,
                 l_allocBlockSize,
-                C_VMM_PROT_KERNEL | C_VMM_PROT_EXEC | C_VMM_PROT_READ_WRITE
+                0 | C_VMM_PROT_EXEC | C_VMM_PROT_READ_WRITE
             ) != 0
         ) {
             pmm_free(l_physicalPtr, l_allocBlockSize);
@@ -127,7 +125,7 @@ static int malloc_refillPhysicalMemoryPool(size_t p_size) {
             l_allocatedPhysicalMemory -= C_MM_PAGE_SIZE;
         }
 
-        vmm_free(l_kernelContext, l_virtualPtr, p_size);
+        vmm_free(&g_vmm_kernelContext, l_virtualPtr, p_size);
 
         return -ENOMEM;
     }

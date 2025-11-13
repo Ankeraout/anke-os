@@ -41,6 +41,7 @@ struct limine_hhdm_request g_hhdmRequest = {
 };
 
 static struct ts_memoryRange s_memoryMap[C_MAX_MEMORY_MAP_ENTRIES];
+static size_t s_memoryMapEntryCount;
 
 static void halt(void);
 
@@ -55,7 +56,7 @@ void bootstrap(void) {
         halt();
     }
 
-    int l_memoryMapEntryCount = 0;
+    s_memoryMapEntryCount = 0;
 
     for(
         unsigned int l_i = 0;
@@ -66,21 +67,21 @@ void bootstrap(void) {
             g_memoryMapRequest.response->entries[l_i]->type
             == LIMINE_MEMMAP_USABLE
         ) {
-            if(l_memoryMapEntryCount == C_MAX_MEMORY_MAP_ENTRIES) {
+            if(s_memoryMapEntryCount == C_MAX_MEMORY_MAP_ENTRIES) {
                 pr_warning("bootstrap: Too many memory map entries.\n");
                 break;
             }
 
-            s_memoryMap[l_memoryMapEntryCount].m_ptr =
+            s_memoryMap[s_memoryMapEntryCount].m_ptr =
                 (void *)g_memoryMapRequest.response->entries[l_i]->base;
-            s_memoryMap[l_memoryMapEntryCount].m_size =
+            s_memoryMap[s_memoryMapEntryCount].m_size =
                 (size_t)g_memoryMapRequest.response->entries[l_i]->length;
 
-            l_memoryMapEntryCount++;
+            s_memoryMapEntryCount++;
         }
     }
 
-    if(pmm_init(s_memoryMap, l_memoryMapEntryCount) != 0) {
+    if(pmm_init() != 0) {
         pr_crit("bootstrap: pmmInit() failed.\n");
         halt();
     }
@@ -91,6 +92,14 @@ void bootstrap(void) {
     } else {
         pr_info("bootstrap: No RSDP provided by the bootloader.\n");
     }
+}
+
+void bootstrap_getMemoryMap(
+    struct ts_memoryRange **p_memoryMapEntries,
+    size_t *p_memoryMapEntryCount
+) {
+    *p_memoryMapEntries = s_memoryMap;
+    *p_memoryMapEntryCount = s_memoryMapEntryCount;
 }
 
 static void halt(void) {
