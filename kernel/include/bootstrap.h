@@ -4,10 +4,27 @@
 #include <stddef.h>
 #include "memoryRange.h"
 
-void bootstrap(void);
-void bootstrap_getMemoryMap(
-    struct ts_memoryRange **p_memoryMapEntries,
-    size_t *p_memoryMapEntryCount
-);
+enum te_bootstrap_memoryMapEntryType {
+    E_BOOTSTRAP_MEMORYMAPENTRYTYPE_FREE,
+    E_BOOTSTRAP_MEMORYMAPENTRYTYPE_RECLAIMABLE
+};
+
+struct ts_bootstrap_memoryMapEntry {
+    enum te_bootstrap_memoryMapEntryType m_type;
+    struct ts_memoryRange m_range;
+};
+
+struct ts_bootstrap_memoryMap {
+    struct ts_bootstrap_memoryMapEntry *m_memoryMap;
+    size_t m_memoryMapLength;
+};
+
+struct ts_bootstrap_information {
+    struct ts_bootstrap_memoryMap m_memoryMap;
+    void *m_hhdm;
+};
+
+void bootstrap_init(void);
+const struct ts_bootstrap_information *bootstrap_getInformation(void);
 
 #endif

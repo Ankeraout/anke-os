@@ -12,21 +12,11 @@
 static __attribute__((aligned(8))) uint8_t s_kernelStack[C_KERNEL_STACK_SIZE];
 
 void arch_init(void) {
-    if(vmm_init() != 0) {
-        pr_crit("arch_init: Failed to initialize VMM.\n");
-        
-        while(1) {
-            asm_cli();
-            asm_hlt();
-        }
-    }
-
     gdt_init();
+    idt_init();
     irq_init();
     pic_init();
-    idt_init();
     tss_initTss(&g_tss[0], (size_t)s_kernelStack);
     asm_ltr(0x20);
-
     asm_sti();
 }

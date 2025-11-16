@@ -13,7 +13,11 @@ CFLAGS := \
 	-std=gnu99 -pedantic-errors \
 	-g3 -Og \
 	-ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-pie -fno-pic -nostdlib -mno-red-zone -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mabi=sysv -mcmodel=kernel -march=x86-64 -m64 \
-	-Iinclude -I../limine
+	-Iinclude -I../limine \
+	-DCONFIG_ARCH_AMD64 \
+	-DCONFIG_AMD64_BOOTSTRAP_LIMINE \
+	-DCONFIG_MAX_CORE_COUNT=1
+
 LDFLAGS := \
 	-nostdlib -static -m elf_x86_64 \
 	-z max-page-size=0x1000 \

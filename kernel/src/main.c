@@ -1,9 +1,7 @@
 #include "arch/arch.h"
-#include "bootstrap.h"
 #include "printk.h"
 
 void main(void) {
-    bootstrap();
     arch_init();
 
     printk("AnkeKernel 0.1.0\n");

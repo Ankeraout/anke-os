@@ -261,7 +261,8 @@ static void vmm_initHHDM(void) {
     struct ts_memoryRange *l_memoryMap;
     size_t l_memoryMapEntryCount;
 
-    bootstrap_getMemoryMap(&l_memoryMap, &l_memoryMapEntryCount);
+    l_memoryMap = NULL;
+    l_memoryMapEntryCount = 0;
 
     for(size_t l_index = 0UL; l_index < l_memoryMapEntryCount; l_index++) {
         const uintptr_t l_startAddress = (uintptr_t)l_memoryMap[l_index].m_ptr;

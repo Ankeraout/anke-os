@@ -5,7 +5,7 @@
 
 #include "arch/amd64/asm.h"
 
-#define C_TSS_COUNT 1
+#define C_TSS_COUNT CONFIG_MAX_CORE_COUNT
 
 struct ts_tss_value {
     uint32_t m_0_31;

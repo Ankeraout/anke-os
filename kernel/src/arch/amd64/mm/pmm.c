@@ -17,7 +17,8 @@ int pmm_init(void) {
     struct ts_memoryRange *l_memoryMap;
     size_t l_memoryMapEntryCount;
 
-    bootstrap_getMemoryMap(&l_memoryMap, &l_memoryMapEntryCount);
+    l_memoryMap = NULL;
+    l_memoryMapEntryCount = 0;
 
     s_freeMemoryEntryList = NULL;
 
