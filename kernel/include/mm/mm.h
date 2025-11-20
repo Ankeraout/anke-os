@@ -29,5 +29,6 @@ void mm_addNodeToMap(
     ),
     void *p_freeNodeContext
 );
+void mm_alignRange(struct ts_memoryRange *p_memoryRange);
 
 #endif

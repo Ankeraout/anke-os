@@ -6,7 +6,7 @@
 
 enum te_bootstrap_memoryMapEntryType {
     E_BOOTSTRAP_MEMORYMAPENTRYTYPE_FREE,
-    E_BOOTSTRAP_MEMORYMAPENTRYTYPE_RECLAIMABLE
+    E_BOOTSTRAP_MEMORYMAPENTRYTYPE_RESERVED
 };
 
 struct ts_bootstrap_memoryMapEntry {
@@ -19,9 +19,15 @@ struct ts_bootstrap_memoryMap {
     size_t m_memoryMapLength;
 };
 
+struct ts_bootstrap_kernelAddress {
+    void *m_physicalAddress;
+    void *m_virtualAddress;
+};
+
 struct ts_bootstrap_information {
     struct ts_bootstrap_memoryMap m_memoryMap;
     void *m_hhdm;
+    struct ts_bootstrap_kernelAddress m_kernelAddress;
 };
 
 void bootstrap_init(void);

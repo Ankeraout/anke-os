@@ -14,30 +14,31 @@ static struct ts_memoryRange_listNode *s_freeMemoryEntryList;
 static t_spinlock s_spinlock;
 
 int pmm_init(void) {
-    struct ts_memoryRange *l_memoryMap;
-    size_t l_memoryMapEntryCount;
-
-    l_memoryMap = NULL;
-    l_memoryMapEntryCount = 0;
+    const struct ts_bootstrap_information *l_bootstrapInformation =
+        bootstrap_getInformation();
+    const struct ts_bootstrap_memoryMapEntry *l_memoryMap =
+        l_bootstrapInformation->m_memoryMap.m_memoryMap;
+    const size_t l_memoryMapLength =
+        l_bootstrapInformation->m_memoryMap.m_memoryMapLength;
 
     s_freeMemoryEntryList = NULL;
 
-    for(int l_index = l_memoryMapEntryCount - 1; l_index >= 0; l_index--) {
+    for(int l_index = l_memoryMapLength - 1; l_index >= 0; l_index--) {
         // Round start to the nearest page
         size_t l_startAddress =
-            mm_roundUpPage((size_t)l_memoryMap[l_index].m_ptr);
+            mm_roundUpPage((size_t)l_memoryMap[l_index].m_range.m_ptr);
         size_t l_rangeStartOffset =
-            (size_t)l_memoryMap[l_index].m_ptr - l_startAddress;
+            (size_t)l_memoryMap[l_index].m_range.m_ptr - l_startAddress;
 
         // The entry does not contain a full page.
-        if(l_memoryMap[l_index].m_size < l_rangeStartOffset) {
+        if(l_memoryMap[l_index].m_range.m_size < l_rangeStartOffset) {
             continue;
         }
 
         size_t l_size =
             mm_roundDownPage(
-                l_memoryMap[l_index].m_size
-                - (l_startAddress - (size_t)l_memoryMap[l_index].m_ptr)
+                l_memoryMap[l_index].m_range.m_size
+                - (l_startAddress - (size_t)l_memoryMap[l_index].m_range.m_ptr)
             );
 
         if(l_size == 0) {

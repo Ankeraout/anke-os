@@ -122,3 +122,11 @@ void mm_addNodeToMap(
         mm_tryMergeNodes(l_previousNode, p_freeNode, p_freeNodeContext);
     }
 }
+
+void mm_alignRange(struct ts_memoryRange *p_memoryRange) {
+    size_t l_pageOffset = ((uintptr_t)p_memoryRange->m_ptr) & 0xfffUL;
+    p_memoryRange->m_ptr =
+        (void *)(((uintptr_t)p_memoryRange->m_ptr) - l_pageOffset);
+    p_memoryRange->m_size =
+        mm_roundUpPage(p_memoryRange->m_size + l_pageOffset);
+}

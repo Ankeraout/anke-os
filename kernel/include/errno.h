@@ -4,6 +4,7 @@
 enum {
     ENOMEM = 12,
     EBUSY = 16,
+    EINVAL = 22
 };
 
 #endif
