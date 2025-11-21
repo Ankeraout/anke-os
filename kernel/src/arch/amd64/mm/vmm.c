@@ -10,6 +10,7 @@
 #include "stdlib.h"
 #include "string.h"
 
+#define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define C_VMM_ENTRIES_PER_PAGE \
     (C_MM_PAGE_SIZE / sizeof(struct ts_memoryRange_listNode))
 
@@ -31,6 +32,12 @@ static void vmm_initKernelContext(void);
 static void vmm_initHHDM(void);
 static void vmm_mapKernel(void);
 static void vmm_switchToKernelContext(void);
+static bool vmm_unmapRecursive(
+    uint64_t *p_pagingStructure,
+    size_t p_pageIndex,
+    size_t p_pageCount,
+    int p_level
+);
 
 extern int g_kernelStart;
 extern int g_kernelEnd;
@@ -91,8 +98,6 @@ int vmm_init(void) {
     vmm_switchToKernelContext();
     //vmm_reclaimBootloaderMemory();
 
-    pr_info("vmm: Kernel context at 0x%016lx.\n", &g_vmm_kernelContext);
-
     return 0;
 }
 
@@ -143,10 +148,10 @@ int vmm_map(
     uint64_t *l_pdpt = NULL;
     uint64_t *l_pd = NULL;
     uint64_t *l_pt = NULL;
-    size_t l_pml4Index = (((uintptr_t)p_vptr) >> 39UL) & 0x1ffUL;
-    size_t l_pdptIndex = (((uintptr_t)p_vptr) >> 30UL) & 0x1ffUL;
-    size_t l_pdIndex = (((uintptr_t)p_vptr) >> 21UL) & 0x1ffUL;
-    size_t l_ptIndex = (((uintptr_t)p_vptr) >> 12UL) & 0x1ffUL;
+    size_t l_pml4Index = (((uintptr_t)l_virtualRange.m_ptr) >> 39UL) & 0x1ffUL;
+    size_t l_pdptIndex = (((uintptr_t)l_virtualRange.m_ptr) >> 30UL) & 0x1ffUL;
+    size_t l_pdIndex = (((uintptr_t)l_virtualRange.m_ptr) >> 21UL) & 0x1ffUL;
+    size_t l_ptIndex = (((uintptr_t)l_virtualRange.m_ptr) >> 12UL) & 0x1ffUL;
     size_t l_currentOffset = 0;
     bool error = false;
     const uint64_t l_pdFlags = C_VMM_PAGING_FLAG_PRESENT
@@ -285,7 +290,32 @@ int vmm_unmap(
     void *p_ptr,
     size_t p_size
 ) {
+    // Align memory range
+    struct ts_memoryRange l_memoryRange = {
+        .m_ptr = p_ptr,
+        .m_size = p_size
+    };
 
+    mm_alignRange(&l_memoryRange);
+
+    // Acquire lock on the context
+    spinlock_acquire(&p_context->m_spinlock);
+
+    bool l_freed = vmm_unmapRecursive(
+        pmm_physicalToLinear(p_context->m_pagingContext),
+        ((uint64_t)l_memoryRange.m_ptr) >> 12UL,
+        l_memoryRange.m_size >> 12UL,
+        4
+    );
+
+    if(l_freed) {
+        pmm_free(p_context->m_pagingContext, C_MM_PAGE_SIZE);
+        p_context->m_pagingContext = NULL;
+    }
+
+    spinlock_release(&p_context->m_spinlock);
+
+    return 0;
 }
 
 void *vmm_getPhysicalAddress(void *p_vptr) {
@@ -465,9 +495,6 @@ static void vmm_mapKernel(void) {
     const struct ts_bootstrap_information *l_bootstrapInformation =
         bootstrap_getInformation();
 
-    pr_info("vmm: Kernel located at 0x%016lx in RAM.\n", l_bootstrapInformation->m_kernelAddress.m_physicalAddress);
-    pr_info("vmm: Kernel located at 0x%016lx.\n", l_bootstrapInformation->m_kernelAddress.m_virtualAddress);
-
     const size_t l_kernelTextOffset = (size_t)(
         ((uintptr_t)&g_kernelTextStart) - ((uintptr_t)&g_kernelStart)
     );
@@ -563,8 +590,105 @@ static void vmm_mapKernel(void) {
 }
 
 static void vmm_switchToKernelContext(void) {
-    pr_info("vmm: Switching to kernel context\n");
-    pr_info("vmm: Setting CR3 to 0x%016lx\n", g_vmm_kernelContext.m_pagingContext);
     asm_writeCr3((uint64_t)g_vmm_kernelContext.m_pagingContext);
-    g_pmm_hhdm = (void *)0xffff800000000000;
+    g_pmm_hhdm = (void *)0xffff800000000000UL;
+}
+
+static bool vmm_unmapRecursive(
+    uint64_t *p_pagingStructure,
+    size_t p_pageIndex,
+    size_t p_pageCount,
+    int p_level
+) {
+    const size_t l_pageIndexMaskTable[] = {
+        0UL,
+        0x1ffUL,
+        0x3ffffUL,
+        0x7ffffffUL,
+        0xfffffffffUL
+    };
+    const size_t l_pageCountTable[] = {
+        0UL,
+        (1UL << 9UL),
+        (1UL << 18UL),
+        (1UL << 27UL),
+        (1UL << 36UL)
+    };
+    const size_t l_pageIndexShiftTable[] = {
+        0UL,
+        0UL,
+        9UL,
+        18UL,
+        27UL
+    };
+
+    size_t l_pageIndex = p_pageIndex & l_pageIndexMaskTable[p_level];
+    size_t l_pageCount = p_pageCount & l_pageIndexMaskTable[p_level];
+
+    bool l_modified = false;
+
+    if(p_level == 1) {
+        if(l_pageCount == 512UL) {
+            pmm_free(pmm_linearToPhysical(p_pagingStructure), C_MM_PAGE_SIZE);
+            return true;
+        }
+
+        for(size_t l_i = 0UL; l_i < l_pageCount; l_i++) {
+            p_pagingStructure[l_pageIndex + l_i] = 0UL;
+        }
+
+        l_modified = true;
+    } else {
+        while(l_pageCount > 0UL) {
+            size_t l_indexInPagingStructure =
+                (l_pageIndex >> l_pageIndexShiftTable[p_level]) & 0x1ffUL;
+            size_t l_pageIndexInNextLevel =
+                l_pageIndex & l_pageIndexMaskTable[p_level - 1UL];
+            size_t l_pageCountInNextLevel = M_MIN(
+                l_pageCountTable[p_level - 1UL] - l_pageIndexInNextLevel,
+                l_pageCount
+            );
+
+            bool l_freed = vmm_unmapRecursive(
+                (uint64_t *)pmm_physicalToLinear(
+                    (void *)(
+                        p_pagingStructure[l_indexInPagingStructure]
+                        & 0x000ffffffffff000UL
+                    )
+                ),
+                l_pageIndexInNextLevel,
+                l_pageCountInNextLevel,
+                p_level - 1UL
+            );
+
+            if(l_freed) {
+                p_pagingStructure[l_indexInPagingStructure] = 0UL;
+                l_modified = true;
+            }
+
+            l_pageIndex += l_pageCountInNextLevel;
+            l_pageCount -= l_pageCountInNextLevel;
+        }
+    }
+
+    // TODO : incorrect
+    if(l_modified) {
+        for(size_t l_i = 0; l_i < l_pageIndex; l_i++) {
+            if((p_pagingStructure[l_i] & C_VMM_PAGING_FLAG_PRESENT) != 0UL) {
+                return false;
+            }
+        }
+
+        for(size_t l_i = l_pageIndex + l_pageCount; l_i < 512UL; l_i++) {
+            if((p_pagingStructure[l_i] & C_VMM_PAGING_FLAG_PRESENT) != 0UL) {
+                return false;
+            }
+        }
+
+        pmm_free(pmm_linearToPhysical(p_pagingStructure), C_MM_PAGE_SIZE);
+        
+        return true;
+    }
+
+    return false;
 }
