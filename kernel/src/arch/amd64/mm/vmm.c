@@ -624,6 +624,9 @@ static bool vmm_unmapRecursive(
 
     size_t l_pageIndex = p_pageIndex & l_pageIndexMaskTable[p_level];
     size_t l_pageCount = p_pageCount & l_pageIndexMaskTable[p_level];
+    size_t l_firstIndexInPagingStructure =
+        (l_pageIndex >> l_pageIndexShiftTable[p_level]) & 0x1ffUL;
+    size_t l_lastIndexInPagingStructure;
 
     bool l_modified = false;
 
@@ -639,9 +642,9 @@ static bool vmm_unmapRecursive(
 
         l_modified = true;
     } else {
+        size_t l_indexInPagingStructure = l_firstIndexInPagingStructure;
+
         while(l_pageCount > 0UL) {
-            size_t l_indexInPagingStructure =
-                (l_pageIndex >> l_pageIndexShiftTable[p_level]) & 0x1ffUL;
             size_t l_pageIndexInNextLevel =
                 l_pageIndex & l_pageIndexMaskTable[p_level - 1UL];
             size_t l_pageCountInNextLevel = M_MIN(
@@ -668,18 +671,20 @@ static bool vmm_unmapRecursive(
 
             l_pageIndex += l_pageCountInNextLevel;
             l_pageCount -= l_pageCountInNextLevel;
+            l_indexInPagingStructure++;
         }
+
+        l_lastIndexInPagingStructure = l_indexInPagingStructure - 1UL;
     }
 
-    // TODO : incorrect
     if(l_modified) {
-        for(size_t l_i = 0; l_i < l_pageIndex; l_i++) {
+        for(size_t l_i = 0; l_i <= l_firstIndexInPagingStructure; l_i++) {
             if((p_pagingStructure[l_i] & C_VMM_PAGING_FLAG_PRESENT) != 0UL) {
                 return false;
             }
         }
 
-        for(size_t l_i = l_pageIndex + l_pageCount; l_i < 512UL; l_i++) {
+        for(size_t l_i = l_lastIndexInPagingStructure; l_i < 512UL; l_i++) {
             if((p_pagingStructure[l_i] & C_VMM_PAGING_FLAG_PRESENT) != 0UL) {
                 return false;
             }
