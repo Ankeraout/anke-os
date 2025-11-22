@@ -24,6 +24,10 @@ int pmm_init(void) {
     s_freeMemoryEntryList = NULL;
 
     for(int l_index = l_memoryMapLength - 1; l_index >= 0; l_index--) {
+        if(l_memoryMap[l_index].m_type != E_BOOTSTRAP_MEMORYMAPENTRYTYPE_FREE) {
+            continue;
+        }
+
         // Round start to the nearest page
         size_t l_startAddress =
             mm_roundUpPage((size_t)l_memoryMap[l_index].m_range.m_ptr);

@@ -295,15 +295,9 @@ int vmm_map(
 
     if(error) {
         return -ENOMEM;
-    } else {
-        pr_info(
-            "vmm: Mapped [0x%016lx -> 0x%016lx] (0x%lx bytes)\n",
-            l_physicalRange.m_ptr,
-            l_virtualRange.m_ptr,
-            l_physicalRange.m_size
-        );
-        return 0;
     }
+
+    return 0;
 }
 
 int vmm_unmap(
@@ -478,6 +472,12 @@ static void vmm_initKernelContext(void) {
     if(g_vmm_kernelContext.m_mapEntryPool == NULL) {
         panic("vmm: Failed to initialize kernel context.");
     }
+
+    vmm_free(
+        &g_vmm_kernelContext,
+        (void *)0xffffff8000000000UL,
+        0x0000007f80000000UL
+    );
 }
 
 static void vmm_initHHDM(void) {
