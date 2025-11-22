@@ -38,6 +38,10 @@ static bool vmm_unmapRecursive(
     size_t p_pageCount,
     int p_level
 );
+static void vmm_freeNode(
+    void *p_context,
+    struct ts_memoryRange_listNode *p_node
+);
 
 extern int g_kernelStart;
 extern int g_kernelEnd;
@@ -81,11 +85,6 @@ struct ts_vmm_context g_vmm_kernelContext;
 static const uint64_t *s_vmm_pteMask;
 
 /**
- * @brief This list contains the free memory ranges in the MMIO area.
- */
-static struct ts_memoryRange_listNode *s_vmm_mmioMap;
-
-/**
  * @brief This variable contains the kernel PML4.
  */
 static __attribute__((aligned(0x1000))) uint64_t s_vmm_kernelPml4[512];
@@ -102,11 +101,33 @@ int vmm_init(void) {
 }
 
 void *vmm_alloc(struct ts_vmm_context *p_context, size_t p_size, int p_flags) {
+    size_t l_size = mm_roundUpPage(p_size);
 
+    spinlock_acquire(&p_context->m_spinlock);
+
+    void *l_address = mm_alloc(&p_context->m_map, l_size);
+
+    spinlock_release(&p_context->m_spinlock);
+
+    return l_address;
 }
 
 int vmm_free(struct ts_vmm_context *p_context, void *p_ptr, size_t p_size) {
+    spinlock_acquire(&p_context->m_spinlock);
 
+    vmm_refillEntryPoolIfNeeded(p_context);
+
+    struct ts_memoryRange_listNode *l_node = p_context->m_mapEntryPool;
+    p_context->m_mapEntryPool = l_node->m_next;
+    l_node->m_memoryRange.m_ptr = p_ptr;
+    l_node->m_memoryRange.m_size = p_size;
+    mm_alignRange(&l_node->m_memoryRange);
+
+    mm_addNodeToMap(&p_context->m_map, l_node, vmm_freeNode, p_context);
+
+    spinlock_release(&p_context->m_spinlock);
+
+    return 0;
 }
 
 int vmm_map(
@@ -395,14 +416,6 @@ void vmm_destroyContext(struct ts_vmm_context *p_context) {
 
 }
 
-void *vmm_mapMmio(void *p_pptr, size_t p_size, int p_flags) {
-
-}
-
-void vmm_unmapMmio(void *p_vptr, size_t p_size) {
-
-}
-
 static void vmm_refillEntryPool(struct ts_vmm_context *p_context) {
     // Allocate a new memory page to store the data
     void *l_newPage_physicalAddress = pmm_alloc(C_MM_PAGE_SIZE);
@@ -626,7 +639,7 @@ static bool vmm_unmapRecursive(
     size_t l_pageCount = p_pageCount & l_pageIndexMaskTable[p_level];
     size_t l_firstIndexInPagingStructure =
         (l_pageIndex >> l_pageIndexShiftTable[p_level]) & 0x1ffUL;
-    size_t l_lastIndexInPagingStructure;
+    size_t l_lastIndexInPagingStructure = l_firstIndexInPagingStructure;
 
     bool l_modified = false;
 
@@ -696,4 +709,14 @@ static bool vmm_unmapRecursive(
     }
 
     return false;
+}
+
+static void vmm_freeNode(
+    void *p_context,
+    struct ts_memoryRange_listNode *p_node
+) {
+    struct ts_vmm_context *l_context = p_context;
+
+    p_node->m_next = l_context->m_mapEntryPool;
+    l_context->m_mapEntryPool = p_node;
 }

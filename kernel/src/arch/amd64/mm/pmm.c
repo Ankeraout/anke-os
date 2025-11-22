@@ -63,14 +63,13 @@ int pmm_init(void) {
 void *pmm_alloc(size_t p_size) {
     void *l_returnValue = NULL;
 
-    spinlock_acquire(&s_spinlock);
-
     size_t l_size = mm_roundUpPage(p_size);
-
-    // Look for entries with size >= l_size.
-
     bool l_found = false;
     struct ts_memoryRange_listNode *l_previousNode = NULL;
+
+    spinlock_acquire(&s_spinlock);
+
+    // Look for entries with size >= l_size.
     struct ts_memoryRange_listNode *l_node = s_freeMemoryEntryList;
 
     while((!l_found) && (l_node != NULL)) {

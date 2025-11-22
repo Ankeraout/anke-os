@@ -141,25 +141,6 @@ struct ts_vmm_context *vmm_createContext(void);
 void vmm_destroyContext(struct ts_vmm_context *p_context);
 
 /**
- * @brief Maps a MMIO space into kernel memory space.
- * 
- * @param[in] p_pptr A pointer to the physical address of the MMIO range.
- * @param[in] p_size The size of the MMIO range in bytes.
- * @param[in] p_flags Flags (C_VMM_CACHE_* and C_VMM_PROT_*)
- * 
- * @returns A pointer to the mapped MMIO range.
- */
-void *vmm_mapMmio(void *p_pptr, size_t p_size, int p_flags);
-
-/**
- * @brief Unmaps a MMIO space from kernel memory space.
- * 
- * @param[in] p_pptr A pointer to the virtual address of the MMIO range.
- * @param[in] p_size The size of the MMIO range in bytes.
- */
-void vmm_unmapMmio(void *p_vptr, size_t p_size);
-
-/**
  * @brief This variable contains the kernel VMM context.
  */
 extern struct ts_vmm_context g_vmm_kernelContext;

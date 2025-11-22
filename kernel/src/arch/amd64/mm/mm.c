@@ -23,10 +23,7 @@ void *mm_getEntryEndAddress(const struct ts_memoryRange *p_entry) {
 
 void mm_tryMergeNodes(
     struct ts_memoryRange_listNode *p_node,
-    void (*p_freeNode)(
-        void *p_context,
-        struct ts_memoryRange_listNode *p_node
-    ),
+    tf_mm_freeNode *p_freeNode,
     void *p_freeNodeContext
 ) {
     // If there is no next node, then there is nothing to merge.
@@ -45,7 +42,7 @@ void mm_tryMergeNodes(
         p_node->m_next = p_node->m_next->m_next;
 
         if(p_freeNode != NULL) {
-            p_freeNode(l_nodeToFree, p_freeNodeContext);
+            p_freeNode(p_freeNodeContext, l_nodeToFree);
         }
     }
 }
@@ -89,10 +86,7 @@ void *mm_allocPages(struct ts_memoryRange_listNode **p_map, size_t p_size) {
 void mm_addNodeToMap(
     struct ts_memoryRange_listNode **p_map,
     struct ts_memoryRange_listNode *p_node,
-    void (*p_freeNode)(
-        void *p_context,
-        struct ts_memoryRange_listNode *p_node
-    ),
+    tf_mm_freeNode *p_freeNode,
     void *p_freeNodeContext
 ) {
     struct ts_memoryRange_listNode *l_node = *p_map;
