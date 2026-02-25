@@ -1,4 +1,5 @@
 bin
 obj
 .vscode
-limine
+/limine
+/limine-protocol

@@ -1,5 +1,10 @@
 [submodule "limine"]
 	path = limine
-	url = git@github.com:limine-bootloader/limine.git
-	branch = v9.6.1-binary
+	url = https://codeberg.org/Limine/Limine.git
+	branch = v10.8.0-binary
+	ignore = dirty
+[submodule "limine-protocol"]
+	path = limine-protocol
+	url = https://codeberg.org/Limine/limine-protocol.git
+	branch = trunk
 	ignore = dirty
