@@ -23,12 +23,12 @@ void isr_exception(uint64_t p_exception, uint64_t p_errorCode) {
     pr_crit("R13=0x%016lx\n", g_task_currentTaskContext.m_r13);
     pr_crit("R14=0x%016lx\n", g_task_currentTaskContext.m_r14);
     pr_crit("R15=0x%016lx\n", g_task_currentTaskContext.m_r15);
-    pr_crit("CS=0x%014lx\n", g_task_currentTaskContext.m_cs);
-    pr_crit("DS=0x%014lx\n", g_task_currentTaskContext.m_ds);
-    pr_crit("ES=0x%014lx\n", g_task_currentTaskContext.m_es);
-    pr_crit("FS=0x%014lx\n", g_task_currentTaskContext.m_fs);
-    pr_crit("GS=0x%014lx\n", g_task_currentTaskContext.m_gs);
-    pr_crit("SS=0x%014lx\n", g_task_currentTaskContext.m_ss);
+    pr_crit("CS=0x%04lx\n", g_task_currentTaskContext.m_cs);
+    pr_crit("DS=0x%04lx\n", g_task_currentTaskContext.m_ds);
+    pr_crit("ES=0x%04lx\n", g_task_currentTaskContext.m_es);
+    pr_crit("FS=0x%04lx\n", g_task_currentTaskContext.m_fs);
+    pr_crit("GS=0x%04lx\n", g_task_currentTaskContext.m_gs);
+    pr_crit("SS=0x%04lx\n", g_task_currentTaskContext.m_ss);
     pr_crit("==================================\n");
     pr_crit("System halted.");
 
